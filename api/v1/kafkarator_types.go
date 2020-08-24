@@ -1,6 +1,13 @@
+//  +versionName=v1
 package kafka_nais_io_v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+const (
+	EventRolloutComplete       = "RolloutComplete"
+	EventFailedPrepare         = "FailedPrepare"
+	EventFailedSynchronization = "FailedSynchronization"
+)
 
 // +genclient
 // +kubebuilder:object:root=true
