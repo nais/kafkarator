@@ -7,6 +7,10 @@ kafkarator:
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+# Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="code-generation/header.go.txt" paths="./..."
+
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
