@@ -1,0 +1,15 @@
+---
+apiVersion: kafka.nais.io/v1
+kind: Topic
+metadata:
+  namespace: default
+  name: mytopic
+  labels:
+    team: aura
+spec:
+  pool: default
+  config:
+    retention.ms: "12345"
+  acl:
+    - access: read
+      team: aura
