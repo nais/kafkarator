@@ -22,6 +22,8 @@ func TestClient_CreateUser(t *testing.T) {
 
 	username := "integration-test-user"
 
+	t.Logf("Creating user %s", username)
+
 	user, err := client.CreateUser(username)
 	assert.NoError(t, err)
 
@@ -42,4 +44,9 @@ func TestClient_CreateUser(t *testing.T) {
 
 	t.Logf("Certificate key of new user %s", username)
 	t.Logf(user.AccessKey)
+
+	t.Logf("Deleting user %s", username)
+
+	err = client.DeleteUser(username)
+	assert.NoError(t, err)
 }

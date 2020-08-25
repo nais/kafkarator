@@ -39,3 +39,16 @@ func (c *Client) CreateUser(username string) (*UserResponse, error) {
 
 	return response.User, nil
 }
+
+func (c *Client) DeleteUser(username string) error {
+	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/user/%s", c.Project, c.Service, username)
+
+	request, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.request(request, nil)
+
+	return err
+}
