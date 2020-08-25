@@ -25,15 +25,15 @@ func equalConfig(config aiven.Config, configResponse aiven.ConfigResponse, key s
 			return nil
 		}
 	}
-	return fmt.Errorf("Configuration option '%s' of type %T and value %v does not match expected value %v", key, configResponse[key].Value, config[key], configResponse[key].Value)
+	return fmt.Errorf("configuration option '%s' of type %T and value %v does not match expected value %v", key, configResponse[key].Value, config[key], configResponse[key].Value)
 }
 
 func TestClient_CreateTopic(t *testing.T) {
 	client := &aiven.Client{
-		Token: os.Getenv("AIVEN_TOKEN"),
+		Token:   os.Getenv("AIVEN_TOKEN"),
+		Project: "nav-integration",
+		Service: "integration-test-service",
 	}
-	project := "nav-integration"
-	service := "integration-test-service"
 	topicName := "integration-test"
 	retention := time.Hour * 36
 	payload := aiven.CreateTopicRequest{
@@ -44,7 +44,7 @@ func TestClient_CreateTopic(t *testing.T) {
 		Partitions:  1,
 		Replication: 2,
 	}
-	err := client.CreateTopic(project, service, payload)
+	err := client.CreateTopic(payload)
 	assert.NoError(t, err)
 
 	t.Logf("Topic creation OK, proceeding with retrieval")
@@ -60,7 +60,7 @@ func TestClient_CreateTopic(t *testing.T) {
 
 			case <-retryTimer.C:
 				t.Logf("Attempting topic retrieval...")
-				topic, err := client.GetTopic(project, service, topicName)
+				topic, err := client.GetTopic(topicName)
 				if err == nil {
 					return topic, nil
 				}
@@ -86,7 +86,7 @@ func TestClient_CreateTopic(t *testing.T) {
 
 	t.Logf("Topic looks equal to request, finalizing by deleting topic")
 
-	err = client.DeleteTopic(project, service, topicName)
+	err = client.DeleteTopic(topicName)
 
 	assert.NoError(t, err)
 }
