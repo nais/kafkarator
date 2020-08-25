@@ -63,85 +63,76 @@ func WithDefaultConfig(conf Config) Config {
 	return merged
 }
 
-func (c *Client) CreateTopic(project, service string, req CreateTopicRequest) error {
-	req.Config = WithDefaultConfig(req.Config)
+// send a generic HTTP request to Aiven with credentials and optionally a body.
+// parse the response, and return a Response object.
+func (c *Client) request(req *http.Request, data interface{}) (*Response, error) {
+	if data != nil {
+		body, err := json.Marshal(data)
 
-	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic", project, service)
-	body, err := json.Marshal(req)
+		if err != nil {
+			return nil, fmt.Errorf("encoding JSON: %s", err)
+		}
 
-	if err != nil {
-		return err
-	}
-
-	reader := bytes.NewReader(body)
-	request, err := http.NewRequest("POST", url, reader)
-
-	if err != nil {
-		return err
+		reader := bytes.NewReader(body)
+		req.Body = ioutil.NopCloser(reader)
 	}
 
 	token := fmt.Sprintf("aivenv1 %s", c.Token)
-	request.Header.Add("authorization", token)
-	httpResponse, err := http.DefaultClient.Do(request)
+	req.Header.Add("authorization", token)
+
+	httpResponse, err := http.DefaultClient.Do(req)
 
 	if err != nil {
-		return fmt.Errorf("POST request to Aiven: %s", err)
+		return nil, fmt.Errorf("%s request to Aiven on %s: %s", req.Method, req.RequestURI, err)
 	}
 
-	response := Response{}
+	response := &Response{}
 	responseBody, err := ioutil.ReadAll(httpResponse.Body)
 
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("reading response from Aiven: %s", err)
 	}
 
-	err = json.Unmarshal(responseBody, &response)
+	err = json.Unmarshal(responseBody, response)
 
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("parse JSON response from Aiven: %s", err)
 	}
 
 	if len(response.Errors) > 0 {
 		//noinspection GoErrorStringFormat
-		return fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
+		return nil, fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
 	}
 
-	return nil
+	return response, nil
+}
+
+func (c *Client) CreateTopic(project, service string, req CreateTopicRequest) error {
+	req.Config = WithDefaultConfig(req.Config)
+
+	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic", project, service)
+
+	request, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.request(request, req)
+
+	return err
 }
 
 func (c *Client) GetTopic(project, service, topic string) (*TopicResponse, error) {
 	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic/%s", project, service, topic)
 
 	request, err := http.NewRequest("GET", url, nil)
-
 	if err != nil {
 		return nil, err
 	}
 
-	token := fmt.Sprintf("aivenv1 %s", c.Token)
-	request.Header.Add("authorization", token)
-	httpResponse, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		return nil, fmt.Errorf("GET request to Aiven: %s", err)
-	}
-
-	response := Response{}
-	responseBody, err := ioutil.ReadAll(httpResponse.Body)
-
+	response, err := c.request(request, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	err = json.Unmarshal(responseBody, &response)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(response.Errors) > 0 {
-		//noinspection GoErrorStringFormat
-		return nil, fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
 	}
 
 	return response.Topic, nil
@@ -151,36 +142,11 @@ func (c *Client) DeleteTopic(project, service, topic string) error {
 	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic/%s", project, service, topic)
 
 	request, err := http.NewRequest("DELETE", url, nil)
-
 	if err != nil {
 		return err
 	}
 
-	token := fmt.Sprintf("aivenv1 %s", c.Token)
-	request.Header.Add("authorization", token)
-	httpResponse, err := http.DefaultClient.Do(request)
+	_, err = c.request(request, nil)
 
-	if err != nil {
-		return fmt.Errorf("DELETE request to Aiven: %s", err)
-	}
-
-	response := Response{}
-	responseBody, err := ioutil.ReadAll(httpResponse.Body)
-
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(responseBody, &response)
-
-	if err != nil {
-		return err
-	}
-
-	if len(response.Errors) > 0 {
-		//noinspection GoErrorStringFormat
-		return fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
-	}
-
-	return nil
+	return err
 }
