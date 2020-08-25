@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type Client struct {
@@ -34,8 +35,10 @@ type TopicResponse struct {
 type PartitionResponse struct {
 }
 
+type Errors []Error
+
 type Response struct {
-	Errors  []Error        `json:"errors"`
+	Errors  Errors         `json:"errors"`
 	Message string         `json:"message"`
 	Topic   *TopicResponse `json:"topic,omitempty"`
 }
@@ -61,6 +64,17 @@ func WithDefaultConfig(conf Config) Config {
 		merged[k] = v
 	}
 	return merged
+}
+
+func (errors Errors) String() string {
+	if len(errors) == 1 {
+		return errors[0].Message
+	}
+	messages := make([]string, len(errors))
+	for i := range errors {
+		messages[i] = fmt.Sprintf("%d) %s", i+1, errors[i].Message)
+	}
+	return strings.Join(messages, "; ")
 }
 
 // send a generic HTTP request to Aiven with credentials and optionally a body.
@@ -101,7 +115,7 @@ func (c *Client) request(req *http.Request, data interface{}) (*Response, error)
 
 	if len(response.Errors) > 0 {
 		//noinspection GoErrorStringFormat
-		return nil, fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
+		return nil, fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Errors)
 	}
 
 	return response, nil
