@@ -31,8 +31,8 @@ func equalConfig(config aiven.Config, configResponse aiven.ConfigResponse, key s
 func TestClient_CreateTopic(t *testing.T) {
 	client := &aiven.Client{
 		Token:   os.Getenv("AIVEN_TOKEN"),
-		Project: "nav-integration",
-		Service: "integration-test-service",
+		Project: "integration-test",
+		Service: "nav-integration-test-kafka",
 	}
 	topicName := "integration-test"
 	retention := time.Hour * 36
