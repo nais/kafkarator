@@ -25,12 +25,28 @@ type Error struct {
 	Status   int    `json:"status"`
 }
 
+type TopicResponse struct {
+	Config      ConfigResponse      `json:"config"`
+	Partitions  []PartitionResponse `json:"partitions,omitempty"`
+	Replication int                 `json:"replication"`
+}
+
+type PartitionResponse struct {
+}
+
 type Response struct {
-	Errors  []Error `json:"errors"`
-	Message string  `json:"message"`
+	Errors  []Error        `json:"errors"`
+	Message string         `json:"message"`
+	Topic   *TopicResponse `json:"topic,omitempty"`
 }
 
 type Config map[string]interface{}
+
+type ConfigResponse map[string]ConfigResponseDescriptor
+
+type ConfigResponseDescriptor struct {
+	Value interface{} `json:"value"`
+}
 
 var defaultConfig = Config{
 	"retention_ms": 1209600000, // two weeks
@@ -47,7 +63,7 @@ func WithDefaultConfig(conf Config) Config {
 	return merged
 }
 
-func (c *Client) CreateTopic(project string, service string, req CreateTopicRequest) error {
+func (c *Client) CreateTopic(project, service string, req CreateTopicRequest) error {
 	req.Config = WithDefaultConfig(req.Config)
 
 	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic", project, service)
@@ -70,6 +86,82 @@ func (c *Client) CreateTopic(project string, service string, req CreateTopicRequ
 
 	if err != nil {
 		return fmt.Errorf("POST request to Aiven: %s", err)
+	}
+
+	response := Response{}
+	responseBody, err := ioutil.ReadAll(httpResponse.Body)
+
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(responseBody, &response)
+
+	if err != nil {
+		return err
+	}
+
+	if len(response.Errors) > 0 {
+		//noinspection GoErrorStringFormat
+		return fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
+	}
+
+	return nil
+}
+
+func (c *Client) GetTopic(project, service, topic string) (*TopicResponse, error) {
+	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic/%s", project, service, topic)
+
+	request, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	token := fmt.Sprintf("aivenv1 %s", c.Token)
+	request.Header.Add("authorization", token)
+	httpResponse, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		return nil, fmt.Errorf("GET request to Aiven: %s", err)
+	}
+
+	response := Response{}
+	responseBody, err := ioutil.ReadAll(httpResponse.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(responseBody, &response)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		//noinspection GoErrorStringFormat
+		return nil, fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
+	}
+
+	return response.Topic, nil
+}
+
+func (c *Client) DeleteTopic(project, service, topic string) error {
+	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic/%s", project, service, topic)
+
+	request, err := http.NewRequest("DELETE", url, nil)
+
+	if err != nil {
+		return err
+	}
+
+	token := fmt.Sprintf("aivenv1 %s", c.Token)
+	request.Header.Add("authorization", token)
+	httpResponse, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		return fmt.Errorf("DELETE request to Aiven: %s", err)
 	}
 
 	response := Response{}
