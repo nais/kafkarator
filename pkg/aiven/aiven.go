@@ -26,6 +26,7 @@ type Response struct {
 	Message string         `json:"message"`
 	Topic   *TopicResponse `json:"topic,omitempty"`
 	User    *UserResponse  `json:"user,omitempty"`
+	ACL     []ACL          `json:"acl,omitempty"`
 }
 
 type Errors []Error
