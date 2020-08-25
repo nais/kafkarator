@@ -9,30 +9,49 @@ import (
 )
 
 type Client struct {
-	token string
+	Token string
 }
 
-type CreateTopicPayload struct {
-	Config      map[string]string
+type CreateTopicRequest struct {
+	Config      Config `json:"config"`
 	TopicName   string `json:"topic_name"`
-	Partitions  int
-	Replication int
+	Partitions  int    `json:"partitions"`
+	Replication int    `json:"replication"`
 }
 
 type Error struct {
-	Message  string
+	Message  string `json:"message"`
 	MoreInfo string `json:"more_info"`
-	Status   int
+	Status   int    `json:"status"`
 }
 
 type Response struct {
-	Errors  []Error
-	Message string
+	Errors  []Error `json:"errors"`
+	Message string  `json:"message"`
 }
 
-func (c *Client) createTopic(project string, service string, payload CreateTopicPayload) error {
+type Config map[string]interface{}
+
+var defaultConfig = Config{
+	"retention_ms": 1209600000, // two weeks
+}
+
+func WithDefaultConfig(conf Config) Config {
+	merged := make(Config)
+	for k, v := range defaultConfig {
+		merged[k] = v
+	}
+	for k, v := range conf {
+		merged[k] = v
+	}
+	return merged
+}
+
+func (c *Client) CreateTopic(project string, service string, req CreateTopicRequest) error {
+	req.Config = WithDefaultConfig(req.Config)
+
 	url := fmt.Sprintf("https://api.aiven.io/v1/project/%s/service/%s/topic", project, service)
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(req)
 
 	if err != nil {
 		return err
@@ -45,12 +64,12 @@ func (c *Client) createTopic(project string, service string, payload CreateTopic
 		return err
 	}
 
-	token := fmt.Sprintf("aivenv1 %s", c.token)
+	token := fmt.Sprintf("aivenv1 %s", c.Token)
 	request.Header.Add("authorization", token)
 	httpResponse, err := http.DefaultClient.Do(request)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("POST request to Aiven: %s", err)
 	}
 
 	response := Response{}
@@ -67,7 +86,8 @@ func (c *Client) createTopic(project string, service string, payload CreateTopic
 	}
 
 	if len(response.Errors) > 0 {
-		return fmt.Errorf(response.Message)
+		//noinspection GoErrorStringFormat
+		return fmt.Errorf("Aiven failed with %d errors: %s", len(response.Errors), response.Message)
 	}
 
 	return nil

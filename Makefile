@@ -34,3 +34,7 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+integration_test:
+	echo "*** Make sure to set the environment AIVEN_TOKEN to a valid token ***"
+	go test ./pkg/aiven/client_test.go -tags=integration -v -count=1
