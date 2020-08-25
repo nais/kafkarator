@@ -13,7 +13,7 @@ import (
 func TestClient_CreateACL(t *testing.T) {
 	client := &aiven.Client{
 		Token:   os.Getenv("AIVEN_TOKEN"),
-		Project: "integration-test",
+		Project: "nav-integration-test",
 		Service: "nav-integration-test-kafka",
 	}
 
