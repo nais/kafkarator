@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -19,9 +20,11 @@ const (
 )
 
 type transaction struct {
-	ctx   context.Context
-	req   ctrl.Request
-	topic kafka_nais_io_v1.Topic
+	ctx        context.Context
+	req        ctrl.Request
+	topic      kafka_nais_io_v1.Topic
+	aivenTopic *aiven.KafkaTopic
+	log        *log.Entry
 }
 
 type TopicReconciler struct {
@@ -88,23 +91,27 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}()
 
 	// prepare and commit
-	tx, err := r.prepare(ctx, req)
-	if err != nil {
-		topic.Status.SynchronizationState = kafka_nais_io_v1.EventFailedPrepare
-		log.Errorf("failed preparing transaction: %s", err)
-		return ctrl.Result{
-			RequeueAfter: requeueInterval,
-		}, nil
+	tx := &transaction{
+		ctx:   ctx,
+		req:   req,
+		topic: topic,
+		log:   log.NewEntry(log.StandardLogger()),
 	}
-
-	tx.topic = topic
-	err = r.create(*tx)
+	err = r.commit(*tx)
 	if err != nil {
-		topic.Status.SynchronizationState = kafka_nais_io_v1.EventFailedSynchronization
-		topic.Status.Message = err.Error()
-		topic.Status.Errors = []string{
-			err.Error(),
+		aivenError, ok := err.(*aiven.Error)
+		if !ok {
+			topic.Status.Message = err.Error()
+			topic.Status.Errors = []string{
+				err.Error(),
+			}
+		} else {
+			topic.Status.Message = aivenError.Message
+			topic.Status.Errors = []string{
+				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+			}
 		}
+		topic.Status.SynchronizationState = kafka_nais_io_v1.EventFailedSynchronization
 		log.Errorf("failed synchronization: %s", err)
 		return ctrl.Result{
 			RequeueAfter: requeueInterval,
@@ -113,6 +120,8 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	topic.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
 	topic.Status.SynchronizationHash = hash
+	topic.Status.Message = "Topic configuration synchronized to Kafka pool"
+	topic.Status.Errors = nil
 
 	// TODO: delete unused secrets from cluster
 	/*
@@ -125,18 +134,44 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *TopicReconciler) prepare(ctx context.Context, req ctrl.Request) (*transaction, error) {
-	return &transaction{
-		ctx: ctx,
-		req: req,
-	}, nil
+func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config) bool {
+	if config == nil {
+		return false
+	}
+	if config.RetentionHours != nil && topic.RetentionHours != *config.RetentionHours {
+		return true
+	}
+	if config.RetentionBytes != nil && topic.RetentionBytes != *config.RetentionBytes {
+		return true
+	}
+	if config.Replication != nil && topic.Replication != *config.Replication {
+		return true
+	}
+	if config.Partitions != nil && len(topic.Partitions) != *config.Partitions {
+		return true
+	}
+	if config.MinimumInSyncReplicas != nil && topic.MinimumInSyncReplicas != *config.MinimumInSyncReplicas {
+		return true
+	}
+	return false
+}
+
+func (r *TopicReconciler) commit(tx transaction) error {
+	topic, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
+	if err == nil {
+		// topic already exists
+		if topicConfigChanged(topic, tx.topic.Spec.Config) {
+			return r.update(tx)
+		} else {
+			tx.log.Infof("No changes for topic %s", tx.topic.Name)
+		}
+	}
+
+	return r.create(tx)
 }
 
 func (r *TopicReconciler) create(tx transaction) error {
-	_, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
-	if err == nil {
-		return nil  // topic already exists
-	}
+	tx.log.Infof("Creating topic %s", tx.topic.Name)
 
 	cfg := tx.topic.Spec.Config
 	if cfg == nil {
@@ -154,6 +189,25 @@ func (r *TopicReconciler) create(tx transaction) error {
 	}
 
 	return r.Aiven.KafkaTopics.Create(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), req)
+}
+
+func (r *TopicReconciler) update(tx transaction) error {
+	tx.log.Infof("Updating topic %s", tx.topic.Name)
+
+	cfg := tx.topic.Spec.Config
+	if cfg == nil {
+		cfg = &kafka_nais_io_v1.Config{}
+	}
+
+	req := aiven.UpdateKafkaTopicRequest{
+		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
+		Partitions:            cfg.Partitions,
+		Replication:           cfg.Replication,
+		RetentionBytes:        cfg.RetentionBytes,
+		RetentionHours:        cfg.RetentionHours,
+	}
+
+	return r.Aiven.KafkaTopics.Update(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name, req)
 }
 
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
