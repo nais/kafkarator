@@ -5,88 +5,110 @@ package aiven_test
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
-	"github.com/nais/kafkarator/pkg/aiven"
+	"github.com/aiven/aiven-go-client"
 	"github.com/stretchr/testify/assert"
 )
 
-func equalConfig(config aiven.Config, configResponse aiven.ConfigResponse, key string) error {
-	switch v := configResponse[key].Value.(type) {
-	case float64:
-		// Aiven returns scientific notation in float for numbers (???)
-		if int64(v) == config[key].(int64) {
-			return nil
-		}
-	default:
-		if reflect.DeepEqual(config[key], configResponse[key].Value) {
-			return nil
-		}
-	}
-	return fmt.Errorf("configuration option '%s' of type %T and value %v does not match expected value %v", key, configResponse[key].Value, config[key], configResponse[key].Value)
+const (
+	project           = "nav-integration-test"
+	service           = "nav-integration-test-kafka"
+	topicName         = "integration-topic"
+	partitions        = 1
+	updatedPartitions = 2
+	replication       = 2
+	retentionHours    = 15
+)
+
+func intp(i int) *int {
+	return &i
 }
 
-func TestClient_CreateTopic(t *testing.T) {
-	client := &aiven.Client{
-		Token:   os.Getenv("AIVEN_TOKEN"),
-		Project: "nav-integration-test",
-		Service: "nav-integration-test-kafka",
+func TestCreateTopic(t *testing.T) {
+	client, err := aiven.NewTokenClient(os.Getenv("AIVEN_TOKEN"), "")
+	if err != nil {
+		panic(err)
 	}
-	topicName := "integration-test"
-	retention := time.Hour * 36
-	payload := aiven.CreateTopicRequest{
-		Config: aiven.Config{
-			"retention_ms": retention.Milliseconds(),
-		},
-		TopicName:   topicName,
-		Partitions:  1,
-		Replication: 2,
+
+	req := aiven.CreateKafkaTopicRequest{
+		Partitions:     intp(partitions),
+		Replication:    intp(replication),
+		RetentionHours: intp(retentionHours),
+		TopicName:      topicName,
 	}
-	err := client.CreateTopic(payload)
+
+	t.Logf("Creating topic...")
+	err = client.KafkaTopics.Create(project, service, req)
+
 	assert.NoError(t, err)
+	if err == nil {
+		t.Logf("Creating topic OK")
+	}
 
-	t.Logf("Topic creation OK, proceeding with retrieval")
-
-	createTopicWithTimeout := func(timeout, retry time.Duration) (*aiven.TopicResponse, error) {
+	waitFor := func(timeout, retry time.Duration, condition func(*aiven.KafkaTopic) bool) (*aiven.KafkaTopic, error) {
 		timeoutTimer := time.NewTimer(timeout)
 		retryTimer := time.NewTicker(retry)
 
 		for {
 			select {
 			case <-timeoutTimer.C:
-				return nil, fmt.Errorf("topic creation not propagated in due time, aborting")
+				return nil, fmt.Errorf("topic request not propagated in due time, aborting")
 
 			case <-retryTimer.C:
 				t.Logf("Attempting topic retrieval...")
-				topic, err := client.GetTopic(topicName)
+				topic, err := client.KafkaTopics.Get(project, service, topicName)
 				if err == nil {
-					return topic, nil
+					if condition(topic) {
+						return topic, nil
+					}
+					t.Logf("Topic conditional check failed, retrying in 5 seconds...")
+				} else {
+					t.Logf("Topic not yet created, retrying in 5 seconds...")
 				}
-				t.Logf("Topic not yet created, retrying in 5 seconds...")
 			}
 		}
 	}
 
-	topic, err := createTopicWithTimeout(time.Second*60, time.Second*5)
+	waitForTopic := func(timeout, retry time.Duration) (*aiven.KafkaTopic, error) {
+		return waitFor(timeout, retry, func(topic *aiven.KafkaTopic) bool { return true })
+	}
+
+	topic, err := waitForTopic(time.Second*60, time.Second*5)
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()
 	}
 
-	t.Logf("Topic retrieval OK, checking if equal")
+	t.Logf("Topic state is %s", topic.State)
+	assert.Equal(t, topicName, topic.TopicName)
+	assert.Len(t, topic.Partitions, partitions)
+	assert.Equal(t, replication, topic.Replication)
+	assert.Equal(t, retentionHours, topic.RetentionHours)
 
-	assert.Equal(t, payload.Partitions, len(topic.Partitions))
-	assert.Equal(t, payload.Replication, topic.Replication)
-
-	for k := range payload.Config {
-		assert.NoError(t, equalConfig(payload.Config, topic.Config, k))
+	updatereq := aiven.UpdateKafkaTopicRequest{
+		Partitions: intp(updatedPartitions),
 	}
 
-	t.Logf("Topic looks equal to request, finalizing by deleting topic")
-
-	err = client.DeleteTopic(topicName)
-
+	t.Logf("Updating topic...")
+	err = client.KafkaTopics.Update(project, service, topic.TopicName, updatereq)
 	assert.NoError(t, err)
+	if err == nil {
+		t.Logf("Updating topic OK")
+	}
+
+	_, err = waitFor(time.Second*60, time.Second*5, func(topic *aiven.KafkaTopic) bool {
+		return len(topic.Partitions) == updatedPartitions
+	})
+	assert.NoError(t, err)
+
+	t.Logf("Deleting topic...")
+
+	err = client.KafkaTopics.Delete(project, service, topic.TopicName)
+	assert.NoError(t, err)
+
+	if err == nil {
+		t.Logf("Deleting topic OK")
+	}
 }

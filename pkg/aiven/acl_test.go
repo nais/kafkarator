@@ -1,6 +1,7 @@
 // +build integration
 
 package aiven_test
+/*
 
 import (
 	"os"
@@ -38,3 +39,4 @@ func TestClient_CreateACL(t *testing.T) {
 	err = client.DeleteACL(acl.ID)
 	assert.NoError(t, err)
 }
+*/

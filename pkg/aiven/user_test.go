@@ -1,6 +1,7 @@
 // +build integration
 
 package aiven_test
+/*
 
 import (
 	"crypto/x509"
@@ -50,3 +51,4 @@ func TestClient_CreateUser(t *testing.T) {
 	err = client.DeleteUser(username)
 	assert.NoError(t, err)
 }
+*/
