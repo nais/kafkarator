@@ -99,7 +99,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	err = r.commit(*tx)
 	if err != nil {
-		aivenError, ok := err.(*aiven.Error)
+		aivenError, ok := err.(aiven.Error)
 		if !ok {
 			topic.Status.Message = err.Error()
 			topic.Status.Errors = []string{
@@ -164,6 +164,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			return r.update(tx)
 		} else {
 			tx.log.Infof("No changes for topic %s", tx.topic.Name)
+			return nil
 		}
 	}
 
