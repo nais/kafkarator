@@ -2,13 +2,18 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
+	"time"
+
 	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/aiven"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
@@ -109,7 +114,36 @@ func (r *TopicReconciler) prepare(ctx context.Context, req ctrl.Request) (*trans
 }
 
 func (r *TopicReconciler) create(tx transaction) error {
-	return nil
+	aiven_client := &aiven.Client{
+		Token:   os.Getenv("AIVEN_TOKEN"),
+		Project: "nav-integration-test",
+		Service: "nav-integration-test-kafka",
+	}
+
+	retention, err := strconv.Atoi(tx.topic.Spec.Config["retention.ms"])
+	if err != nil {
+		return fmt.Errorf("could not convert retention %s to number: %s", tx.topic.Spec.Config["retention.ms"], err)
+	}
+
+	partitions, err := strconv.Atoi(tx.topic.Spec.Config["kafka.partitions"])
+	if err != nil {
+		return fmt.Errorf("could not convert kafka partitions %s to number: %s", tx.topic.Spec.Config["kafka.partitions"], err)
+	}
+
+	replication, err := strconv.Atoi(tx.topic.Spec.Config["replication"])
+	if err != nil {
+		return fmt.Errorf("could not convert replication %s to number: %s", tx.topic.Spec.Config["replication"], err)
+	}
+
+	payload := aiven.CreateTopicRequest{
+		Config: aiven.Config{
+			"retention_ms": retention,
+		},
+		TopicName:   tx.topic.Name,
+		Partitions:  partitions,
+		Replication: replication,
+	}
+	return aiven_client.CreateTopic(payload)
 }
 
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
