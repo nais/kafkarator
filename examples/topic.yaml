@@ -7,9 +7,9 @@ metadata:
   labels:
     team: aura
 spec:
-  pool: default
+  pool: nav-integration-test
   config:
-    retention.ms: "12345"
+    retentionHours: 900
   acl:
     - access: read
       team: aura

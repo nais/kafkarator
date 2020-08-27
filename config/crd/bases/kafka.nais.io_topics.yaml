@@ -60,8 +60,19 @@ spec:
                 type: object
               type: array
             config:
-              additionalProperties:
-                type: string
+              properties:
+                cleanupPolicy:
+                  type: string
+                minimumInSyncReplicas:
+                  type: integer
+                partitions:
+                  type: integer
+                replication:
+                  type: integer
+                retentionBytes:
+                  type: integer
+                retentionHours:
+                  type: integer
               type: object
             pool:
               type: string

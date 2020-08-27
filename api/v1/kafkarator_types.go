@@ -29,10 +29,19 @@ type Topic struct {
 	Status            *TopicStatus `json:"status,omitempty"`
 }
 
+type Config struct {
+	CleanupPolicy         *string `json:"cleanupPolicy,omitempty"`
+	MinimumInSyncReplicas *int    `json:"minimumInSyncReplicas,omitempty"`
+	Partitions            *int    `json:"partitions,omitempty"`
+	Replication           *int    `json:"replication,omitempty"`
+	RetentionBytes        *int    `json:"retentionBytes,omitempty"`
+	RetentionHours        *int    `json:"retentionHours,omitempty"`
+}
+
 type TopicSpec struct {
-	Pool   string            `json:"pool"`
-	Config map[string]string `json:"config,omitempty"`
-	ACL    []TopicACL        `json:"acl"`
+	Pool   string     `json:"pool"`
+	Config *Config    `json:"config,omitempty"`
+	ACL    []TopicACL `json:"acl"`
 }
 
 type TopicStatus struct {

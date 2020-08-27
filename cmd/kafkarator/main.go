@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/controllers"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -15,33 +16,45 @@ import (
 
 var scheme = runtime.NewScheme()
 
+const (
+	ExitOK = iota
+	ExitController
+	ExitAiven
+	ExitReconciler
+	ExitManager
+)
+
 func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 	})
 
 	if err != nil {
-		// TODO: Log error
-		fmt.Println(err)
-		os.Exit(1)
+		log.Println(err)
+		os.Exit(ExitController)
+	}
+
+	aivenClient, err := aiven.NewTokenClient(os.Getenv("AIVEN_TOKEN"), "")
+	if err != nil {
+		log.Println(err)
+		os.Exit(ExitAiven)
 	}
 
 	reconciler := &controllers.TopicReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Aiven:  aivenClient,
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
-		// TODO: setupLog.Error(err, "unable to create controller", "controller", "Jwker")
-		fmt.Println(err)
-		os.Exit(2)
+		log.Println(err)
+		os.Exit(ExitReconciler)
 	}
 
-	// TODO: setupLog.Info("starting manager")
+	log.Info("Kafkarator running")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		// TODO: setupLog.Error(err, "problem running manager")
-		fmt.Println(err)
-		os.Exit(3)
+		log.Println(err)
+		os.Exit(ExitManager)
 	}
 }
 
