@@ -133,6 +133,11 @@ func (r *TopicReconciler) prepare(ctx context.Context, req ctrl.Request) (*trans
 }
 
 func (r *TopicReconciler) create(tx transaction) error {
+	_, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
+	if err == nil {
+		return nil  // topic already exists
+	}
+
 	cfg := tx.topic.Spec.Config
 	if cfg == nil {
 		cfg = &kafka_nais_io_v1.Config{}
