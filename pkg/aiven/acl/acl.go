@@ -12,10 +12,10 @@ type AclReconciler struct {
 	Topic   kafka_nais_io_v1.Topic
 }
 
-func (r *AclReconciler) Update() error {
+func (r *AclReconciler) Update() ([]string, error) {
 	acls, err := r.Aiven.KafkaACLs.List(r.Project, r.Service)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	acls = topicACLs(acls, r.Topic.Name)
@@ -24,15 +24,19 @@ func (r *AclReconciler) Update() error {
 
 	err = r.AddAcls(toAdd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = r.DeleteAcls(toDelete)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	users := make([]string, 0, len(toAdd))
+	for _, acl := range toAdd {
+		users = append(users, acl.Team)
+	}
+	return users, nil
 }
 
 func (r *AclReconciler) AddAcls(toAdd []kafka_nais_io_v1.TopicACL) error {

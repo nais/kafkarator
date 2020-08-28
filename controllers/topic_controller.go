@@ -8,6 +8,7 @@ import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/service_users"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -160,7 +161,18 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		Service: aivenService(tx.topic.Spec.Pool),
 		Topic:   tx.topic,
 	}
-	err := aclReconciler.Update()
+	users, err := aclReconciler.Update()
+	if err != nil {
+		return err
+	}
+
+	userReconciler := service_users.UserReconciler{
+		Aiven:   r.Aiven,
+		K8s:     r,
+		Project: tx.topic.Spec.Pool,
+		Service: aivenService(tx.topic.Spec.Pool),
+	}
+	err = userReconciler.UpdateUsers(users)
 	if err != nil {
 		return err
 	}
