@@ -38,10 +38,6 @@ func aivenService(aivenProject string) string {
 	return aivenProject + "-kafka"
 }
 
-func intp(i int) *int {
-	return &i
-}
-
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics/status,verbs=get;update;patch
 
@@ -158,7 +154,13 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 }
 
 func (r *TopicReconciler) commit(tx transaction) error {
-	err := acl.Update(r.Aiven, tx.topic.Name, tx.topic.Spec.ACL)
+	aclReconciler := acl.AclReconciler{
+		Aiven:   r.Aiven,
+		Project: tx.topic.Spec.Pool,
+		Service: aivenService(tx.topic.Spec.Pool),
+		Topic:   tx.topic,
+	}
+	err := aclReconciler.Update()
 	if err != nil {
 		return err
 	}

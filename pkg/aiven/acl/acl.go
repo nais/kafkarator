@@ -5,23 +5,58 @@ import (
 	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
 )
 
-func aivenService(aivenProject string) string {
-	return aivenProject + "-kafka"
+type AclReconciler struct {
+	Aiven   *aiven.Client
+	Project string
+	Service string
+	Topic   kafka_nais_io_v1.Topic
 }
 
-func Update(aiven *aiven.Client, topic kafka_nais_io_v1.Topic) error {
-	acls, err := aiven.KafkaACLs.List(topic.Spec.Pool, aivenService(topic.Spec.Pool))
+func (r *AclReconciler) Update() error {
+	acls, err := r.Aiven.KafkaACLs.List(r.Project, r.Service)
 	if err != nil {
 		return err
 	}
 
-	acls = topicACLs(acls, topic.Name)
-	toAdd := NewACLs(acls, topic.Spec.ACL)
-	toDelete := DeleteACLs(acls, topic.Spec.ACL)
+	acls = topicACLs(acls, r.Topic.Name)
+	toAdd := NewACLs(acls, r.Topic.Spec.ACL)
+	toDelete := DeleteACLs(acls, r.Topic.Spec.ACL)
 
-	_ = toAdd
-	_ = toDelete
+	err = r.AddAcls(toAdd)
+	if err != nil {
+		return err
+	}
 
+	err = r.DeleteAcls(toDelete)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *AclReconciler) AddAcls(toAdd []kafka_nais_io_v1.TopicACL) error {
+	for _, topicAcl := range toAdd {
+		req := aiven.CreateKafkaACLRequest{
+			Permission: topicAcl.Access,
+			Topic:      r.Topic.Name,
+			Username:   topicAcl.Team,
+		}
+		_, err := r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *AclReconciler) DeleteAcls(toDelete []*aiven.KafkaACL) error {
+	for _, kafkaAcl := range toDelete {
+		err := r.Aiven.KafkaACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
