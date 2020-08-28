@@ -7,6 +7,7 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -157,6 +158,11 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 }
 
 func (r *TopicReconciler) commit(tx transaction) error {
+	err := acl.Update(r.Aiven, tx.topic.Name, tx.topic.Spec.ACL)
+	if err != nil {
+		return err
+	}
+
 	topic, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
 	if err == nil {
 		// topic already exists
