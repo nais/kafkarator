@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -25,18 +26,25 @@ const (
 )
 
 func main() {
+	logfmt := &log.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339Nano,
+	}
+	logger := log.New()
+	logger.SetFormatter(logfmt)
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 	})
 
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		os.Exit(ExitController)
 	}
 
 	aivenClient, err := aiven.NewTokenClient(os.Getenv("AIVEN_TOKEN"), "")
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		os.Exit(ExitAiven)
 	}
 
@@ -44,16 +52,17 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Aiven:  aivenClient,
+		Logger: logger,
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
-		log.Println(err)
+		logger.Println(err)
 		os.Exit(ExitReconciler)
 	}
 
-	log.Info("Kafkarator running")
+	logger.Info("Kafkarator running")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		log.Println(err)
+		logger.Println(err)
 		os.Exit(ExitManager)
 	}
 }

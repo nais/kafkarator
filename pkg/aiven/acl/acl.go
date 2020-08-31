@@ -3,6 +3,7 @@ package acl
 import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 type Manager struct {
@@ -10,6 +11,7 @@ type Manager struct {
 	Project string
 	Service string
 	Topic   kafka_nais_io_v1.Topic
+	Logger      *log.Entry
 }
 
 // Sync the ACL spec in the Topic resource with Aiven.
@@ -49,10 +51,16 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 			Topic:      r.Topic.Name,
 			Username:   topicAcl.Team,
 		}
+
 		_, err := r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
 		if err != nil {
 			return err
 		}
+
+		r.Logger.WithFields(log.Fields{
+			"acl_username": topicAcl.Team,
+			"acl_permission": topicAcl.Access,
+		}).Infof("Created ACL entry")
 	}
 	return nil
 }
@@ -60,9 +68,16 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
 	for _, kafkaAcl := range toDelete {
 		err := r.Aiven.KafkaACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
+
 		if err != nil {
 			return err
 		}
+
+		r.Logger.WithFields(log.Fields{
+			"acl_id": kafkaAcl.ID,
+			"acl_username": kafkaAcl.Username,
+			"acl_permission": kafkaAcl.Permission,
+		}).Infof("Deleted ACL entry")
 	}
 	return nil
 }

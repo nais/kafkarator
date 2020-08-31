@@ -9,6 +9,7 @@ import (
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
+	"github.com/nais/kafkarator/pkg/aiven/topic"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,13 +27,14 @@ type transaction struct {
 	req        ctrl.Request
 	topic      kafka_nais_io_v1.Topic
 	aivenTopic *aiven.KafkaTopic
-	log        *log.Entry
+	logger     *log.Entry
 }
 
 type TopicReconciler struct {
 	client.Client
 	Aiven  *aiven.Client
 	Scheme *runtime.Scheme
+	Logger *log.Logger
 }
 
 func aivenService(aivenProject string) string {
@@ -43,83 +45,99 @@ func aivenService(aivenProject string) string {
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics/status,verbs=get;update;patch
 
 func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	log.Infof("Processing request for %s", req.Name)
+	logger := log.NewEntry(r.Logger)
+
+	logger = logger.WithFields(log.Fields{
+		"topic":     req.Name,
+		"namespace": req.Namespace,
+	})
+
+	logger.Infof("Processing request")
 
 	ctx := context.Background()
 	hash := ""
-	var topic kafka_nais_io_v1.Topic
+
+	var topicResource kafka_nais_io_v1.Topic
 
 	defer func() {
-		log.Infof("Finished processing request for %s", req.Name)
+		logger.Infof("Finished processing request")
 	}()
 
 	// purge other systems if resource was deleted
-	err := r.Get(ctx, req.NamespacedName, &topic)
+	err := r.Get(ctx, req.NamespacedName, &topicResource)
 	switch {
 	case errors.IsNotFound(err):
-		log.Errorf("Resource not found in cluster")
+		logger.Errorf("Resource not found in cluster")
 	case err != nil:
-		log.Errorf("Unable to retrieve resource from cluster: %s", err)
+		logger.Errorf("Unable to retrieve resource from cluster: %s", err)
 		return ctrl.Result{
 			RequeueAfter: requeueInterval,
 		}, nil
 	}
 
-	if topic.Status == nil {
-		topic.Status = &kafka_nais_io_v1.TopicStatus{}
+	logger = logger.WithFields(log.Fields{
+		"team": topicResource.Labels["team"],
+	})
+
+	if topicResource.Status == nil {
+		topicResource.Status = &kafka_nais_io_v1.TopicStatus{}
 	}
 
-	hash, err = topic.Spec.Hash()
+	hash, err = topicResource.Spec.Hash()
 	if err != nil {
-		log.Errorf("Unable to calculate synchronization hash")
+		logger.Errorf("Unable to calculate synchronization hash")
 		return ctrl.Result{}, err
 	}
-	if topic.Status.SynchronizationHash == hash {
-		log.Infof("Synchronization already complete")
+	if topicResource.Status.SynchronizationHash == hash {
+		logger.Infof("Synchronization already complete")
 		return ctrl.Result{}, nil
 	}
 
 	// Update Topic resource with status event
 	defer func() {
-		topic.Status.SynchronizationTime = time.Now().Format(time.RFC3339)
-		err := r.Update(ctx, &topic)
+		topicResource.Status.SynchronizationTime = time.Now().Format(time.RFC3339)
+		err := r.Update(ctx, &topicResource)
 		if err != nil {
-			log.Errorf("failed writing topic status: %s", err)
+			logger.Errorf("failed writing topic status: %s", err)
 		}
 	}()
 
 	// prepare and commit
 	tx := &transaction{
-		ctx:   ctx,
-		req:   req,
-		topic: topic,
-		log:   log.NewEntry(log.StandardLogger()),
+		ctx:    ctx,
+		req:    req,
+		topic:  topicResource,
+		logger: logger,
 	}
+
 	err = r.commit(*tx)
+
 	if err != nil {
 		aivenError, ok := err.(aiven.Error)
 		if !ok {
-			topic.Status.Message = err.Error()
-			topic.Status.Errors = []string{
+			topicResource.Status.Message = err.Error()
+			topicResource.Status.Errors = []string{
 				err.Error(),
 			}
 		} else {
-			topic.Status.Message = aivenError.Message
-			topic.Status.Errors = []string{
+			topicResource.Status.Message = aivenError.Message
+			topicResource.Status.Errors = []string{
 				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
 			}
 		}
-		topic.Status.SynchronizationState = kafka_nais_io_v1.EventFailedSynchronization
-		log.Errorf("failed synchronization: %s", err)
+		topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventFailedSynchronization
+
+		logger.Errorf("Failed synchronization: %s", err)
+
 		return ctrl.Result{
 			RequeueAfter: requeueInterval,
 		}, nil
 	}
 
-	topic.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
-	topic.Status.SynchronizationHash = hash
-	topic.Status.Message = "Topic configuration synchronized to Kafka pool"
-	topic.Status.Errors = nil
+	topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
+	topicResource.Status.SynchronizationHash = hash
+	topicResource.Status.Message = "Topic configuration synchronized to Kafka pool"
+	topicResource.Status.Errors = nil
 
 	// TODO: delete unused secrets from cluster
 	/*
@@ -132,104 +150,48 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config) bool {
-	if config == nil {
-		return false
-	}
-	if config.RetentionHours != nil && topic.RetentionHours != *config.RetentionHours {
-		return true
-	}
-	if config.RetentionBytes != nil && topic.RetentionBytes != *config.RetentionBytes {
-		return true
-	}
-	if config.Replication != nil && topic.Replication != *config.Replication {
-		return true
-	}
-	if config.Partitions != nil && len(topic.Partitions) != *config.Partitions {
-		return true
-	}
-	if config.MinimumInSyncReplicas != nil && topic.MinimumInSyncReplicas != *config.MinimumInSyncReplicas {
-		return true
-	}
-	return false
-}
-
 func (r *TopicReconciler) commit(tx transaction) error {
-	aclReconciler := acl.Manager{
+	aclManager := acl.Manager{
 		Aiven:   r.Aiven,
 		Project: tx.topic.Spec.Pool,
 		Service: aivenService(tx.topic.Spec.Pool),
 		Topic:   tx.topic,
+		Logger:  tx.logger,
 	}
-	usernames, err := aclReconciler.Synchronize()
+
+	tx.logger.Infof("Synchronizing access control lists")
+	usernames, err := aclManager.Synchronize()
 	if err != nil {
 		return err
 	}
 
-	userReconciler := serviceuser.Manager{
+	userManager := serviceuser.Manager{
 		AivenServiceUsers: r.Aiven.ServiceUsers,
 		Project:           tx.topic.Spec.Pool,
 		Service:           aivenService(tx.topic.Spec.Pool),
+		Logger:            tx.logger,
 	}
-	users, err := userReconciler.Synchronize(usernames)
+
+	tx.logger.Infof("Synchronizing service users")
+	users, err := userManager.Synchronize(usernames)
 	if err != nil {
 		return err
 	}
 
 	_ = users // TODO: create secrets
 
-	topic, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
-	if err == nil {
-		// topic already exists
-		if topicConfigChanged(topic, tx.topic.Spec.Config) {
-			return r.update(tx)
-		} else {
-			tx.log.Infof("No changes for topic %s", tx.topic.Name)
-			return nil
-		}
+	tx.logger.Infof("Synchronizing topic")
+	topicManager := topic.Manager{
+		AivenTopics: r.Aiven.KafkaTopics,
+		Project:     tx.topic.Spec.Pool,
+		Service:     aivenService(tx.topic.Spec.Pool),
+		Topic:       tx.topic,
+		Logger:      tx.logger,
 	}
 
-	return r.create(tx)
-}
+	err = topicManager.Synchronize()
 
-func (r *TopicReconciler) create(tx transaction) error {
-	tx.log.Infof("Creating topic %s", tx.topic.Name)
-
-	cfg := tx.topic.Spec.Config
-	if cfg == nil {
-		cfg = &kafka_nais_io_v1.Config{}
-	}
-
-	req := aiven.CreateKafkaTopicRequest{
-		CleanupPolicy:         cfg.CleanupPolicy,
-		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
-		Partitions:            cfg.Partitions,
-		Replication:           cfg.Replication,
-		RetentionBytes:        cfg.RetentionBytes,
-		RetentionHours:        cfg.RetentionHours,
-		TopicName:             tx.topic.Name,
-	}
-
-	return r.Aiven.KafkaTopics.Create(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), req)
-}
-
-func (r *TopicReconciler) update(tx transaction) error {
-	tx.log.Infof("Updating topic %s", tx.topic.Name)
-
-	cfg := tx.topic.Spec.Config
-	if cfg == nil {
-		cfg = &kafka_nais_io_v1.Config{}
-	}
-
-	req := aiven.UpdateKafkaTopicRequest{
-		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
-		Partitions:            cfg.Partitions,
-		Replication:           cfg.Replication,
-		RetentionBytes:        cfg.RetentionBytes,
-		RetentionHours:        cfg.RetentionHours,
-	}
-
-	return r.Aiven.KafkaTopics.Update(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name, req)
+	return err
 }
 
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
