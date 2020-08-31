@@ -2,17 +2,19 @@ package acl
 
 import (
 	"github.com/aiven/aiven-go-client"
-	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/api/v1"
 )
 
-type AclReconciler struct {
+type Manager struct {
 	Aiven   *aiven.Client
 	Project string
 	Service string
 	Topic   kafka_nais_io_v1.Topic
 }
 
-func (r *AclReconciler) Update() ([]string, error) {
+// Sync the ACL spec in the Topic resource with Aiven.
+// Missing ACL definitions are created, unneccessary definitions are deleted.
+func (r *Manager) Synchronize() ([]string, error) {
 	acls, err := r.Aiven.KafkaACLs.List(r.Project, r.Service)
 	if err != nil {
 		return nil, err
@@ -22,12 +24,12 @@ func (r *AclReconciler) Update() ([]string, error) {
 	toAdd := NewACLs(acls, r.Topic.Spec.ACL)
 	toDelete := DeleteACLs(acls, r.Topic.Spec.ACL)
 
-	err = r.AddAcls(toAdd)
+	err = r.add(toAdd)
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.DeleteAcls(toDelete)
+	err = r.delete(toDelete)
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +38,11 @@ func (r *AclReconciler) Update() ([]string, error) {
 	for _, acl := range toAdd {
 		users = append(users, acl.Team)
 	}
+
 	return users, nil
 }
 
-func (r *AclReconciler) AddAcls(toAdd []kafka_nais_io_v1.TopicACL) error {
+func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 	for _, topicAcl := range toAdd {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
@@ -54,7 +57,7 @@ func (r *AclReconciler) AddAcls(toAdd []kafka_nais_io_v1.TopicACL) error {
 	return nil
 }
 
-func (r *AclReconciler) DeleteAcls(toDelete []*aiven.KafkaACL) error {
+func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
 	for _, kafkaAcl := range toDelete {
 		err := r.Aiven.KafkaACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
 		if err != nil {
@@ -62,6 +65,28 @@ func (r *AclReconciler) DeleteAcls(toDelete []*aiven.KafkaACL) error {
 		}
 	}
 	return nil
+}
+
+// given a list of ACL specs, return a new list of ACL objects that does not already exist
+func NewACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []kafka_nais_io_v1.TopicACL {
+	candidates := make([]kafka_nais_io_v1.TopicACL, 0, len(aclSpecs))
+	for _, aclSpec := range aclSpecs {
+		if !aclsContainsSpec(acls, aclSpec) {
+			candidates = append(candidates, aclSpec)
+		}
+	}
+	return candidates
+}
+
+// given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
+func DeleteACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []*aiven.KafkaACL {
+	candidates := make([]*aiven.KafkaACL, 0, len(acls))
+	for _, acl := range acls {
+		if !specsContainsACL(aclSpecs, acl) {
+			candidates = append(candidates, acl)
+		}
+	}
+	return candidates
 }
 
 // filter out ACLs not matching the topic name
@@ -93,26 +118,4 @@ func specsContainsACL(aclSpecs []kafka_nais_io_v1.TopicACL, acl *aiven.KafkaACL)
 		}
 	}
 	return false
-}
-
-// given a list of ACL specs, return a new list of ACL objects that does not already exist
-func NewACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []kafka_nais_io_v1.TopicACL {
-	candidates := make([]kafka_nais_io_v1.TopicACL, 0, len(aclSpecs))
-	for _, aclSpec := range aclSpecs {
-		if !aclsContainsSpec(acls, aclSpec) {
-			candidates = append(candidates, aclSpec)
-		}
-	}
-	return candidates
-}
-
-// given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
-func DeleteACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []*aiven.KafkaACL {
-	candidates := make([]*aiven.KafkaACL, 0, len(acls))
-	for _, acl := range acls {
-		if !specsContainsACL(aclSpecs, acl) {
-			candidates = append(candidates, acl)
-		}
-	}
-	return candidates
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/service_users"
+	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -155,27 +155,28 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 }
 
 func (r *TopicReconciler) commit(tx transaction) error {
-	aclReconciler := acl.AclReconciler{
+	aclReconciler := acl.Manager{
 		Aiven:   r.Aiven,
 		Project: tx.topic.Spec.Pool,
 		Service: aivenService(tx.topic.Spec.Pool),
 		Topic:   tx.topic,
 	}
-	users, err := aclReconciler.Update()
+	usernames, err := aclReconciler.Synchronize()
 	if err != nil {
 		return err
 	}
 
-	userReconciler := service_users.UserReconciler{
-		Aiven:   r.Aiven,
-		K8s:     r,
-		Project: tx.topic.Spec.Pool,
-		Service: aivenService(tx.topic.Spec.Pool),
+	userReconciler := serviceuser.Manager{
+		AivenServiceUsers: r.Aiven.ServiceUsers,
+		Project:           tx.topic.Spec.Pool,
+		Service:           aivenService(tx.topic.Spec.Pool),
 	}
-	err = userReconciler.UpdateUsers(users)
+	users, err := userReconciler.Synchronize(usernames)
 	if err != nil {
 		return err
 	}
+
+	_ = users // TODO: create secrets
 
 	topic, err := r.Aiven.KafkaTopics.Get(tx.topic.Spec.Pool, aivenService(tx.topic.Spec.Pool), tx.topic.Name)
 	if err == nil {
