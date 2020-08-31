@@ -39,9 +39,9 @@ type Config struct {
 }
 
 type TopicSpec struct {
-	Pool   string     `json:"pool"`
-	Config *Config    `json:"config,omitempty"`
-	ACL    []TopicACL `json:"acl"`
+	Pool   string    `json:"pool"`
+	Config *Config   `json:"config,omitempty"`
+	ACL    TopicACLs `json:"acl"`
 }
 
 type TopicStatus struct {
@@ -52,10 +52,20 @@ type TopicStatus struct {
 	Message              string   `json:"message,omitempty"`
 }
 
+type TopicACLs []TopicACL
+
 type TopicACL struct {
 	// +kubebuilder:validation:Enum=read;write;readwrite
 	Access string `json:"access"`
 	Team   string `json:"team"`
+}
+
+func (t TopicACLs) Teams() []string {
+	teams := make([]string, len(t))
+	for i, acl := range t {
+		teams[i] = acl.Team
+	}
+	return teams
 }
 
 func init() {

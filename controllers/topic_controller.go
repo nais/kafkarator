@@ -174,7 +174,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	tx.logger.Infof("Synchronizing access control lists")
-	usernames, err := aclManager.Synchronize()
+	err := aclManager.Synchronize()
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	tx.logger.Infof("Synchronizing service users")
-	users, err := userManager.Synchronize(usernames)
+	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Teams())
 	if err != nil {
 		return err
 	}

@@ -11,15 +11,15 @@ type Manager struct {
 	Project string
 	Service string
 	Topic   kafka_nais_io_v1.Topic
-	Logger      *log.Entry
+	Logger  *log.Entry
 }
 
 // Sync the ACL spec in the Topic resource with Aiven.
 // Missing ACL definitions are created, unneccessary definitions are deleted.
-func (r *Manager) Synchronize() ([]string, error) {
+func (r *Manager) Synchronize() error {
 	acls, err := r.Aiven.KafkaACLs.List(r.Project, r.Service)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	acls = topicACLs(acls, r.Topic.Name)
@@ -28,20 +28,14 @@ func (r *Manager) Synchronize() ([]string, error) {
 
 	err = r.add(toAdd)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = r.delete(toDelete)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	users := make([]string, 0, len(toAdd))
-	for _, acl := range toAdd {
-		users = append(users, acl.Team)
-	}
-
-	return users, nil
+	return nil
 }
 
 func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
@@ -58,7 +52,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_username": topicAcl.Team,
+			"acl_username":   topicAcl.Team,
 			"acl_permission": topicAcl.Access,
 		}).Infof("Created ACL entry")
 	}
@@ -74,8 +68,8 @@ func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_id": kafkaAcl.ID,
-			"acl_username": kafkaAcl.Username,
+			"acl_id":         kafkaAcl.ID,
+			"acl_username":   kafkaAcl.Username,
 			"acl_permission": kafkaAcl.Permission,
 		}).Infof("Deleted ACL entry")
 	}
