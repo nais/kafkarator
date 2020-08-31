@@ -8,9 +8,12 @@ import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,7 +22,18 @@ import (
 )
 
 const (
-	requeueInterval = 10 * time.Second
+	requeueInterval          = 10 * time.Second
+	KafkaBrokers             = "KAFKA_BROKERS"
+	KafkaSchemaRegistry      = "KAFKA_SCHEMA_REGISTRY"
+	KafkaCertificatePath     = "KAFKA_CERTIFICATE_PATH"
+	KafkaPrivateKeyPath      = "KAFKA_PRIVATE_KEY_PATH"
+	KafkaCAPath              = "KAFKA_CA_PATH"
+	KafkaCertificate         = "KAFKA_CERTIFICATE"
+	KafkaCertificateFilename = "/var/run/secrets/kafka/kafka.crt"
+	KafkaPrivateKey          = "KAFKA_PRIVATE_KEY"
+	KafkaPrivateKeyFilename  = "/var/run/secrets/kafka/kafka.key"
+	KafkaCA                  = "KAFKA_CA"
+	KafkaCAFilename          = "/var/run/secrets/kafka/ca.crt"
 )
 
 type transaction struct {
@@ -178,7 +192,32 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		return err
 	}
 
-	_ = users // TODO: create secrets
+	tx.logger.Infof("Synchronizing secrets")
+	serviceManager := service.Manager{
+		AivenCA:      r.Aiven.CA,
+		AivenService: r.Aiven.Services,
+		Project:      tx.topic.Spec.Pool,
+		Service:      aivenService(tx.topic.Spec.Pool),
+		Logger:       tx.logger,
+	}
+	svc, err := serviceManager.Get()
+	if err != nil {
+		return err
+	}
+	kafkaBrokerAddress := service.GetKafkaBrokerAddress(*svc)
+	kafkaSchemaRegistryAddress := service.GetSchemaRegistryAddress(*svc)
+	kafkaCA, err := serviceManager.GetCA()
+	if err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		secret := ConvertSecret(*user, tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
+		err = r.Create(tx.ctx, &secret)
+		if err != nil {
+			return err
+		}
+	}
 
 	tx.logger.Infof("Synchronizing topic")
 	topicManager := topic.Manager{
@@ -198,4 +237,31 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kafka_nais_io_v1.Topic{}).
 		Complete(r)
+}
+
+func ConvertSecret(user aiven.ServiceUser, pool, brokers, registry, ca string) v1.Secret {
+	return v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pool + "-kafka",
+			Namespace: user.Username,
+			Labels: map[string]string{
+				"team": user.Username,
+			},
+		},
+		StringData: map[string]string{
+			KafkaCertificate:     user.AccessCert,
+			KafkaPrivateKey:      user.AccessKey,
+			KafkaBrokers:         brokers,
+			KafkaSchemaRegistry:  registry,
+			KafkaCertificatePath: KafkaCertificateFilename,
+			KafkaPrivateKeyPath:  KafkaPrivateKeyFilename,
+			KafkaCAPath:          KafkaCAFilename,
+			KafkaCA:              ca,
+		},
+		Type: v1.SecretTypeOpaque,
+	}
 }
