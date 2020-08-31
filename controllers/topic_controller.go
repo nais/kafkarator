@@ -212,8 +212,21 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	for _, user := range users {
-		secret := ConvertSecret(*user, tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
-		err = r.Create(tx.ctx, &secret)
+		key := client.ObjectKey{
+			Namespace: user.Username,
+			Name:      secretName(tx.topic.Spec.Pool),
+		}
+		secret := v1.Secret{}
+		err = r.Get(tx.ctx, key, &secret)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				secret := ConvertSecret(*user, "", tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
+				err = r.Create(tx.ctx, &secret)
+			}
+		} else {
+			secret := ConvertSecret(*user, secret.ObjectMeta.ResourceVersion, tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
+			err = r.Update(tx.ctx, &secret)
+		}
 		if err != nil {
 			return err
 		}
@@ -239,18 +252,19 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func ConvertSecret(user aiven.ServiceUser, pool, brokers, registry, ca string) v1.Secret {
+func ConvertSecret(user aiven.ServiceUser, resourceVersion, pool, brokers, registry, ca string) v1.Secret {
 	return v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pool + "-kafka",
+			Name:      secretName(pool),
 			Namespace: user.Username,
 			Labels: map[string]string{
 				"team": user.Username,
 			},
+			ResourceVersion: resourceVersion,
 		},
 		StringData: map[string]string{
 			KafkaCertificate:     user.AccessCert,
@@ -264,4 +278,8 @@ func ConvertSecret(user aiven.ServiceUser, pool, brokers, registry, ca string) v
 		},
 		Type: v1.SecretTypeOpaque,
 	}
+}
+
+func secretName(pool string) string {
+	return pool + "-kafka"
 }

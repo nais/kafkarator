@@ -21,13 +21,31 @@ type Manager struct {
 
 // given a list of usernames, create Aiven users not found in that list
 func (r *Manager) Synchronize(users []string) ([]*aiven.ServiceUser, error) {
-	missing, err := r.findMissingServiceUsers(users)
+	serviceUsers, err := r.AivenServiceUsers.List(r.Project, r.Service)
+	if err != nil {
+		return nil, fmt.Errorf("unable to list service users: %s", err)
+	}
+
+	missing, err := r.findMissingServiceUsers(users, serviceUsers)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return r.createServiceUsers(missing)
+	createdUsers, err := r.createServiceUsers(missing)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, serviceUser := range serviceUsers {
+		for _, user := range users {
+			if serviceUser.Username == user {
+				createdUsers = append(createdUsers, serviceUser)
+				break
+			}
+		}
+	}
+	return createdUsers, err
 }
 
 func (r *Manager) createServiceUsers(missing []string) ([]*aiven.ServiceUser, error) {
@@ -53,12 +71,7 @@ func (r *Manager) createServiceUsers(missing []string) ([]*aiven.ServiceUser, er
 	return users, nil
 }
 
-func (r *Manager) findMissingServiceUsers(users []string) ([]string, error) {
-	serviceUsers, err := r.AivenServiceUsers.List(r.Project, r.Service)
-	if err != nil {
-		return nil, fmt.Errorf("unable to list service users: %s", err)
-	}
-
+func (r *Manager) findMissingServiceUsers(users []string, serviceUsers []*aiven.ServiceUser) ([]string, error) {
 	serviceUserMap := make(map[string]bool, len(serviceUsers))
 
 	for _, user := range users {
