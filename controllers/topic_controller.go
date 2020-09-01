@@ -44,6 +44,16 @@ type transaction struct {
 	logger     *log.Entry
 }
 
+type secretData struct {
+	user            aiven.ServiceUser
+	resourceVersion string
+	name            string
+	team            string
+	brokers         string
+	registry        string
+	ca              string
+}
+
 type TopicReconciler struct {
 	client.Client
 	Aiven  *aiven.Client
@@ -187,7 +197,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	tx.logger.Infof("Synchronizing service users")
-	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Teams())
+	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Usernames())
 	if err != nil {
 		return err
 	}
@@ -212,19 +222,35 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	for _, user := range users {
-		key := client.ObjectKey{
-			Namespace: user.Username,
-			Name:      secretName(tx.topic.Spec.Pool),
+		team, app, err := serviceuser.NameParts(user.Username)
+		if err != nil {
+			tx.logger.WithField("username", user.Username).Infof("Skip secret creation: %s", err)
+			continue
 		}
+
+		key := client.ObjectKey{
+			Namespace: team,
+			Name:      secretName(app, tx.topic.Spec.Pool),
+		}
+
 		secret := v1.Secret{}
 		err = r.Get(tx.ctx, key, &secret)
+		opts := secretData{
+			user:            *user,
+			resourceVersion: secret.ResourceVersion,
+			name:            key.Name,
+			team:            team,
+			brokers:         kafkaBrokerAddress,
+			registry:        kafkaSchemaRegistryAddress,
+			ca:              kafkaCA,
+		}
+		secret = ConvertSecret(opts)
+
 		if err != nil {
 			if errors.IsNotFound(err) {
-				secret := ConvertSecret(*user, "", tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
 				err = r.Create(tx.ctx, &secret)
 			}
 		} else {
-			secret := ConvertSecret(*user, secret.ObjectMeta.ResourceVersion, tx.topic.Spec.Pool, kafkaBrokerAddress, kafkaSchemaRegistryAddress, kafkaCA)
 			err = r.Update(tx.ctx, &secret)
 		}
 		if err != nil {
@@ -252,34 +278,34 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func ConvertSecret(user aiven.ServiceUser, resourceVersion, pool, brokers, registry, ca string) v1.Secret {
+func ConvertSecret(data secretData) v1.Secret {
 	return v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName(pool),
-			Namespace: user.Username,
+			Name:      data.name,
+			Namespace: data.team,
 			Labels: map[string]string{
-				"team": user.Username,
+				"team": data.team,
 			},
-			ResourceVersion: resourceVersion,
+			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:     user.AccessCert,
-			KafkaPrivateKey:      user.AccessKey,
-			KafkaBrokers:         brokers,
-			KafkaSchemaRegistry:  registry,
+			KafkaCertificate:     data.user.AccessCert,
+			KafkaPrivateKey:      data.user.AccessKey,
+			KafkaBrokers:         data.brokers,
+			KafkaSchemaRegistry:  data.registry,
 			KafkaCertificatePath: KafkaCertificateFilename,
 			KafkaPrivateKeyPath:  KafkaPrivateKeyFilename,
 			KafkaCAPath:          KafkaCAFilename,
-			KafkaCA:              ca,
+			KafkaCA:              data.ca,
 		},
 		Type: v1.SecretTypeOpaque,
 	}
 }
 
-func secretName(pool string) string {
-	return pool + "-kafka"
+func secretName(app, pool string) string {
+	return fmt.Sprintf("kafka-%s-%s", app, pool)
 }

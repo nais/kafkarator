@@ -2,6 +2,7 @@ package serviceuser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aiven/aiven-go-client"
 	log "github.com/sirupsen/logrus"
@@ -19,8 +20,9 @@ type Manager struct {
 	Logger            *log.Entry
 }
 
-// given a list of usernames, create Aiven users not found in that list
-func (r *Manager) Synchronize(users []string) ([]*aiven.ServiceUser, error) {
+// Create Aiven users from a list of usernames, if they are not found on the Aiven service.
+// Returns a list of all users, both created and existing.
+func (r *Manager) Synchronize(users []string) (map[string]*aiven.ServiceUser, error) {
 	serviceUsers, err := r.AivenServiceUsers.List(r.Project, r.Service)
 	if err != nil {
 		return nil, fmt.Errorf("unable to list service users: %s", err)
@@ -37,15 +39,23 @@ func (r *Manager) Synchronize(users []string) ([]*aiven.ServiceUser, error) {
 		return nil, err
 	}
 
-	for _, serviceUser := range serviceUsers {
-		for _, user := range users {
-			if serviceUser.Username == user {
-				createdUsers = append(createdUsers, serviceUser)
-				break
-			}
-		}
+	result := make(map[string]*aiven.ServiceUser)
+	for _, user := range serviceUsers {
+		result[user.Username] = user
 	}
-	return createdUsers, err
+	for _, user := range createdUsers {
+		result[user.Username] = user
+	}
+
+	return result, nil
+}
+
+func NameParts(username string) (team, application string, err error) {
+	s := strings.SplitN(username, "__", 2)
+	if len(s) != 2 {
+		return "", "", fmt.Errorf("unable to parse team and application name from username %s", username)
+	}
+	return s[0], s[1], nil
 }
 
 func (r *Manager) createServiceUsers(missing []string) ([]*aiven.ServiceUser, error) {

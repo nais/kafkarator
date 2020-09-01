@@ -43,7 +43,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
 			Topic:      r.Topic.Name,
-			Username:   topicAcl.Team,
+			Username:   topicAcl.Username(),
 		}
 
 		_, err := r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
@@ -52,8 +52,8 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_username":   topicAcl.Team,
-			"acl_permission": topicAcl.Access,
+			"acl_username":   req.Username,
+			"acl_permission": req.Permission,
 		}).Infof("Created ACL entry")
 	}
 	return nil
@@ -112,7 +112,7 @@ func topicACLs(acls []*aiven.KafkaACL, topic string) []*aiven.KafkaACL {
 // returns true if the list of existing ACLs contains an ACL spec from the cluster
 func aclsContainsSpec(acls []*aiven.KafkaACL, aclSpec kafka_nais_io_v1.TopicACL) bool {
 	for _, acl := range acls {
-		if aclSpec.Team == acl.Username && aclSpec.Access == acl.Permission {
+		if aclSpec.Username() == acl.Username && aclSpec.Access == acl.Permission {
 			return true
 		}
 	}
@@ -122,7 +122,7 @@ func aclsContainsSpec(acls []*aiven.KafkaACL, aclSpec kafka_nais_io_v1.TopicACL)
 // returns true if the list of cluster ACL specs contains an existing ACL
 func specsContainsACL(aclSpecs []kafka_nais_io_v1.TopicACL, acl *aiven.KafkaACL) bool {
 	for _, aclSpec := range aclSpecs {
-		if aclSpec.Team == acl.Username && aclSpec.Access == acl.Permission {
+		if aclSpec.Username() == acl.Username && aclSpec.Access == acl.Permission {
 			return true
 		}
 	}

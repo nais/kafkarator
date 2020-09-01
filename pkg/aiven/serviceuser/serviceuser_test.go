@@ -5,6 +5,7 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -57,16 +58,20 @@ func TestManager_Synchronize(t *testing.T) {
 		AivenServiceUsers: m,
 		Project:           project,
 		Service:           service,
+		Logger:            log.NewEntry(log.StandardLogger()),
 	}
 
-	expectedCreatedUsers := []*aiven.ServiceUser{
-		{
+	expectedReturnUsers := map[string]*aiven.ServiceUser{
+		"user1": {
+			Username: "user1",
+		},
+		"user2": {
 			Username: "user2",
 		},
 	}
 	users, err := manager.Synchronize(usernames)
 
 	assert.NoError(t, err)
-	assert.Equal(t, expectedCreatedUsers, users)
+	assert.Equal(t, expectedReturnUsers, users)
 	m.AssertExpectations(t)
 }

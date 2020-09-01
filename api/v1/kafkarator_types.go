@@ -1,4 +1,4 @@
-//  +versionName=v1
+// +versionName=v1
 package kafka_nais_io_v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,12 +61,32 @@ type TopicACL struct {
 	Team        string `json:"team"`
 }
 
-func (t TopicACLs) Teams() []string {
-	teams := make([]string, len(t))
-	for i, acl := range t {
-		teams[i] = acl.Team
+func (in TopicACL) Username() string {
+	return in.Team + "__" + in.Application
+}
+
+func (in TopicACLs) Teams() []string {
+	teams := make(map[string]interface{})
+	result := make([]string, 0, len(in))
+	for _, acl := range in {
+		teams[acl.Team] = new(interface{})
 	}
-	return teams
+	for k := range teams {
+		result = append(result, k)
+	}
+	return result
+}
+
+func (in TopicACLs) Usernames() []string {
+	usernames := make(map[string]interface{})
+	result := make([]string, 0, len(in))
+	for _, acl := range in {
+		usernames[acl.Username()] = new(interface{})
+	}
+	for k := range usernames {
+		result = append(result, k)
+	}
+	return result
 }
 
 func init() {

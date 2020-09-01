@@ -12,4 +12,8 @@ spec:
     retentionHours: 900
   acl:
     - access: read
-      team: aura
+      team: myteam
+      application: myapplication
+    - access: write
+      team: myteam
+      application: otherapplication
