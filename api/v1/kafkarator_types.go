@@ -56,8 +56,9 @@ type TopicACLs []TopicACL
 
 type TopicACL struct {
 	// +kubebuilder:validation:Enum=read;write;readwrite
-	Access string `json:"access"`
-	Team   string `json:"team"`
+	Access      string `json:"access"`
+	Application string `json:"application"`
+	Team        string `json:"team"`
 }
 
 func (t TopicACLs) Teams() []string {

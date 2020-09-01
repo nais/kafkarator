@@ -52,10 +52,13 @@ spec:
                     - write
                     - readwrite
                     type: string
+                  application:
+                    type: string
                   team:
                     type: string
                 required:
                 - access
+                - application
                 - team
                 type: object
               type: array
