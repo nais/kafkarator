@@ -39,7 +39,6 @@ jobs:
         echo ::set-env name=NAIS_YAML::${GITHUB_WORKSPACE}/nais-yaml
         pwd
     - name: Bump version in nais-yaml
-      if: false
       env:
         DEPLOY_KEY: ${{ secrets.NAIS_YAML_DEPLOY_KEY }}
         GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
