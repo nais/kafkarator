@@ -221,10 +221,29 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		return err
 	}
 
+	usernames := tx.topic.Spec.ACL.Usernames()
+	affectedUser := func(username string) bool {
+		for _, u := range usernames {
+			if username == u {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, user := range users {
+		tx.logger = tx.logger.WithFields(log.Fields{
+			"username": user.Username,
+		})
+
+		if !affectedUser(user.Username) {
+			tx.logger.Infof("Skip secret creation: user is not specified in ACL")
+			continue
+		}
+
 		team, app, err := serviceuser.NameParts(user.Username)
 		if err != nil {
-			tx.logger.WithField("username", user.Username).Infof("Skip secret creation: %s", err)
+			tx.logger.Infof("Skip secret creation: %s", err)
 			continue
 		}
 
@@ -232,6 +251,11 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			Namespace: team,
 			Name:      secretName(app, tx.topic.Spec.Pool),
 		}
+
+		tx.logger = tx.logger.WithFields(log.Fields{
+			"secret_namespace": key.Namespace,
+			"secret_name":      key.Name,
+		})
 
 		secret := v1.Secret{}
 		err = r.Get(tx.ctx, key, &secret)
@@ -248,9 +272,11 @@ func (r *TopicReconciler) commit(tx transaction) error {
 
 		if err != nil {
 			if errors.IsNotFound(err) {
+				tx.logger.Infof("Creating secret")
 				err = r.Create(tx.ctx, &secret)
 			}
 		} else {
+			tx.logger.Infof("Updating secret")
 			err = r.Update(tx.ctx, &secret)
 		}
 		if err != nil {
