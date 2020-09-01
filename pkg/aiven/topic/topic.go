@@ -77,6 +77,7 @@ func (r *Manager) update() error {
 	r.Logger.Infof("Updating topic")
 
 	cfg := r.Topic.Spec.Config
+	// below code should never run - should not be nil due to topicConfigChanged()
 	if cfg == nil {
 		cfg = &kafka_nais_io_v1.Config{}
 	}
