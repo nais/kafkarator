@@ -35,6 +35,9 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+test:
+	go test ./... -count=1
+
 integration_test:
 	echo "*** Make sure to set the environment AIVEN_TOKEN to a valid token ***"
 	go test ./pkg/aiven/... -tags=integration -v -count=1
