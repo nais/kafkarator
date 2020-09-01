@@ -1,6 +1,7 @@
 package kafka_nais_io_v1_test
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/nais/kafkarator/api/v1"
@@ -34,6 +35,9 @@ func TestTopicACLs_Usernames(t *testing.T) {
 	}
 
 	actual := acls.Usernames()
+
+	sort.Strings(expected)
+	sort.Strings(actual)
 
 	assert.Equal(t, expected, actual)
 }
