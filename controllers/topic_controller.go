@@ -163,14 +163,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	topicResource.Status.Message = "Topic configuration synchronized to Kafka pool"
 	topicResource.Status.Errors = nil
 
-	// TODO: delete unused secrets from cluster
-	/*
-		for _, oldSecret := range tx.secretLists.Unused.Items {
-			err = r.Delete(tx.ctx, &oldSecret)
-			r.logger.Error(err, "failed deletion")
-		}
-	*/
-
 	return ctrl.Result{}, nil
 }
 
@@ -214,8 +206,10 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	if err != nil {
 		return err
 	}
+
 	kafkaBrokerAddress := service.GetKafkaBrokerAddress(*svc)
 	kafkaSchemaRegistryAddress := service.GetSchemaRegistryAddress(*svc)
+
 	kafkaCA, err := serviceManager.GetCA()
 	if err != nil {
 		return err
