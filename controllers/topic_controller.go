@@ -11,6 +11,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/utils"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,8 @@ type transaction struct {
 type secretData struct {
 	user            aiven.ServiceUser
 	resourceVersion string
+	app             string
+	pool            string
 	name            string
 	team            string
 	brokers         string
@@ -215,35 +218,25 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		return err
 	}
 
-	usernames := tx.topic.Spec.ACL.Usernames()
-	affectedUser := func(username string) bool {
-		for _, u := range usernames {
-			if username == u {
-				return true
-			}
-		}
-		return false
-	}
-
 	for _, user := range users {
 		tx.logger = tx.logger.WithFields(log.Fields{
-			"username": user.Username,
+			"username": user.AivenName,
 		})
 
-		if !affectedUser(user.Username) {
-			tx.logger.Infof("Skip secret creation: user is not specified in ACL")
-			continue
-		}
-
-		team, app, err := serviceuser.NameParts(user.Username)
+		team, app, err := serviceuser.NameParts(user.Name)
 		if err != nil {
 			tx.logger.Infof("Skip secret creation: %s", err)
 			continue
 		}
 
+		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", app, tx.topic.Spec.Pool), 63)
+		if err != nil {
+			return fmt.Errorf("unable to generate secret name: %s", err)
+		}
+
 		key := client.ObjectKey{
 			Namespace: team,
-			Name:      secretName(app, tx.topic.Spec.Pool),
+			Name:      secretName,
 		}
 
 		tx.logger = tx.logger.WithFields(log.Fields{
@@ -254,9 +247,11 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		secret := v1.Secret{}
 		err = r.Get(tx.ctx, key, &secret)
 		opts := secretData{
-			user:            *user,
+			user:            *user.User,
 			resourceVersion: secret.ResourceVersion,
 			name:            key.Name,
+			app:             app,
+			pool:            tx.topic.Spec.Pool,
 			team:            team,
 			brokers:         kafkaBrokerAddress,
 			registry:        kafkaSchemaRegistryAddress,
@@ -310,6 +305,10 @@ func ConvertSecret(data secretData) v1.Secret {
 			Labels: map[string]string{
 				"team": data.team,
 			},
+			Annotations: map[string]string{
+				"kafka.nais.io/pool":        data.pool,
+				"kafka.nais.io/application": data.app,
+			},
 			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
@@ -324,8 +323,4 @@ func ConvertSecret(data secretData) v1.Secret {
 		},
 		Type: v1.SecretTypeOpaque,
 	}
-}
-
-func secretName(app, pool string) string {
-	return fmt.Sprintf("kafka-%s-%s", app, pool)
 }

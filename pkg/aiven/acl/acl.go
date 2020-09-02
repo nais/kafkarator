@@ -3,6 +3,7 @@ package acl
 import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +44,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
 			Topic:      r.Topic.Name,
-			Username:   topicAcl.Username(),
+			Username:   serviceuser.AivenUserName(topicAcl.Username()),
 		}
 
 		_, err := r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
