@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/aiven/aiven-go-client"
+	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -32,23 +33,30 @@ func (s *ServiceUsersMock) List(project, serviceName string) ([]*aiven.ServiceUs
 func TestManager_Synchronize(t *testing.T) {
 	m := &ServiceUsersMock{}
 
-	usernames := []string{
-		"user1",
-		"user2",
-	}
+	usernames := make([]kafka_nais_io_v1.User, 0)
+	usernames = append(usernames, kafka_nais_io_v1.User{
+		Username:    "app1-team1",
+		Application: "app1",
+		Team:        "team1",
+	})
+	usernames = append(usernames, kafka_nais_io_v1.User{
+		Username:    "app2-team1",
+		Application: "app2",
+		Team:        "team1",
+	})
 
 	req := aiven.CreateServiceUserRequest{
-		Username: "user2",
+		Username: "app2-team1",
 	}
 
 	existingUsers := []*aiven.ServiceUser{
 		{
-			Username: "user1",
+			Username: "app1-team1",
 		},
 	}
 
 	expectedCreateArgs := &aiven.ServiceUser{
-		Username: "user2",
+		Username: "app2-team1",
 	}
 
 	m.On("Create", project, service, req).Return(expectedCreateArgs, nil)
@@ -61,12 +69,18 @@ func TestManager_Synchronize(t *testing.T) {
 		Logger:            log.NewEntry(log.StandardLogger()),
 	}
 
-	expectedReturnUsers := map[string]*aiven.ServiceUser{
-		"user1": {
-			Username: "user1",
+	expectedReturnUsers := []*serviceuser.UserMap{
+		{
+			User: usernames[0],
+			AivenUser: &aiven.ServiceUser{
+				Username: "app1-team1",
+			},
 		},
-		"user2": {
-			Username: "user2",
+		{
+			User: usernames[1],
+			AivenUser: &aiven.ServiceUser{
+				Username: "app2-team1",
+			},
 		},
 	}
 	users, err := manager.Synchronize(usernames)

@@ -1,12 +1,17 @@
 // +versionName=v1
 package kafka_nais_io_v1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"github.com/nais/kafkarator/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 const (
 	EventRolloutComplete       = "RolloutComplete"
 	EventFailedPrepare         = "FailedPrepare"
 	EventFailedSynchronization = "FailedSynchronization"
+
+	MaxServiceUserNameLength = 40
 )
 
 // +genclient
@@ -61,29 +66,36 @@ type TopicACL struct {
 	Team        string `json:"team"`
 }
 
+type User struct {
+	Username    string
+	Application string
+	Team        string
+}
+
 func (in TopicACL) Username() string {
-	return in.Team + "__" + in.Application
+	username := in.Team + "__" + in.Application
+	username, err := utils.ShortName(username, MaxServiceUserNameLength)
+	if err != nil {
+		panic(err)
+	}
+	return username
 }
 
-func (in TopicACLs) Teams() []string {
-	teams := make(map[string]interface{})
-	result := make([]string, 0, len(in))
-	for _, acl := range in {
-		teams[acl.Team] = new(interface{})
+func (in TopicACL) User() User {
+	return User{
+		Username:    in.Username(),
+		Application: in.Application,
+		Team:        in.Team,
 	}
-	for k := range teams {
-		result = append(result, k)
-	}
-	return result
 }
 
-func (in TopicACLs) Usernames() []string {
-	usernames := make(map[string]interface{})
-	result := make([]string, 0, len(in))
+func (in TopicACLs) Users() []User {
+	users := make(map[User]interface{})
+	result := make([]User, 0, len(in))
 	for _, acl := range in {
-		usernames[acl.Username()] = new(interface{})
+		users[acl.User()] = new(interface{})
 	}
-	for k := range usernames {
+	for k := range users {
 		result = append(result, k)
 	}
 	return result

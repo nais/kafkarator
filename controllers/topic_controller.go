@@ -192,7 +192,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	}
 
 	tx.logger.Infof("Synchronizing service users")
-	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Usernames())
+	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Users())
 	if err != nil {
 		return err
 	}
@@ -220,22 +220,16 @@ func (r *TopicReconciler) commit(tx transaction) error {
 
 	for _, user := range users {
 		tx.logger = tx.logger.WithFields(log.Fields{
-			"username": user.AivenName,
+			"username": user.Username,
 		})
 
-		team, app, err := serviceuser.NameParts(user.Name)
-		if err != nil {
-			tx.logger.Infof("Skip secret creation: %s", err)
-			continue
-		}
-
-		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", app, tx.topic.Spec.Pool), 63)
+		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, tx.topic.Spec.Pool), 63)
 		if err != nil {
 			return fmt.Errorf("unable to generate secret name: %s", err)
 		}
 
 		key := client.ObjectKey{
-			Namespace: team,
+			Namespace: user.Team,
 			Name:      secretName,
 		}
 
@@ -247,12 +241,12 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		secret := v1.Secret{}
 		err = r.Get(tx.ctx, key, &secret)
 		opts := secretData{
-			user:            *user.User,
+			user:            *user.AivenUser,
 			resourceVersion: secret.ResourceVersion,
 			name:            key.Name,
-			app:             app,
+			app:             user.Application,
 			pool:            tx.topic.Spec.Pool,
-			team:            team,
+			team:            user.Team,
 			brokers:         kafkaBrokerAddress,
 			registry:        kafkaSchemaRegistryAddress,
 			ca:              kafkaCA,

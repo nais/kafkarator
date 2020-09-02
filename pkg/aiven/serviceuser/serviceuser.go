@@ -2,21 +2,15 @@ package serviceuser
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/kafkarator/api/v1"
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	MaxServiceUserNameLength = 40
-)
-
 type UserMap struct {
-	Name      string
-	AivenName string
-	User      *aiven.ServiceUser
+	kafka_nais_io_v1.User
+	AivenUser *aiven.ServiceUser
 }
 
 type ServiceUser interface {
@@ -31,17 +25,11 @@ type Manager struct {
 	Logger            *log.Entry
 }
 
-func AivenUserName(username string) string {
-	username, _ = utils.ShortName(username, MaxServiceUserNameLength)
-	return username
-}
-
-func mapUsers(usernames []string) []*UserMap {
-	mp := make([]*UserMap, len(usernames))
-	for i := range usernames {
+func mapUsers(users []kafka_nais_io_v1.User) []*UserMap {
+	mp := make([]*UserMap, len(users))
+	for i := range users {
 		mp[i] = &UserMap{
-			Name:      usernames[i],
-			AivenName: AivenUserName(usernames[i]),
+			User: users[i],
 		}
 	}
 	return mp
@@ -49,8 +37,8 @@ func mapUsers(usernames []string) []*UserMap {
 
 // Create Aiven users from a list of usernames, if they are not found on the Aiven service.
 // Returns a list of all users, both created and existing.
-func (r *Manager) Synchronize(usernames []string) ([]*UserMap, error) {
-	userMap := mapUsers(usernames)
+func (r *Manager) Synchronize(users []kafka_nais_io_v1.User) ([]*UserMap, error) {
+	userMap := mapUsers(users)
 
 	serviceUsers, err := r.AivenServiceUsers.List(r.Project, r.Service)
 	if err != nil {
@@ -67,22 +55,14 @@ func (r *Manager) Synchronize(usernames []string) ([]*UserMap, error) {
 	return userMap, nil
 }
 
-func NameParts(username string) (team, application string, err error) {
-	s := strings.SplitN(username, "__", 2)
-	if len(s) != 2 {
-		return "", "", fmt.Errorf("unable to parse team and application name from username %s", username)
-	}
-	return s[0], s[1], nil
-}
-
 func (r *Manager) createServiceUsers(users []*UserMap) error {
 	var err error
 
 	for i, user := range users {
 		logger := r.Logger.WithFields(log.Fields{
-			"username": user.AivenName,
+			"username": user.Username,
 		})
-		if user.User != nil {
+		if user.AivenUser != nil {
 			logger.Infof("Skip creating service user")
 			continue
 		}
@@ -90,10 +70,10 @@ func (r *Manager) createServiceUsers(users []*UserMap) error {
 		logger.Infof("Creating service user")
 
 		req := aiven.CreateServiceUserRequest{
-			Username: user.AivenName,
+			Username: user.Username,
 		}
 
-		users[i].User, err = r.AivenServiceUsers.Create(r.Project, r.Service, req)
+		users[i].AivenUser, err = r.AivenServiceUsers.Create(r.Project, r.Service, req)
 		if err != nil {
 			return err
 		}
@@ -105,8 +85,8 @@ func (r *Manager) createServiceUsers(users []*UserMap) error {
 func populate(users []*UserMap, serviceUsers []*aiven.ServiceUser) {
 	for _, existingUser := range serviceUsers {
 		for _, user := range users {
-			if user.AivenName == existingUser.Username {
-				user.User = existingUser
+			if user.Username == existingUser.Username {
+				user.AivenUser = existingUser
 			}
 		}
 	}
