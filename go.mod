@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/aiven/aiven-go-client v1.5.7
 	github.com/mitchellh/hashstructure v1.0.0
+	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	gotest.tools v2.2.0+incompatible

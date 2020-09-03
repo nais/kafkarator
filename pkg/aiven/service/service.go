@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/aiven/aiven-go-client"
+	"github.com/nais/kafkarator/pkg/metrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,11 +23,23 @@ type Manager struct {
 }
 
 func (r *Manager) Get() (*aiven.Service, error) {
-	return r.AivenService.Get(r.Project, r.Service)
+	var service *aiven.Service
+	err := metrics.ObserveAivenLatency("Service_Get", r.Project, func() error {
+		var err error
+		service, err = r.AivenService.Get(r.Project, r.Service)
+		return err
+	})
+	return service, err
 }
 
 func (r *Manager) GetCA() (string, error) {
-	return r.AivenCA.Get(r.Project)
+	var ca string
+	err := metrics.ObserveAivenLatency("CA_Get", r.Project, func() error {
+		var err error
+		ca, err = r.AivenCA.Get(r.Project)
+		return err
+	})
+	return ca, err
 }
 
 func GetKafkaBrokerAddress(service aiven.Service) string {

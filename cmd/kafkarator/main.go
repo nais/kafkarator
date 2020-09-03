@@ -1,7 +1,9 @@
 package main
 
 import (
+	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -34,7 +36,8 @@ func main() {
 	logger.SetFormatter(logfmt)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme: scheme,
+		Scheme:             scheme,
+		MetricsBindAddress: "127.0.0.1:8080",
 	})
 
 	if err != nil {
@@ -78,5 +81,12 @@ func init() {
 		panic(err)
 	}
 
+	metrics.Registry.MustRegister(
+		kafkaratormetrics.Topics,
+		kafkaratormetrics.TopicsProcessed,
+		kafkaratormetrics.ServiceUsers,
+		kafkaratormetrics.AivenLatency,
+		kafkaratormetrics.Acls,
+	)
 	// +kubebuilder:scaffold:scheme
 }

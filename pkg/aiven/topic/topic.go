@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"github.com/nais/kafkarator/pkg/metrics"
 	"net/http"
 
 	"github.com/aiven/aiven-go-client"
@@ -32,8 +33,12 @@ func aivenError(err error) *aiven.Error {
 
 // given a list of usernames, create Aiven users not found in that list
 func (r *Manager) Synchronize() error {
-	topic, err := r.AivenTopics.Get(r.Project, r.Service, r.Topic.Name)
-
+	var topic *aiven.KafkaTopic
+	err := metrics.ObserveAivenLatency("Topic_Get", r.Project, func() error {
+		var err error
+		topic, err = r.AivenTopics.Get(r.Project, r.Service, r.Topic.Name)
+		return err
+	})
 	if err != nil {
 		aivenErr := aivenError(err)
 		if aivenErr != nil && aivenErr.Status == http.StatusNotFound {
@@ -70,7 +75,9 @@ func (r *Manager) create() error {
 		TopicName:             r.Topic.Name,
 	}
 
-	return r.AivenTopics.Create(r.Project, r.Service, req)
+	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
+		return r.AivenTopics.Create(r.Project, r.Service, req)
+	})
 }
 
 func (r *Manager) update() error {
@@ -90,7 +97,9 @@ func (r *Manager) update() error {
 		RetentionHours:        cfg.RetentionHours,
 	}
 
-	return r.AivenTopics.Update(r.Project, r.Service, r.Topic.Name, req)
+	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
+		return r.AivenTopics.Update(r.Project, r.Service, r.Topic.Name, req)
+	})
 }
 
 func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config) bool {

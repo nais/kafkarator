@@ -3,6 +3,7 @@ package acl
 import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/metrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,12 @@ type Manager struct {
 // Sync the ACL spec in the Topic resource with Aiven.
 // Missing ACL definitions are created, unneccessary definitions are deleted.
 func (r *Manager) Synchronize() error {
-	acls, err := r.Aiven.KafkaACLs.List(r.Project, r.Service)
+	var acls []*aiven.KafkaACL
+	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
+		var err error
+		acls, err = r.Aiven.KafkaACLs.List(r.Project, r.Service)
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -46,7 +52,11 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 			Username:   topicAcl.Username(),
 		}
 
-		_, err := r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
+		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
+			var err error
+			_, err = r.Aiven.KafkaACLs.Create(r.Project, r.Service, req)
+			return err
+		})
 		if err != nil {
 			return err
 		}
@@ -61,8 +71,9 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 
 func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
 	for _, kafkaAcl := range toDelete {
-		err := r.Aiven.KafkaACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
-
+		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
+			return r.Aiven.KafkaACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
+		})
 		if err != nil {
 			return err
 		}

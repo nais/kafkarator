@@ -2,6 +2,7 @@ package serviceuser
 
 import (
 	"fmt"
+	"github.com/nais/kafkarator/pkg/metrics"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -40,7 +41,12 @@ func mapUsers(users []kafka_nais_io_v1.User) []*UserMap {
 func (r *Manager) Synchronize(users []kafka_nais_io_v1.User) ([]*UserMap, error) {
 	userMap := mapUsers(users)
 
-	serviceUsers, err := r.AivenServiceUsers.List(r.Project, r.Service)
+	var serviceUsers []*aiven.ServiceUser
+	err := metrics.ObserveAivenLatency("ServiceUser_List", r.Project, func() error {
+		var err error
+		serviceUsers, err = r.AivenServiceUsers.List(r.Project, r.Service)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to list service users: %s", err)
 	}
@@ -73,7 +79,11 @@ func (r *Manager) createServiceUsers(users []*UserMap) error {
 			Username: user.Username,
 		}
 
-		users[i].AivenUser, err = r.AivenServiceUsers.Create(r.Project, r.Service, req)
+		err = metrics.ObserveAivenLatency("ServiceUser_Create", r.Project, func() error {
+			var err error
+			users[i].AivenUser, err = r.AivenServiceUsers.Create(r.Project, r.Service, req)
+			return err
+		})
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -35,6 +37,7 @@ const (
 	KafkaPrivateKeyFilename  = "/var/run/secrets/kafka/kafka.key"
 	KafkaCA                  = "KAFKA_CA"
 	KafkaCAFilename          = "/var/run/secrets/kafka/ca.crt"
+	maxSecretNameLength      = 63
 )
 
 type transaction struct {
@@ -127,6 +130,10 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			logger.Errorf("failed writing topic status: %s", err)
 		}
+		metrics.TopicsProcessed.With(prometheus.Labels{
+			metrics.LabelSyncState: topicResource.Status.SynchronizationState,
+			metrics.LabelPool:      topicResource.Spec.Pool,
+		}).Inc()
 	}()
 
 	// prepare and commit
@@ -223,7 +230,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"username": user.Username,
 		})
 
-		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, tx.topic.Spec.Pool), 63)
+		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, tx.topic.Spec.Pool), maxSecretNameLength)
 		if err != nil {
 			return fmt.Errorf("unable to generate secret name: %s", err)
 		}
