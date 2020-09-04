@@ -49,6 +49,29 @@ func (_m *Topic) Get(project string, service string, _a2 string) (*aiven.KafkaTo
 	return r0, r1
 }
 
+// List provides a mock function with given fields: project, service
+func (_m *Topic) List(project string, service string) ([]*aiven.KafkaListTopic, error) {
+	ret := _m.Called(project, service)
+
+	var r0 []*aiven.KafkaListTopic
+	if rf, ok := ret.Get(0).(func(string, string) []*aiven.KafkaListTopic); ok {
+		r0 = rf(project, service)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*aiven.KafkaListTopic)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(project, service)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: project, service, _a2, req
 func (_m *Topic) Update(project string, service string, _a2 string, req aiven.UpdateKafkaTopicRequest) error {
 	ret := _m.Called(project, service, _a2, req)
