@@ -2,8 +2,7 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  namespace: default
-  name: mytopic
+  name: othertopic
   labels:
     team: aura
 spec:

@@ -1,10 +1,12 @@
 package main
 
 import (
-	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"time"
+
+	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -25,6 +27,8 @@ const (
 	ExitAiven
 	ExitReconciler
 	ExitManager
+
+	topicReportInterval = time.Minute * 5
 )
 
 func main() {
@@ -64,6 +68,15 @@ func main() {
 	}
 
 	logger.Info("Kafkarator running")
+
+	collector := &clustercollector.Topic{
+		Client: mgr.GetClient(),
+		Aiven:  aivenClient,
+		Logger: logger,
+		ReportInterval: topicReportInterval,
+	}
+	go collector.Run()
+
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Println(err)
 		os.Exit(ExitManager)

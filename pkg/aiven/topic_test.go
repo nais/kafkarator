@@ -1,6 +1,6 @@
 // +build integration
 
-package aiven_test
+package kafkarator_aiven_test
 
 import (
 	"fmt"

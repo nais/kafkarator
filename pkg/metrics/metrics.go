@@ -15,9 +15,13 @@ const (
 	LabelTopic          = "topic"
 	LabelApp            = "app"
 	LabelSyncState      = "synchronization_state"
+	LabelSource         = "source"
 	LabelAivenOperation = "operation"
 	LabelStatus         = "status"
 	LabelPool           = "pool"
+
+	SourceCluster = "cluster"
+	SourceAiven   = "aiven"
 )
 
 var (
@@ -25,7 +29,7 @@ var (
 		Name:      "topics",
 		Namespace: Namespace,
 		Help:      "number of topics",
-	}, []string{LabelTeam, LabelPool})
+	}, []string{LabelSource, LabelTeam, LabelPool})
 
 	TopicsProcessed = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name:      "topics_processed",

@@ -1,8 +1,9 @@
 package topic
 
 import (
-	"github.com/nais/kafkarator/pkg/metrics"
 	"net/http"
+
+	"github.com/nais/kafkarator/pkg/metrics"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -11,6 +12,7 @@ import (
 
 type Topic interface {
 	Get(project, service, topic string) (*aiven.KafkaTopic, error)
+	List(project, service string) ([]*aiven.KafkaListTopic, error)
 	Create(project, service string, req aiven.CreateKafkaTopicRequest) error
 	Update(project, service, topic string, req aiven.UpdateKafkaTopicRequest) error
 }
@@ -55,6 +57,16 @@ func (r *Manager) Synchronize() error {
 	}
 
 	return nil
+}
+
+func (r *Manager) List() ([]*aiven.KafkaListTopic, error) {
+	var list []*aiven.KafkaListTopic
+	err := metrics.ObserveAivenLatency("Topic_List", r.Project, func() error {
+		var err error
+		list, err = r.AivenTopics.List(r.Project, r.Service)
+		return err
+	})
+	return list, err
 }
 
 func (r *Manager) create() error {

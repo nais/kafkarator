@@ -3,9 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -65,10 +67,6 @@ type TopicReconciler struct {
 	Aiven  *aiven.Client
 	Scheme *runtime.Scheme
 	Logger *log.Logger
-}
-
-func aivenService(aivenProject string) string {
-	return aivenProject + "-kafka"
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
@@ -180,7 +178,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	aclManager := acl.Manager{
 		Aiven:   r.Aiven,
 		Project: tx.topic.Spec.Pool,
-		Service: aivenService(tx.topic.Spec.Pool),
+		Service: kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
 		Topic:   tx.topic,
 		Logger:  tx.logger,
 	}
@@ -194,7 +192,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	userManager := serviceuser.Manager{
 		AivenServiceUsers: r.Aiven.ServiceUsers,
 		Project:           tx.topic.Spec.Pool,
-		Service:           aivenService(tx.topic.Spec.Pool),
+		Service:           kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
 		Logger:            tx.logger,
 	}
 
@@ -209,7 +207,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		AivenCA:      r.Aiven.CA,
 		AivenService: r.Aiven.Services,
 		Project:      tx.topic.Spec.Pool,
-		Service:      aivenService(tx.topic.Spec.Pool),
+		Service:      kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
 		Logger:       tx.logger,
 	}
 	svc, err := serviceManager.Get()
@@ -278,7 +276,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 	topicManager := topic.Manager{
 		AivenTopics: r.Aiven.KafkaTopics,
 		Project:     tx.topic.Spec.Pool,
-		Service:     aivenService(tx.topic.Spec.Pool),
+		Service:     kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
 		Topic:       tx.topic,
 		Logger:      tx.logger,
 	}
