@@ -2,7 +2,9 @@ package serviceuser
 
 import (
 	"fmt"
+
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
@@ -57,6 +59,10 @@ func (r *Manager) Synchronize(users []kafka_nais_io_v1.User) ([]*UserMap, error)
 	if err != nil {
 		return nil, err
 	}
+
+	metrics.ServiceUsers.With(prometheus.Labels{
+		metrics.LabelPool: r.Project,
+	}).Set(float64(len(serviceUsers)))
 
 	return userMap, nil
 }
