@@ -1,10 +1,11 @@
 package metrics
 
 import (
-	"github.com/aiven/aiven-go-client"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
+
+	"github.com/aiven/aiven-go-client"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -55,12 +56,12 @@ var (
 func ObserveAivenLatency(operation, pool string, fun func() error) error {
 	timer := time.Now()
 	err := fun()
+	used := time.Now().Sub(timer)
 	status := 200
 	if err != nil {
 		aivenErr := err.(aiven.Error)
 		status = aivenErr.Status
 	}
-	used := time.Now().Sub(timer)
 	AivenLatency.With(prometheus.Labels{
 		LabelAivenOperation: operation,
 		LabelPool:           pool,

@@ -4,6 +4,7 @@ import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,6 +30,7 @@ func (r *Manager) Synchronize() error {
 	}
 
 	acls = topicACLs(acls, r.Topic.Name)
+
 	toAdd := NewACLs(acls, r.Topic.Spec.ACL)
 	toDelete := DeleteACLs(acls, r.Topic.Spec.ACL)
 
@@ -41,7 +43,39 @@ func (r *Manager) Synchronize() error {
 	if err != nil {
 		return err
 	}
+
+	r.reportMetrics()
+
 	return nil
+}
+
+func (r *Manager) reportMetrics() {
+	type metric struct {
+		topic string
+		team  string
+		app   string
+		pool  string
+	}
+
+	uniq := make(map[metric]int)
+	for _, acl := range r.Topic.Spec.ACL {
+		key := metric{
+			topic: r.Topic.Name,
+			team:  acl.Team,
+			app:   acl.Application,
+			pool:  r.Topic.Spec.Pool,
+		}
+		uniq[key]++
+	}
+
+	for key, count := range uniq {
+		metrics.Acls.With(prometheus.Labels{
+			metrics.LabelTopic: key.topic,
+			metrics.LabelTeam:  key.team,
+			metrics.LabelApp:   key.app,
+			metrics.LabelPool:  key.pool,
+		}).Set(float64(count))
+	}
 }
 
 func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
