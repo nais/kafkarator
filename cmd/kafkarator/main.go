@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"time"
 
@@ -27,8 +28,6 @@ const (
 	ExitAiven
 	ExitReconciler
 	ExitManager
-
-	topicReportInterval = time.Minute * 5
 )
 
 func main() {
@@ -39,9 +38,16 @@ func main() {
 	logger := log.New()
 	logger.SetFormatter(logfmt)
 
+	var metricsAddr string
+	var topicReportIntervalSeconds int
+
+	flag.StringVar(&metricsAddr, "metrics-addr", "127.0.0.1:8080", "The address the metric endpoint binds to.")
+	flag.IntVar(&topicReportIntervalSeconds, "topic-report-interval-seconds", 300, "The interval for topic metrics reporting")
+	flag.Parse()
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: "127.0.0.1:8080",
+		MetricsBindAddress: metricsAddr,
 	})
 
 	if err != nil {
@@ -70,10 +76,10 @@ func main() {
 	logger.Info("Kafkarator running")
 
 	collector := &clustercollector.Topic{
-		Client: mgr.GetClient(),
-		Aiven:  aivenClient,
-		Logger: logger,
-		ReportInterval: topicReportInterval,
+		Client:         mgr.GetClient(),
+		Aiven:          aivenClient,
+		Logger:         logger,
+		ReportInterval: time.Second * time.Duration(topicReportIntervalSeconds),
 	}
 	go collector.Run()
 
