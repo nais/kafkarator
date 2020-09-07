@@ -30,15 +30,9 @@ const (
 	requeueInterval          = 10 * time.Second
 	KafkaBrokers             = "KAFKA_BROKERS"
 	KafkaSchemaRegistry      = "KAFKA_SCHEMA_REGISTRY"
-	KafkaCertificatePath     = "KAFKA_CERTIFICATE_PATH"
-	KafkaPrivateKeyPath      = "KAFKA_PRIVATE_KEY_PATH"
-	KafkaCAPath              = "KAFKA_CA_PATH"
 	KafkaCertificate         = "KAFKA_CERTIFICATE"
 	KafkaPrivateKey          = "KAFKA_PRIVATE_KEY"
 	KafkaCA                  = "KAFKA_CA"
-	KafkaCertificateFilename = "/var/run/secrets/nais.io/kafka/kafka.crt"
-	KafkaPrivateKeyFilename  = "/var/run/secrets/nais.io/kafka/kafka.key"
-	KafkaCAFilename          = "/var/run/secrets/nais.io/kafka/ca.crt"
 	maxSecretNameLength      = 63
 )
 
@@ -315,9 +309,6 @@ func ConvertSecret(data secretData) v1.Secret {
 			KafkaPrivateKey:      data.user.AccessKey,
 			KafkaBrokers:         data.brokers,
 			KafkaSchemaRegistry:  data.registry,
-			KafkaCertificatePath: KafkaCertificateFilename,
-			KafkaPrivateKeyPath:  KafkaPrivateKeyFilename,
-			KafkaCAPath:          KafkaCAFilename,
 			KafkaCA:              data.ca,
 		},
 		Type: v1.SecretTypeOpaque,
