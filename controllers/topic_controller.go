@@ -34,11 +34,11 @@ const (
 	KafkaPrivateKeyPath      = "KAFKA_PRIVATE_KEY_PATH"
 	KafkaCAPath              = "KAFKA_CA_PATH"
 	KafkaCertificate         = "KAFKA_CERTIFICATE"
-	KafkaCertificateFilename = "/var/run/secrets/kafka/kafka.crt"
 	KafkaPrivateKey          = "KAFKA_PRIVATE_KEY"
-	KafkaPrivateKeyFilename  = "/var/run/secrets/kafka/kafka.key"
 	KafkaCA                  = "KAFKA_CA"
-	KafkaCAFilename          = "/var/run/secrets/kafka/ca.crt"
+	KafkaCertificateFilename = "/var/run/secrets/nais.io/kafka/kafka.crt"
+	KafkaPrivateKeyFilename  = "/var/run/secrets/nais.io/kafka/kafka.key"
+	KafkaCAFilename          = "/var/run/secrets/nais.io/kafka/ca.crt"
 	maxSecretNameLength      = 63
 )
 
