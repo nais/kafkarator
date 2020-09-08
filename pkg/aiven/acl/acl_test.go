@@ -15,31 +15,31 @@ func TestACLFilter(t *testing.T) {
 			ID:         "abc",
 			Permission: "read",
 			Topic:      "topic",
-			Username:   "user__app-fe8425fc",
+			Username:   "user.app-f1fbd6bd",
 		},
 		{
 			ID:         "abcde",
 			Permission: "write",
 			Topic:      "topic",
-			Username:   "user__app-fe8425fc",
+			Username:   "user.app-f1fbd6bd",
 		},
 		{
 			ID:         "123",
 			Permission: "read",
 			Topic:      "topic",
-			Username:   "user2__app-8f88fef2",
+			Username:   "user2.app-4ca551f9",
 		},
 		{
 			ID:         "abcdef",
 			Permission: "write",
 			Topic:      "topic",
-			Username:   "user2__app-8f88fef2",
+			Username:   "user2.app-4ca551f9",
 		},
 		{
 			ID:         "abc",
 			Permission: "read",
 			Topic:      "not_our_topic",
-			Username:   "user__app-fe8425fc",
+			Username:   "user.app-f1fbd6bd",
 		},
 	}
 
@@ -74,13 +74,13 @@ func TestACLFilter(t *testing.T) {
 			ID:         "abcde",
 			Permission: "write",
 			Topic:      "topic",
-			Username:   "user__app-fe8425fc",
+			Username:   "user.app-f1fbd6bd",
 		},
 		{
 			ID:         "123",
 			Permission: "read",
 			Topic:      "topic",
-			Username:   "user2__app-8f88fef2",
+			Username:   "user2.app-4ca551f9",
 		},
 	}
 

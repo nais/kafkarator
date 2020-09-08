@@ -77,7 +77,7 @@ func (in Topic) FullName() string {
 }
 
 func (in TopicACL) Username() string {
-	username := in.Team + "__" + in.Application
+	username := in.Team + "." + in.Application
 	username, err := utils.ShortName(username, MaxServiceUserNameLength)
 	if err != nil {
 		panic(err)

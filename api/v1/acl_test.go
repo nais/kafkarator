@@ -46,17 +46,17 @@ func TestTopicACLs_Usernames(t *testing.T) {
 
 	expected := UserList{
 		{
-			Username:    "team__app-55e49d4e",
+			Username:    "team.app-407e3d92",
 			Application: "app",
 			Team:        "team",
 		},
 		{
-			Username:    "team__app2-8be43607",
+			Username:    "team.app2-4943258",
 			Application: "app2",
 			Team:        "team",
 		},
 		{
-			Username:    "team2__app3-2da7c9b1",
+			Username:    "team2.app3-8c3bd36a",
 			Application: "app3",
 			Team:        "team2",
 		},
