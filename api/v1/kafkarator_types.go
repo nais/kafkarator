@@ -72,6 +72,10 @@ type User struct {
 	Team        string
 }
 
+func (in Topic) FullName() string {
+	return in.Namespace + "." + in.Name
+}
+
 func (in TopicACL) Username() string {
 	username := in.Team + "__" + in.Application
 	username, err := utils.ShortName(username, MaxServiceUserNameLength)

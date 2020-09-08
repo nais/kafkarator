@@ -29,7 +29,7 @@ func (r *Manager) Synchronize() error {
 		return err
 	}
 
-	acls = topicACLs(acls, r.Topic.Name)
+	acls = topicACLs(acls, r.Topic.FullName())
 
 	toAdd := NewACLs(acls, r.Topic.Spec.ACL)
 	toDelete := DeleteACLs(acls, r.Topic.Spec.ACL)
@@ -60,7 +60,7 @@ func (r *Manager) reportMetrics() {
 	uniq := make(map[metric]int)
 	for _, acl := range r.Topic.Spec.ACL {
 		key := metric{
-			topic: r.Topic.Name,
+			topic: r.Topic.FullName(),
 			team:  acl.Team,
 			app:   acl.Application,
 			pool:  r.Topic.Spec.Pool,
@@ -82,7 +82,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 	for _, topicAcl := range toAdd {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
-			Topic:      r.Topic.Name,
+			Topic:      r.Topic.FullName(),
 			Username:   topicAcl.Username(),
 		}
 

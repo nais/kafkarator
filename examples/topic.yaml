@@ -2,7 +2,8 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: othertopic
+  name: mytopic
+  namespace: aura
   labels:
     team: aura
 spec:
@@ -11,8 +12,8 @@ spec:
     retentionHours: 900
   acl:
     - access: read
-      team: myteam
+      team: aura
       application: myapplication
     - access: write
-      team: myteam
+      team: aura
       application: otherapplication

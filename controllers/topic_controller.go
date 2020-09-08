@@ -99,6 +99,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	logger = logger.WithFields(log.Fields{
 		"team": topicResource.Labels["team"],
+		"aiven_topic": topicResource.FullName(),
 	})
 
 	if topicResource.Status == nil {

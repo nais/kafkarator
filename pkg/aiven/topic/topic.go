@@ -38,7 +38,7 @@ func (r *Manager) Synchronize() error {
 	var topic *aiven.KafkaTopic
 	err := metrics.ObserveAivenLatency("Topic_Get", r.Project, func() error {
 		var err error
-		topic, err = r.AivenTopics.Get(r.Project, r.Service, r.Topic.Name)
+		topic, err = r.AivenTopics.Get(r.Project, r.Service, r.Topic.FullName())
 		return err
 	})
 	if err != nil {
@@ -84,7 +84,7 @@ func (r *Manager) create() error {
 		Replication:           cfg.Replication,
 		RetentionBytes:        cfg.RetentionBytes,
 		RetentionHours:        cfg.RetentionHours,
-		TopicName:             r.Topic.Name,
+		TopicName:             r.Topic.FullName(),
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
@@ -110,7 +110,7 @@ func (r *Manager) update() error {
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
-		return r.AivenTopics.Update(r.Project, r.Service, r.Topic.Name, req)
+		return r.AivenTopics.Update(r.Project, r.Service, r.Topic.FullName(), req)
 	})
 }
 

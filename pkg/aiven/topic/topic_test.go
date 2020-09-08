@@ -39,7 +39,8 @@ var tests = []topicTest{
 		name: "create a new topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -54,7 +55,7 @@ var tests = []topicTest{
 		create: &aiven.CreateKafkaTopicRequest{
 			Partitions:  intp(2),
 			Replication: intp(3),
-			TopicName:   "mytopic",
+			TopicName:   "myteam.mytopic",
 		},
 	},
 
@@ -62,7 +63,8 @@ var tests = []topicTest{
 		name: "update an existing topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -85,7 +87,8 @@ var tests = []topicTest{
 		name: "skip updating a topic without changes",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -115,7 +118,8 @@ var tests = []topicTest{
 		name: "skip updating a topic with nil config",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -137,7 +141,8 @@ var tests = []topicTest{
 		name: "unexpected error when getting existing topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -146,7 +151,7 @@ var tests = []topicTest{
 		project: "someproject",
 		service: "mypool-kafka",
 		create: &aiven.CreateKafkaTopicRequest{
-			TopicName: "mytopic",
+			TopicName: "myteam.mytopic",
 		},
 		error: map[string]bool{
 			"get": true,
@@ -157,7 +162,8 @@ var tests = []topicTest{
 		name: "unexpected error when creating topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -166,7 +172,7 @@ var tests = []topicTest{
 		project: "someproject",
 		service: "mypool-kafka",
 		create: &aiven.CreateKafkaTopicRequest{
-			TopicName: "mytopic",
+			TopicName: "myteam.mytopic",
 		},
 		error: map[string]bool{
 			"create": true,
@@ -177,7 +183,8 @@ var tests = []topicTest{
 		name: "unexpected error when updating topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mytopic",
+				Name:      "mytopic",
+				Namespace: "myteam",
 			},
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
@@ -211,15 +218,15 @@ func TestManager_Synchronize(t *testing.T) {
 		m := &mocks.Topic{}
 
 		if test.error["get"] {
-			m.On("Get", test.project, test.service, test.topic.Name).Return(nil, aiven.Error{
+			m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
 				Status: http.StatusInternalServerError,
 			})
 		} else if test.existing == nil {
-			m.On("Get", test.project, test.service, test.topic.Name).Return(nil, aiven.Error{
+			m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
 				Status: http.StatusNotFound,
 			})
 		} else {
-			m.On("Get", test.project, test.service, test.topic.Name).Return(test.existing, nil)
+			m.On("Get", test.project, test.service, test.topic.FullName()).Return(test.existing, nil)
 		}
 
 		if test.create != nil && !test.error["get"] {
@@ -235,12 +242,12 @@ func TestManager_Synchronize(t *testing.T) {
 
 		if test.update != nil && !test.error["get"] {
 			if test.error["update"] {
-				m.On("Update", test.project, test.service, test.topic.Name, *test.update).Return(aiven.Error{
+				m.On("Update", test.project, test.service, test.topic.FullName(), *test.update).Return(aiven.Error{
 					Message: "failed create",
 					Status:  http.StatusInternalServerError,
 				})
 			} else {
-				m.On("Update", test.project, test.service, test.topic.Name, *test.update).Return(nil)
+				m.On("Update", test.project, test.service, test.topic.FullName(), *test.update).Return(nil)
 			}
 		}
 
