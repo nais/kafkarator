@@ -3,6 +3,7 @@ module github.com/nais/kafkarator
 go 1.13
 
 require (
+	github.com/Shopify/sarama v1.27.0
 	github.com/aiven/aiven-go-client v1.5.7
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/prometheus/client_golang v1.0.0
