@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/nais/kafkarator/pkg/kafka"
+	"github.com/nais/kafkarator/pkg/kafka/producer"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
 	"github.com/spf13/viper"
@@ -81,7 +84,7 @@ func init() {
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
-	flag.String(KafkaBrokers, "localhost:9092", "Broker addresses for Kafka support")
+	flag.StringSlice(KafkaBrokers, []string{"localhost:9092"}, "Broker addresses for Kafka support")
 	flag.String(KafkaTopic, "kafkarator-secrets", "Topic where Kafkarator cluster secrets are produced")
 	flag.String(KafkaGroupID, hostname, "Kafka group ID for storing consumed message positions")
 	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
@@ -159,6 +162,32 @@ func main() {
 	}
 }
 
+func tlsFromFiles() (cert, key, ca []byte, err error) {
+	certPath := viper.GetString(KafkaCertificatePath)
+	keyPath := viper.GetString(KafkaKeyPath)
+	caPath := viper.GetString(KafkaCAPath)
+
+	cert, err = ioutil.ReadFile(certPath)
+	if err != nil {
+		err = fmt.Errorf("unable to read certificate file %s: %s", certPath, err)
+		return
+	}
+
+	key, err = ioutil.ReadFile(keyPath)
+	if err != nil {
+		err = fmt.Errorf("unable to read key file %s: %s", keyPath, err)
+		return
+	}
+
+	ca, err = ioutil.ReadFile(caPath)
+	if err != nil {
+		err = fmt.Errorf("unable to read CA certificate file %s: %s", caPath, err)
+		return
+	}
+
+	return
+}
+
 func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
@@ -167,11 +196,30 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		return
 	}
 
+	cert, key, ca, err := tlsFromFiles()
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		return
+	}
+
+	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		return
+	}
+
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaBrokers), tlsConfig, logger)
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
+		return
+	}
+
 	reconciler := &controllers.TopicReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Aiven:  aivenClient,
-		Logger: logger,
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Aiven:    aivenClient,
+		Producer: prod,
+		Logger:   logger,
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {

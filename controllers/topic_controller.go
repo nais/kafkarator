@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -27,13 +28,13 @@ import (
 )
 
 const (
-	requeueInterval          = 10 * time.Second
-	KafkaBrokers             = "KAFKA_BROKERS"
-	KafkaSchemaRegistry      = "KAFKA_SCHEMA_REGISTRY"
-	KafkaCertificate         = "KAFKA_CERTIFICATE"
-	KafkaPrivateKey          = "KAFKA_PRIVATE_KEY"
-	KafkaCA                  = "KAFKA_CA"
-	maxSecretNameLength      = 63
+	requeueInterval     = 10 * time.Second
+	KafkaBrokers        = "KAFKA_BROKERS"
+	KafkaSchemaRegistry = "KAFKA_SCHEMA_REGISTRY"
+	KafkaCertificate    = "KAFKA_CERTIFICATE"
+	KafkaPrivateKey     = "KAFKA_PRIVATE_KEY"
+	KafkaCA             = "KAFKA_CA"
+	maxSecretNameLength = 63
 )
 
 type transaction struct {
@@ -58,9 +59,10 @@ type secretData struct {
 
 type TopicReconciler struct {
 	client.Client
-	Aiven  *aiven.Client
-	Scheme *runtime.Scheme
-	Logger *log.Logger
+	Aiven    *aiven.Client
+	Scheme   *runtime.Scheme
+	Logger   *log.Logger
+	Producer *producer.Producer
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
@@ -98,7 +100,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"team": topicResource.Labels["team"],
+		"team":        topicResource.Labels["team"],
 		"aiven_topic": topicResource.FullName(),
 	})
 
@@ -306,11 +308,11 @@ func ConvertSecret(data secretData) v1.Secret {
 			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:     data.user.AccessCert,
-			KafkaPrivateKey:      data.user.AccessKey,
-			KafkaBrokers:         data.brokers,
-			KafkaSchemaRegistry:  data.registry,
-			KafkaCA:              data.ca,
+			KafkaCertificate:    data.user.AccessCert,
+			KafkaPrivateKey:     data.user.AccessKey,
+			KafkaBrokers:        data.brokers,
+			KafkaSchemaRegistry: data.registry,
+			KafkaCA:             data.ca,
 		},
 		Type: v1.SecretTypeOpaque,
 	}
