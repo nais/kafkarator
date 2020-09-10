@@ -2,9 +2,10 @@ package producer
 
 import (
 	"crypto/tls"
+	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type Producer struct {
@@ -12,7 +13,7 @@ type Producer struct {
 	topic    string
 }
 
-func New(brokers []string, topic string, tlsConfig *tls.Config, logger *logrus.Logger) (*Producer, error) {
+func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
@@ -30,4 +31,14 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *logrus.L
 		producer: producer,
 		topic:    topic,
 	}, nil
+}
+
+func (p *Producer) Produce(msg string) error {
+	producerMessage := &sarama.ProducerMessage{
+		Topic:     p.topic,
+		Value:     sarama.ByteEncoder(msg),
+		Timestamp: time.Now(),
+	}
+	_, _, err := p.producer.SendMessage(producerMessage)
+	return err
 }

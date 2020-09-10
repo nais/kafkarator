@@ -9,6 +9,8 @@ import (
 	"k8s.io/client-go/util/keyutil"
 )
 
+type Message string
+
 func TLSConfig(certificate, key, ca []byte) (*tls.Config, error) {
 	cert, _ := pem.Decode(certificate)
 	if cert == nil {

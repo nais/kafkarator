@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nais/kafkarator/pkg/kafka"
+	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
@@ -208,7 +209,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		return
 	}
 
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaBrokers), tlsConfig, logger)
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
 		return
@@ -250,6 +251,27 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 func follower(quit QuitChannel, logger *log.Logger, client client.Client) {
 	logger.Info("Follower started")
 
+	cert, key, ca, err := tlsFromFiles()
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		return
+	}
+
+	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		return
+	}
+
+	cons, err := consumer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), viper.GetString(KafkaGroupID), tlsConfig, logger)
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
+		return
+	}
+
+	for msg := range cons.Messages {
+		log.Infof(string(msg))
+	}
 }
 
 func init() {
