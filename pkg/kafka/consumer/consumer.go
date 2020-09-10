@@ -65,7 +65,7 @@ func New(brokers []string, topic, groupID string, tlsConfig *tls.Config, logger 
 
 	go func() {
 		for err := range c.consumer.Errors() {
-			logger.Errorf("Consumer encountered error: %w", err)
+			logger.Errorf("Consumer encountered error: %s", err)
 		}
 	}()
 
@@ -74,11 +74,11 @@ func New(brokers []string, topic, groupID string, tlsConfig *tls.Config, logger 
 			logger.Infof("(re-)starting consumer on topic %s", topic)
 			err := c.consumer.Consume(c.ctx, []string{topic}, c)
 			if err != nil {
-				logger.Errorf("Error setting up consumer: %w", err)
+				logger.Errorf("Error setting up consumer: %s", err)
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if c.ctx.Err() != nil {
-				logger.Errorf("Consumer context error: %w", c.ctx.Err())
+				logger.Errorf("Consumer context error: %s", c.ctx.Err())
 				c.ctx, c.cancel = context.WithCancel(context.Background())
 			}
 			time.Sleep(10 * time.Second)
