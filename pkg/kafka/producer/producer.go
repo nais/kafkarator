@@ -14,13 +14,14 @@ type Producer struct {
 	topic    string
 }
 
-func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
+func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger, interceptor sarama.ProducerInterceptor) (*Producer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
+	config.Producer.Interceptors = []sarama.ProducerInterceptor{interceptor}
 	sarama.Logger = logger
 
 	producer, err := sarama.NewSyncProducer(brokers, config)

@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
+	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
@@ -130,6 +132,17 @@ func main() {
 
 	logger.SetFormatter(logfmt)
 
+	key, err := crypto.KeyFromHexString(viper.GetString(PreSharedKey))
+	if err != nil {
+		logger.Error(err)
+		os.Exit(ExitConfig)
+	}
+
+	cryptInterceptor := &kafka.CryptInterceptor{
+		Key:    key,
+		Logger: logger,
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: viper.GetString(MetricsAddress),
@@ -143,11 +156,11 @@ func main() {
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
-		go primary(quit, logger, mgr)
+		go primary(quit, logger, mgr, cryptInterceptor)
 	}
 
 	if viper.GetBool(Follower) {
-		go follower(quit, logger, mgr.GetClient())
+		go follower(quit, logger, mgr.GetClient(), cryptInterceptor)
 	}
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -190,7 +203,7 @@ func tlsFromFiles() (cert, key, ca []byte, err error) {
 	return
 }
 
-func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
+func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, interceptor sarama.ProducerInterceptor) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
@@ -210,7 +223,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		return
 	}
 
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger, interceptor)
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
 		return
@@ -249,7 +262,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func follower(quit QuitChannel, logger *log.Logger, client client.Client) {
+func follower(quit QuitChannel, logger *log.Logger, client client.Client, interceptor sarama.ConsumerInterceptor) {
 	logger.Info("Follower started")
 
 	cert, key, ca, err := tlsFromFiles()
@@ -264,7 +277,7 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client) {
 		return
 	}
 
-	cons, err := consumer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), viper.GetString(KafkaGroupID), tlsConfig, logger)
+	cons, err := consumer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), viper.GetString(KafkaGroupID), tlsConfig, logger, interceptor)
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
 		return
