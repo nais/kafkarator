@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/kafka/producer"
-	"github.com/nais/kafkarator/pkg/metrics"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/kafka/producer"
+	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -240,32 +239,26 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"secret_name":      key.Name,
 		})
 
-		secret := v1.Secret{}
-		err = r.Get(tx.ctx, key, &secret)
 		opts := secretData{
-			user:            *user.AivenUser,
-			resourceVersion: secret.ResourceVersion,
-			name:            key.Name,
-			app:             user.Application,
-			pool:            tx.topic.Spec.Pool,
-			team:            user.Team,
-			brokers:         kafkaBrokerAddress,
-			registry:        kafkaSchemaRegistryAddress,
-			ca:              kafkaCA,
+			user:     *user.AivenUser,
+			name:     key.Name,
+			app:      user.Application,
+			pool:     tx.topic.Spec.Pool,
+			team:     user.Team,
+			brokers:  kafkaBrokerAddress,
+			registry: kafkaSchemaRegistryAddress,
+			ca:       kafkaCA,
 		}
-		secret = ConvertSecret(opts)
+		secret := ConvertSecret(opts)
 
+		payload, err := secret.Marshal()
 		if err != nil {
-			if errors.IsNotFound(err) {
-				tx.logger.Infof("Creating secret")
-				err = r.Create(tx.ctx, &secret)
-			}
-		} else {
-			tx.logger.Infof("Updating secret")
-			err = r.Update(tx.ctx, &secret)
+			return fmt.Errorf("unable to marshal secret: %w", err)
 		}
+
+		err = r.Producer.Produce(payload)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to produce secret on Kafka: %w", err)
 		}
 	}
 

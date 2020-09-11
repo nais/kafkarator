@@ -14,7 +14,9 @@ import (
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
+	"github.com/nais/kafkarator/pkg/secretsync"
 	"github.com/spf13/viper"
+	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -38,9 +40,6 @@ type QuitChannel chan error
 const (
 	ExitOK = iota
 	ExitController
-	ExitAiven
-	ExitReconciler
-	ExitManager
 	ExitConfig
 	ExitRuntime
 )
@@ -59,6 +58,7 @@ const (
 	LogFormat            = "log-format"
 	MetricsAddress       = "metrics-address"
 	Primary              = "primary"
+	SecretWriteTimeout   = "secret-write-timeout"
 	TopicReportInterval  = "topic-report-interval"
 )
 
@@ -80,6 +80,7 @@ func init() {
 	flag.String(MetricsAddress, "127.0.0.1:8080", "The address the metric endpoint binds to.")
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
+	flag.Duration(SecretWriteTimeout, time.Second*2, "How much time to allocate for writing one secret to the cluster")
 	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
 	flag.Bool(Follower, false, "If true, consume secrets from Kafka topic and persist them to Kubernetes")
 
@@ -269,8 +270,33 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client) {
 		return
 	}
 
+	secretsyncer := &secretsync.Synchronizer{
+		Client:  client,
+		Timeout: viper.GetDuration(SecretWriteTimeout),
+	}
+
 	for msg := range cons.Messages {
-		log.Infof(string(msg))
+		logger.Infof("Incoming message from Kafka")
+		secret := &v1.Secret{}
+		err := secret.Unmarshal(msg)
+		if err != nil {
+			logger.Errorf("Unmarshal error in received secret: %s", err)
+			continue
+		}
+
+		logger := logger.WithFields(log.Fields{
+			"secret_namespace": secret.Namespace,
+			"secret_name":      secret.Name,
+		})
+
+		err = secretsyncer.Write(secret, logger)
+		if err != nil {
+			logger.Errorf("Retriable error in persisting secret: %s", err)
+			// todo: metrics
+			// todo: don't ack kafka
+		} else {
+			logger.Infof("Successfully synchronized secret")
+		}
 	}
 }
 

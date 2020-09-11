@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/nais/kafkarator/pkg/kafka"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,7 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	}, nil
 }
 
-func (p *Producer) Produce(msg string) error {
+func (p *Producer) Produce(msg kafka.Message) error {
 	producerMessage := &sarama.ProducerMessage{
 		Topic:     p.topic,
 		Value:     sarama.ByteEncoder(msg),

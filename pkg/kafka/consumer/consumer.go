@@ -3,7 +3,6 @@ package consumer
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -33,9 +32,8 @@ func (c *Consumer) Cleanup(_ sarama.ConsumerGroupSession) error {
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
-		msg := fmt.Sprintf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+		c.Messages <- message.Value
 		session.MarkMessage(message, "")
-		c.Messages <- kafka.Message(msg)
 	}
 	return nil
 }
