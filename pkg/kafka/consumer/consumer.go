@@ -6,17 +6,30 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/nais/kafkarator/pkg/kafka"
 	log "github.com/sirupsen/logrus"
 )
 
+type Callback func(message *sarama.ConsumerMessage, logger *log.Entry) (retry bool, err error)
+
 type Consumer struct {
-	Messages chan kafka.Message
-	consumer sarama.ConsumerGroup
-	topic    string
-	ctx      context.Context
-	cancel   context.CancelFunc
-	logger   *log.Logger
+	callback      Callback
+	cancel        context.CancelFunc
+	consumer      sarama.ConsumerGroup
+	ctx           context.Context
+	logger        *log.Logger
+	retryInterval time.Duration
+	topic         string
+}
+
+type Config struct {
+	Brokers       []string
+	Callback      Callback
+	GroupID       string
+	Interceptor   sarama.ConsumerInterceptor
+	Logger        *log.Logger
+	RetryInterval time.Duration
+	TlsConfig     *tls.Config
+	Topic         string
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
@@ -31,53 +44,67 @@ func (c *Consumer) Cleanup(_ sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	var retry = true
+	var err error
+
 	for message := range claim.Messages() {
-		c.Messages <- message.Value
+		for err != nil || retry {
+			logger := c.logger.WithFields(log.Fields{
+				"kafka_offset": message.Offset,
+			})
+			retry, err = c.callback(message, logger)
+			if err != nil {
+				logger.Errorf("Consume Kafka message: %s", err)
+				time.Sleep(c.retryInterval)
+			}
+		}
+		retry, err = true, nil
 		session.MarkMessage(message, "")
 	}
 	return nil
 }
 
-func New(brokers []string, topic, groupID string, tlsConfig *tls.Config, logger *log.Logger, interceptor sarama.ConsumerInterceptor) (*Consumer, error) {
+func New(cfg Config) (*Consumer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
-	config.Net.TLS.Config = tlsConfig
+	config.Net.TLS.Config = cfg.TlsConfig
 	config.Version = sarama.V2_6_0_0
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	config.Consumer.Interceptors = []sarama.ConsumerInterceptor{interceptor}
-	sarama.Logger = logger
+	config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
+	sarama.Logger = cfg.Logger
 
-	consumer, err := sarama.NewConsumerGroup(brokers, groupID, config)
+	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &Consumer{
-		Messages: make(chan kafka.Message, 1024),
-		consumer: consumer,
-		topic:    topic,
-		logger:   logger,
+		callback:      cfg.Callback,
+		consumer:      consumer,
+		logger:        cfg.Logger,
+		retryInterval: cfg.RetryInterval,
+		topic:         cfg.Topic,
 	}
 
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	go func() {
 		for err := range c.consumer.Errors() {
-			logger.Errorf("Consumer encountered error: %s", err)
+			c.logger.Errorf("Consumer encountered error: %s", err)
 		}
 	}()
 
 	go func() {
 		for {
-			logger.Infof("(re-)starting consumer on topic %s", topic)
-			err := c.consumer.Consume(c.ctx, []string{topic}, c)
+			c.logger.Infof("(re-)starting consumer on topic %s", cfg.Topic)
+			err := c.consumer.Consume(c.ctx, []string{cfg.Topic}, c)
 			if err != nil {
-				logger.Errorf("Error setting up consumer: %s", err)
+				c.logger.Errorf("Error setting up consumer: %s", err)
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if c.ctx.Err() != nil {
-				logger.Errorf("Consumer context error: %s", c.ctx.Err())
+				c.logger.Errorf("Consumer context error: %s", c.ctx.Err())
 				c.ctx, c.cancel = context.WithCancel(context.Background())
 			}
 			time.Sleep(10 * time.Second)

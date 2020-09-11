@@ -48,20 +48,21 @@ const (
 
 // Configuration options
 const (
-	AivenToken           = "aiven-token"
-	PreSharedKey         = "psk"
-	Follower             = "follower"
-	KafkaBrokers         = "kafka-brokers"
-	KafkaCAPath          = "kafka-ca-path"
-	KafkaCertificatePath = "kafka-certificate-path"
-	KafkaGroupID         = "kafka-group-id"
-	KafkaKeyPath         = "kafka-key-path"
-	KafkaTopic           = "kafka-topic"
-	LogFormat            = "log-format"
-	MetricsAddress       = "metrics-address"
-	Primary              = "primary"
-	SecretWriteTimeout   = "secret-write-timeout"
-	TopicReportInterval  = "topic-report-interval"
+	AivenToken                   = "aiven-token"
+	Follower                     = "follower"
+	KafkaBrokers                 = "kafka-brokers"
+	KafkaCAPath                  = "kafka-ca-path"
+	KafkaCertificatePath         = "kafka-certificate-path"
+	KafkaGroupID                 = "kafka-group-id"
+	KafkaKeyPath                 = "kafka-key-path"
+	KafkaTopic                   = "kafka-topic"
+	KubernetesWriteRetryInterval = "kubernetes-write-retry-interval"
+	LogFormat                    = "log-format"
+	MetricsAddress               = "metrics-address"
+	PreSharedKey                 = "psk"
+	Primary                      = "primary"
+	SecretWriteTimeout           = "secret-write-timeout"
+	TopicReportInterval          = "topic-report-interval"
 )
 
 const (
@@ -83,6 +84,7 @@ func init() {
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
 	flag.Duration(SecretWriteTimeout, time.Second*2, "How much time to allocate for writing one secret to the cluster")
+	flag.Duration(KubernetesWriteRetryInterval, time.Second*10, "Requeueing interval when Kubernetes writes fail")
 	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
 	flag.Bool(Follower, false, "If true, consume secrets from Kafka topic and persist them to Kubernetes")
 
@@ -230,11 +232,12 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 	}
 
 	reconciler := &controllers.TopicReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Aiven:    aivenClient,
-		Producer: prod,
-		Logger:   logger,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		Aiven:           aivenClient,
+		Producer:        prod,
+		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
+		Logger:          logger,
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
@@ -277,40 +280,51 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, interc
 		return
 	}
 
-	cons, err := consumer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), viper.GetString(KafkaGroupID), tlsConfig, logger, interceptor)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
-		return
-	}
-
 	secretsyncer := &secretsync.Synchronizer{
 		Client:  client,
 		Timeout: viper.GetDuration(SecretWriteTimeout),
 	}
 
-	for msg := range cons.Messages {
+	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
 		logger.Infof("Incoming message from Kafka")
 		secret := &v1.Secret{}
-		err := secret.Unmarshal(msg)
+		err := secret.Unmarshal(msg.Value)
 		if err != nil {
-			logger.Errorf("Unmarshal error in received secret: %s", err)
-			continue
+			return false, fmt.Errorf("unmarshal error in received secret: %s", err)
 		}
 
-		logger := logger.WithFields(log.Fields{
+		logger = logger.WithFields(log.Fields{
 			"secret_namespace": secret.Namespace,
 			"secret_name":      secret.Name,
 		})
 
 		err = secretsyncer.Write(secret, logger)
 		if err != nil {
-			logger.Errorf("Retriable error in persisting secret: %s", err)
+			return true, fmt.Errorf("retriable error in persisting secret: %s", err)
 			// todo: metrics
-			// todo: don't ack kafka
-		} else {
-			logger.Infof("Successfully synchronized secret")
 		}
+
+		logger.Infof("Successfully synchronized secret")
+
+		return false, nil
 	}
+
+	_, err = consumer.New(consumer.Config{
+		Brokers:       viper.GetStringSlice(KafkaBrokers),
+		GroupID:       viper.GetString(KafkaGroupID),
+		RetryInterval: viper.GetDuration(KubernetesWriteRetryInterval),
+		Topic:         viper.GetString(KafkaTopic),
+		Callback:      callback,
+		Interceptor:   interceptor,
+		Logger:        logger,
+		TlsConfig:     tlsConfig,
+	})
+
+	if err != nil {
+		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
+	}
+
+	return
 }
 
 func init() {

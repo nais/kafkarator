@@ -35,12 +35,12 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	}, nil
 }
 
-func (p *Producer) Produce(msg kafka.Message) error {
+func (p *Producer) Produce(msg kafka.Message) (offset int64, err error) {
 	producerMessage := &sarama.ProducerMessage{
 		Topic:     p.topic,
 		Value:     sarama.ByteEncoder(msg),
 		Timestamp: time.Now(),
 	}
-	_, _, err := p.producer.SendMessage(producerMessage)
-	return err
+	_, offset, err = p.producer.SendMessage(producerMessage)
+	return
 }

@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	requeueInterval     = 10 * time.Second
 	KafkaBrokers        = "KAFKA_BROKERS"
 	KafkaSchemaRegistry = "KAFKA_SCHEMA_REGISTRY"
 	KafkaCertificate    = "KAFKA_CERTIFICATE"
@@ -58,10 +57,11 @@ type secretData struct {
 
 type TopicReconciler struct {
 	client.Client
-	Aiven    *aiven.Client
-	Scheme   *runtime.Scheme
-	Logger   *log.Logger
-	Producer *producer.Producer
+	Aiven           *aiven.Client
+	Scheme          *runtime.Scheme
+	Logger          *log.Logger
+	Producer        *producer.Producer
+	RequeueInterval time.Duration
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
@@ -94,7 +94,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	case err != nil:
 		logger.Errorf("Unable to retrieve resource from cluster: %s", err)
 		return ctrl.Result{
-			RequeueAfter: requeueInterval,
+			RequeueAfter: r.RequeueInterval,
 		}, nil
 	}
 
@@ -158,7 +158,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		logger.Errorf("Failed synchronization: %s", err)
 
 		return ctrl.Result{
-			RequeueAfter: requeueInterval,
+			RequeueAfter: r.RequeueInterval,
 		}, nil
 	}
 
@@ -198,7 +198,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		return err
 	}
 
-	tx.logger.Infof("Synchronizing secrets")
+	tx.logger.Infof("Producing secrets")
 	serviceManager := service.Manager{
 		AivenCA:      r.Aiven.CA,
 		AivenService: r.Aiven.Services,
@@ -256,10 +256,14 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			return fmt.Errorf("unable to marshal secret: %w", err)
 		}
 
-		err = r.Producer.Produce(payload)
+		offset, err := r.Producer.Produce(payload)
 		if err != nil {
 			return fmt.Errorf("unable to produce secret on Kafka: %w", err)
 		}
+
+		tx.logger.WithFields(log.Fields{
+			"kafka_offset": offset,
+		}).Infof("Produced secret")
 	}
 
 	tx.logger.Infof("Synchronizing topic")
