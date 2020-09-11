@@ -58,7 +58,7 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	report(0)
 
 	for message := range claim.Messages() {
-		for err != nil || retry {
+		for retry {
 			report(1)
 			logger := c.logger.WithFields(log.Fields{
 				"kafka_offset": message.Offset,
