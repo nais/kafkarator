@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,6 +18,7 @@ type Consumer struct {
 	cancel        context.CancelFunc
 	consumer      sarama.ConsumerGroup
 	ctx           context.Context
+	groupID       string
 	logger        *log.Logger
 	retryInterval time.Duration
 	topic         string
@@ -47,8 +50,16 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	var retry = true
 	var err error
 
+	report := func(add int) {
+		metrics.SecretQueueSize.With(prometheus.Labels{
+			metrics.LabelGroupID: c.groupID,
+		}).Set(float64(len(claim.Messages()) + add))
+	}
+	report(0)
+
 	for message := range claim.Messages() {
 		for err != nil || retry {
+			report(1)
 			logger := c.logger.WithFields(log.Fields{
 				"kafka_offset": message.Offset,
 			})
@@ -60,6 +71,7 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 		}
 		retry, err = true, nil
 		session.MarkMessage(message, "")
+		report(0)
 	}
 	return nil
 }
@@ -82,6 +94,7 @@ func New(cfg Config) (*Consumer, error) {
 	c := &Consumer{
 		callback:      cfg.Callback,
 		consumer:      consumer,
+		groupID:       cfg.GroupID,
 		logger:        cfg.Logger,
 		retryInterval: cfg.RetryInterval,
 		topic:         cfg.Topic,

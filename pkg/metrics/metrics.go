@@ -11,14 +11,15 @@ import (
 const (
 	Namespace = "kafkarator"
 
+	LabelAivenOperation = "operation"
+	LabelApp            = "app"
+	LabelGroupID        = "group_id"
+	LabelPool           = "pool"
+	LabelSource         = "source"
+	LabelStatus         = "status"
+	LabelSyncState      = "synchronization_state"
 	LabelTeam           = "team"
 	LabelTopic          = "topic"
-	LabelApp            = "app"
-	LabelSyncState      = "synchronization_state"
-	LabelSource         = "source"
-	LabelAivenOperation = "operation"
-	LabelStatus         = "status"
-	LabelPool           = "pool"
 
 	SourceCluster = "cluster"
 	SourceAiven   = "aiven"
@@ -55,6 +56,12 @@ var (
 		Help:      "latency in aiven api operations",
 		Buckets:   prometheus.LinearBuckets(0.05, 0.05, 100),
 	}, []string{LabelAivenOperation, LabelStatus, LabelPool})
+
+	SecretQueueSize = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name:      "secret_queue_size",
+		Namespace: Namespace,
+		Help:      "unwritten secrets for a specific group id",
+	}, []string{LabelGroupID})
 )
 
 func ObserveAivenLatency(operation, pool string, fun func() error) error {

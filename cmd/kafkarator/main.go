@@ -344,6 +344,7 @@ func init() {
 		kafkaratormetrics.ServiceUsers,
 		kafkaratormetrics.AivenLatency,
 		kafkaratormetrics.Acls,
+		kafkaratormetrics.SecretQueueSize,
 	)
 	// +kubebuilder:scaffold:scheme
 }
