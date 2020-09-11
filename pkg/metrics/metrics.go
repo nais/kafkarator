@@ -14,7 +14,9 @@ const (
 	LabelAivenOperation = "operation"
 	LabelApp            = "app"
 	LabelGroupID        = "group_id"
+	LabelNamespace      = "namespace"
 	LabelPool           = "pool"
+	LabelResourceType   = "resource_type"
 	LabelSource         = "source"
 	LabelStatus         = "status"
 	LabelSyncState      = "synchronization_state"
@@ -62,6 +64,12 @@ var (
 		Namespace: Namespace,
 		Help:      "unwritten secrets for a specific group id",
 	}, []string{LabelGroupID})
+
+	KubernetesResourcesWritten = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "kubernetes_resources_written",
+		Namespace: Namespace,
+		Help:      "number of kubernetes resources written to the cluster",
+	}, []string{LabelNamespace, LabelResourceType})
 )
 
 func ObserveAivenLatency(operation, pool string, fun func() error) error {

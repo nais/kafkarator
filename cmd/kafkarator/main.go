@@ -301,7 +301,6 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, interc
 		err = secretsyncer.Write(secret, logger)
 		if err != nil {
 			return true, fmt.Errorf("retriable error in persisting secret: %s", err)
-			// todo: metrics
 		}
 
 		logger.Infof("Successfully synchronized secret")
@@ -339,12 +338,13 @@ func init() {
 	}
 
 	metrics.Registry.MustRegister(
+		kafkaratormetrics.Acls,
+		kafkaratormetrics.AivenLatency,
+		kafkaratormetrics.KubernetesResourcesWritten,
+		kafkaratormetrics.SecretQueueSize,
+		kafkaratormetrics.ServiceUsers,
 		kafkaratormetrics.Topics,
 		kafkaratormetrics.TopicsProcessed,
-		kafkaratormetrics.ServiceUsers,
-		kafkaratormetrics.AivenLatency,
-		kafkaratormetrics.Acls,
-		kafkaratormetrics.SecretQueueSize,
 	)
 	// +kubebuilder:scaffold:scheme
 }

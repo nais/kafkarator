@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +38,13 @@ func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
 		logger.Infof("Updating secret")
 		secret.ResourceVersion = old.ResourceVersion
 		err = s.Update(ctx, secret)
+	}
+
+	if err == nil {
+		metrics.KubernetesResourcesWritten.With(prometheus.Labels{
+			metrics.LabelResourceType: "secret",
+			metrics.LabelNamespace:    key.Namespace,
+		})
 	}
 
 	return err
