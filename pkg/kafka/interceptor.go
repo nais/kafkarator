@@ -30,5 +30,5 @@ func (c *CryptInterceptor) OnSend(msg *sarama.ProducerMessage) {
 		msg.Value = sarama.ByteEncoder(ciphertext)
 		return
 	}
-	log.Errorf("crypt interceptor: encoding error: %s")
+	log.Errorf("crypt interceptor: encoding error: %s", err)
 }
