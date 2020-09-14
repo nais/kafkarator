@@ -155,6 +155,8 @@ func main() {
 		os.Exit(ExitController)
 	}
 
+	terminator := make(chan struct{}, 1)
+
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
@@ -167,16 +169,25 @@ func main() {
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
-	for {
-		select {
-		case err := <-quit:
-			logger.Errorf("terminating unexpectedly: %s", err)
-			os.Exit(ExitRuntime)
-		case sig := <-signals:
-			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
-			os.Exit(ExitOK)
+	go func() {
+		for {
+			select {
+			case err := <-quit:
+				logger.Errorf("terminating unexpectedly: %s", err)
+				os.Exit(ExitRuntime)
+			case sig := <-signals:
+				logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
+				os.Exit(ExitOK)
+			}
 		}
+	}()
+
+	if err := mgr.Start(terminator); err != nil {
+		quit <- fmt.Errorf("manager stopped unexpectedly: %s", err)
+		return
 	}
+
+	quit <- fmt.Errorf("manager has stopped")
 }
 
 func tlsFromFiles() (cert, key, ca []byte, err error) {
@@ -253,16 +264,8 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 		Logger:         logger,
 		ReportInterval: viper.GetDuration(TopicReportInterval),
 	}
+
 	go collector.Run()
-
-	terminator := make(chan struct{}, 1)
-
-	if err := mgr.Start(terminator); err != nil {
-		quit <- fmt.Errorf("manager stopped unexpectedly: %s", err)
-		return
-	}
-
-	quit <- fmt.Errorf("manager has stopped")
 }
 
 func follower(quit QuitChannel, logger *log.Logger, client client.Client, interceptor sarama.ConsumerInterceptor) {
