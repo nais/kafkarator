@@ -105,8 +105,7 @@ func (t *Topic) Report(ctx context.Context) error {
 }
 
 func (t *Topic) Run() {
-	ticker := time.NewTicker(t.ReportInterval)
-	for range ticker.C {
+	report := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), t.ReportInterval)
 		now := time.Now()
 		err := t.Report(ctx)
@@ -117,6 +116,12 @@ func (t *Topic) Run() {
 		} else {
 			t.Logger.Infof("Updated topic metrics in %s", duration)
 		}
+	}
+
+	report()
+	ticker := time.NewTicker(t.ReportInterval)
+	for range ticker.C {
+		report()
 	}
 }
 
