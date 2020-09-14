@@ -15,6 +15,7 @@ func (c *CryptInterceptor) OnConsume(msg *sarama.ConsumerMessage) {
 	plaintext, err := crypto.Decrypt(msg.Value, c.Key)
 	if err != nil {
 		log.Errorf("unable to decrypt incoming Kafka message: %s", err)
+		plaintext = msg.Value
 	}
 	msg.Value = plaintext
 }
