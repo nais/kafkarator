@@ -312,14 +312,15 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, interc
 	}
 
 	_, err = consumer.New(consumer.Config{
-		Brokers:       viper.GetStringSlice(KafkaBrokers),
-		GroupID:       viper.GetString(KafkaGroupID),
-		RetryInterval: viper.GetDuration(KubernetesWriteRetryInterval),
-		Topic:         viper.GetString(KafkaTopic),
-		Callback:      callback,
-		Interceptor:   interceptor,
-		Logger:        logger,
-		TlsConfig:     tlsConfig,
+		Brokers:           viper.GetStringSlice(KafkaBrokers),
+		GroupID:           viper.GetString(KafkaGroupID),
+		MaxProcessingTime: viper.GetDuration(SecretWriteTimeout),
+		RetryInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
+		Topic:             viper.GetString(KafkaTopic),
+		Callback:          callback,
+		Interceptor:       interceptor,
+		Logger:            logger,
+		TlsConfig:         tlsConfig,
 	})
 
 	if err != nil {

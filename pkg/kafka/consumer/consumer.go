@@ -25,14 +25,15 @@ type Consumer struct {
 }
 
 type Config struct {
-	Brokers       []string
-	Callback      Callback
-	GroupID       string
-	Interceptor   sarama.ConsumerInterceptor
-	Logger        *log.Logger
-	RetryInterval time.Duration
-	TlsConfig     *tls.Config
-	Topic         string
+	Brokers           []string
+	Callback          Callback
+	GroupID           string
+	Interceptor       sarama.ConsumerInterceptor
+	MaxProcessingTime time.Duration
+	Logger            *log.Logger
+	RetryInterval     time.Duration
+	TlsConfig         *tls.Config
+	Topic             string
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
@@ -84,6 +85,8 @@ func New(cfg Config) (*Consumer, error) {
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
+	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
+
 	sarama.Logger = cfg.Logger
 
 	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)
