@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"crypto/tls"
+	"os"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -86,7 +87,7 @@ func New(cfg Config) (*Consumer, error) {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
-
+	config.ClientID, _ = os.Hostname()
 	sarama.Logger = cfg.Logger
 
 	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)

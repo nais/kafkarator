@@ -2,6 +2,7 @@ package producer
 
 import (
 	"crypto/tls"
+	"os"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -22,6 +23,7 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
 	config.Producer.Interceptors = []sarama.ProducerInterceptor{interceptor}
+	config.ClientID, _ = os.Hostname()
 	sarama.Logger = logger
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
