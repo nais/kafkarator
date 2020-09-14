@@ -44,7 +44,7 @@ func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
 		metrics.KubernetesResourcesWritten.With(prometheus.Labels{
 			metrics.LabelResourceType: "secret",
 			metrics.LabelNamespace:    key.Namespace,
-		})
+		}).Inc()
 	}
 
 	return err
