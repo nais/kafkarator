@@ -90,7 +90,8 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	err := r.Get(ctx, req.NamespacedName, &topicResource)
 	switch {
 	case errors.IsNotFound(err):
-		logger.Errorf("Resource not found in cluster")
+		logger.Errorf("Resource deleted from cluster; noop")
+		return ctrl.Result{}, nil
 	case err != nil:
 		logger.Errorf("Unable to retrieve resource from cluster: %s", err)
 		return ctrl.Result{
