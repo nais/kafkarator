@@ -179,7 +179,7 @@ func main() {
 					"timestamp": timer.Format(time.RFC3339Nano),
 				}).Info("Produced canary message")
 			} else {
-				logger.Infof("unable to produce canary message on Kafka: %w", err)
+				logger.Infof("unable to produce canary message on Kafka: %s", err)
 			}
 			time.Sleep(viper.GetDuration(CanaryMessageInterval))
 		}
