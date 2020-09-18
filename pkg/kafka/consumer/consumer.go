@@ -68,7 +68,9 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 			retry, err = c.callback(message, logger)
 			if err != nil {
 				logger.Errorf("Consume Kafka message: %s", err)
-				time.Sleep(c.retryInterval)
+				if retry {
+					time.Sleep(c.retryInterval)
+				}
 			}
 		}
 		retry, err = true, nil
@@ -85,7 +87,9 @@ func New(cfg Config) (*Consumer, error) {
 	config.Version = sarama.V2_6_0_0
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
+	if cfg.Interceptor != nil {
+		config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
+	}
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
 	config.ClientID, _ = os.Hostname()
 	sarama.Logger = cfg.Logger

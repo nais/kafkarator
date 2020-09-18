@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
 	"github.com/nais/kafkarator/pkg/secretsync"
+	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -190,32 +190,6 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func tlsFromFiles() (cert, key, ca []byte, err error) {
-	certPath := viper.GetString(KafkaCertificatePath)
-	keyPath := viper.GetString(KafkaKeyPath)
-	caPath := viper.GetString(KafkaCAPath)
-
-	cert, err = ioutil.ReadFile(certPath)
-	if err != nil {
-		err = fmt.Errorf("unable to read certificate file %s: %s", certPath, err)
-		return
-	}
-
-	key, err = ioutil.ReadFile(keyPath)
-	if err != nil {
-		err = fmt.Errorf("unable to read key file %s: %s", keyPath, err)
-		return
-	}
-
-	ca, err = ioutil.ReadFile(caPath)
-	if err != nil {
-		err = fmt.Errorf("unable to read CA certificate file %s: %s", caPath, err)
-		return
-	}
-
-	return
-}
-
 func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, interceptor sarama.ProducerInterceptor) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
@@ -224,7 +198,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 		return
 	}
 
-	cert, key, ca, err := tlsFromFiles()
+	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
 		return
@@ -271,7 +245,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 func follower(quit QuitChannel, logger *log.Logger, client client.Client, interceptor sarama.ConsumerInterceptor) {
 	logger.Info("Follower started")
 
-	cert, key, ca, err := tlsFromFiles()
+	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
 		return
