@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,28 +14,64 @@ import (
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-type QuitChannel chan error
-
 const (
 	ExitOK = iota
 	ExitRuntime
+
+	Namespace = "kafkarator_canary"
 )
 
 // Configuration options
 const (
-	KafkaBrokers         = "kafka-brokers"
-	KafkaCAPath          = "kafka-ca-path"
-	KafkaCertificatePath = "kafka-certificate-path"
-	KafkaGroupID         = "kafka-group-id"
-	KafkaKeyPath         = "kafka-key-path"
-	KafkaTopic           = "kafka-topic"
-	LogFormat            = "log-format"
-	MetricsAddress       = "metrics-address"
+	KafkaBrokers          = "kafka-brokers"
+	KafkaCAPath           = "kafka-ca-path"
+	KafkaCertificatePath  = "kafka-certificate-path"
+	KafkaGroupID          = "kafka-group-id"
+	KafkaKeyPath          = "kafka-key-path"
+	KafkaTopic            = "kafka-topic"
+	LogFormat             = "log-format"
+	MetricsAddress        = "metrics-address"
+	CanaryMessageInterval = "canary-message-interval"
+)
+
+type Consume struct {
+	offset    int64
+	timeStamp time.Time
+}
+
+var (
+	LastProduced = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "last_produced",
+		Help:      "timestamp of last produced canary message",
+	})
+
+	LastConsumed = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "last_consumed",
+		Help:      "timestamp of last consumed canary message",
+	})
+
+	CanaryProduceLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "canary_produce_latency",
+		Namespace: Namespace,
+		Help:      "latency in canary produce",
+		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
+	})
+
+	CanaryConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "canary_consume_latency",
+		Namespace: Namespace,
+		Help:      "latency in canary consume",
+		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
+	})
 )
 
 func init() {
@@ -46,6 +83,8 @@ func init() {
 
 	flag.String(MetricsAddress, "127.0.0.1:8080", "The address the metric endpoint binds to.")
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
+
+	flag.Duration(CanaryMessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -62,13 +101,25 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	prometheus.MustRegister(
+		LastProduced,
+		LastConsumed,
+		CanaryConsumeLatency,
+		CanaryProduceLatency)
 }
 
 func main() {
+	type QuitChannel chan error
+
 	quit := make(QuitChannel, 1)
 	signals := make(chan os.Signal, 1)
-	consume := make(chan time.Time, 32)
+	cons := make(chan Consume, 32)
 	logger := log.New()
+
+	go func() {
+		quit <- http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler())
+	}()
 
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
@@ -93,7 +144,9 @@ func main() {
 		if err != nil {
 			return false, fmt.Errorf("converting string to timestamp: %s", err)
 		}
-		consume <- t
+		o := msg.Offset
+		c := Consume{o, t}
+		cons <- c
 
 		return false, nil
 	}
@@ -116,20 +169,31 @@ func main() {
 
 	go func() {
 		for {
+			timer := time.Now()
 			offset, err := prod.Produce(kafka.Message(time.Now().Format(time.RFC3339Nano)))
-			if err != nil {
-				quit <- fmt.Errorf("unable to produce canary message on Kafka: %w", err)
-				return
+			CanaryProduceLatency.Observe(time.Now().Sub(timer).Seconds())
+			if err == nil {
+				LastProduced.SetToCurrentTime()
+				logger.WithFields(log.Fields{
+					"offset":    offset,
+					"timestamp": timer.Format(time.RFC3339Nano),
+				}).Info("Produced canary message")
+			} else {
+				logger.Infof("unable to produce canary message on Kafka: %w", err)
 			}
-			logger.Info("Produced canary message at offset ", offset)
-			time.Sleep(time.Minute * 1)
+			time.Sleep(viper.GetDuration(CanaryMessageInterval))
 		}
 	}()
 
 	for {
 		select {
-		case msg := <-consume:
-			logger.Infof("consumed message with timestamp: %s", msg)
+		case msg := <-cons:
+			logger.WithFields(log.Fields{
+				"offset":    msg.offset,
+				"timestamp": msg.timeStamp.Format(time.RFC3339Nano),
+			}).Info("consumed message")
+			LastConsumed.SetToCurrentTime()
+			CanaryConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
 		case err := <-quit:
 			logger.Errorf("terminating unexpectedly: %s", err)
 			os.Exit(ExitRuntime)

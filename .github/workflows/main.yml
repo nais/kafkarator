@@ -3,7 +3,8 @@ name: Build and deploy Kafkarator
 on: [push]
 
 env:
-  image: docker.pkg.github.com/${{ github.repository }}/kafkarator
+  kafkarator_image: docker.pkg.github.com/${{ github.repository }}/kafkarator
+  canary_image: docker.pkg.github.com/${{ github.repository }}/canary
 
 jobs:
   build:
@@ -15,15 +16,20 @@ jobs:
         run: |
           version=$(./version.sh)
           echo ::set-env name=version::${version}
-          echo ::set-env name=IMAGE::${image}:${version}
-      - name: Build docker image
-        run: docker build . --tag $IMAGE
+          echo ::set-env name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}
+          echo ::set-env name=CANARY_IMAGE::${canary_image}:${version}
+      - name: Build kafkarator docker image
+        run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
+      - name: Build canary docker image
+        run: docker build -f Dockerfile.canary . --tag $CANARY_IMAGE --tag ${canary_image}:latest
       - name: Login to Github package registry
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GITHUB_TOKEN" | docker login docker.pkg.github.com -u "$GITHUB_REPOSITORY" --password-stdin
-      - name: Push docker image
-        run: docker push $IMAGE
+      - name: Push docker images
+        run: |
+          docker push $KAFKARATOR_IMAGE
+          docker push $CANARY_IMAGE
   deploy:
     name: Deploy to Kubernetes
     if: github.ref == 'refs/heads/master'
@@ -35,7 +41,7 @@ jobs:
       run: |
         version=$(./version.sh)
         echo ::set-env name=version::${version}
-        echo ::set-env name=IMAGE::${image}:${version}
+        echo ::set-env name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}
         echo ::set-env name=NAIS_YAML::${GITHUB_WORKSPACE}/nais-yaml
         pwd
     - name: Bump version in nais-yaml
@@ -51,7 +57,7 @@ jobs:
         cd $NAIS_YAML
         git config user.email "aura@nav.no"
         git config user.name "NAIS deploy pipeline"
-        sed -E -i "s#image: .+#image: ${IMAGE}#" vars/kafkarator.yaml
+        sed -E -i "s#image: .+#image: ${KAFKARATOR_IMAGE}#" vars/kafkarator.yaml
         git add .
         git --no-pager diff --cached
         git commit -a -m "Bump Kafkarator to version ${version}"
