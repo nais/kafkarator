@@ -12,20 +12,28 @@ type CryptInterceptor struct {
 }
 
 func (c *CryptInterceptor) OnConsume(msg *sarama.ConsumerMessage) {
+	if msg == nil {
+		c.Logger.Errorf("OnConsume interceptor: ignoring nil message")
+		return
+	}
 	plaintext, err := crypto.Decrypt(msg.Value, c.Key)
 	if err != nil {
-		log.Errorf("unable to decrypt incoming Kafka message: %s", err)
+		c.Logger.Errorf("unable to decrypt incoming Kafka message: %s", err)
 		plaintext = msg.Value
 	}
 	msg.Value = plaintext
 }
 
 func (c *CryptInterceptor) OnSend(msg *sarama.ProducerMessage) {
+	if msg == nil {
+		c.Logger.Errorf("OnSend interceptor: ignoring nil message")
+		return
+	}
 	plaintext, err := msg.Value.Encode()
 	if err == nil {
 		ciphertext, err := crypto.Encrypt(plaintext, c.Key)
 		if err != nil {
-			log.Errorf("unable to encrypt outgoing Kafka message; sending empty string instead: %s", err)
+			c.Logger.Errorf("unable to encrypt outgoing Kafka message; sending empty string instead: %s", err)
 			ciphertext = make([]byte, 0)
 		}
 		msg.Value = sarama.ByteEncoder(ciphertext)
