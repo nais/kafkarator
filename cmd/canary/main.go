@@ -83,7 +83,7 @@ var (
 func init() {
 	// Automatically read configuration options from environment variables.
 	// i.e. --aiven-token will be configurable using KAFKARATOR_AIVEN_TOKEN.
-	viper.SetEnvPrefix("KAFKARATOR")
+	viper.SetEnvPrefix("CANARY")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 
@@ -100,6 +100,13 @@ func init() {
 	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
 	flag.String(KafkaKeyPath, "kafka.key", "Path to Kafka client key")
 	flag.String(KafkaCAPath, "ca.crt", "Path to Kafka CA certificate")
+
+	// Read config from NAIS
+	// https://doc.nais.io/addons/kafka#application-config
+	_ = viper.BindEnv(KafkaBrokers, "KAFKA_BROKERS")
+	_ = viper.BindEnv(KafkaCertificatePath, "KAFKA_CERTIFICATE_PATH")
+	_ = viper.BindEnv(KafkaKeyPath, "KAFKA_PRIVATE_KEY_PATH")
+	_ = viper.BindEnv(KafkaCAPath, "KAFKA_CA_PATH")
 
 	flag.Parse()
 
