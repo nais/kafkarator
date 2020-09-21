@@ -42,6 +42,7 @@ jobs:
         version=$(./version.sh)
         echo ::set-env name=version::${version}
         echo ::set-env name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}
+        echo ::set-env name=CANARY_IMAGE::${canary_image}:${version}
         echo ::set-env name=NAIS_YAML::${GITHUB_WORKSPACE}/nais-yaml
         pwd
     - name: Bump version in nais-yaml
@@ -57,7 +58,8 @@ jobs:
         cd $NAIS_YAML
         git config user.email "aura@nav.no"
         git config user.name "NAIS deploy pipeline"
-        sed -E -i "s#image: .+#image: ${KAFKARATOR_IMAGE}#" vars/kafkarator.yaml
+        sed -E -i "s#kafkarator_image: .+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/kafkarator.yaml
+        sed -E -i "s#canary_image: .+#canary_image: ${CANARY_IMAGE}#" vars/kafkarator.yaml
         git add .
         git --no-pager diff --cached
         git commit -a -m "Bump Kafkarator to version ${version}"
