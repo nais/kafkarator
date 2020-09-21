@@ -65,17 +65,17 @@ var (
 		Help:      "timestamp of last consumed canary message",
 	})
 
-	CanaryProduceLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
-		Name:      "canary_produce_latency",
+	ProduceLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "produce_latency",
 		Namespace: Namespace,
-		Help:      "latency in canary produce",
+		Help:      "latency in message production",
 		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
 	})
 
-	CanaryConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
-		Name:      "canary_consume_latency",
+	ConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "consume_latency",
 		Namespace: Namespace,
-		Help:      "latency in canary consume",
+		Help:      "latency in message consumption",
 		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
 	})
 )
@@ -118,8 +118,8 @@ func init() {
 	prometheus.MustRegister(
 		LastProduced,
 		LastConsumed,
-		CanaryConsumeLatency,
-		CanaryProduceLatency)
+		ConsumeLatency,
+		ProduceLatency)
 }
 
 func formatter(logFormat string) (log.Formatter, error) {
@@ -162,19 +162,19 @@ func main() {
 
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		logger.Errorf("unable to set up TLS config: %s", err)
 		return
 	}
 
 	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
 	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
+		logger.Errorf("unable to set up TLS config: %s", err)
 		return
 	}
 
 	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger, nil)
 	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
+		logger.Errorf("unable to set up kafka producer: %s", err)
 		return
 	}
 
@@ -203,7 +203,8 @@ func main() {
 		TlsConfig:         tlsConfig,
 	})
 	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
+		logger.Errorf("unable to set up kafka consumer: %s", err)
+		return
 	}
 
 	logger.Infof("started message consumer")
@@ -214,7 +215,7 @@ func main() {
 		for {
 			timer := time.Now()
 			offset, err := prod.Produce(kafka.Message(time.Now().Format(time.RFC3339Nano)))
-			CanaryProduceLatency.Observe(time.Now().Sub(timer).Seconds())
+			ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 			if err == nil {
 				LastProduced.SetToCurrentTime()
 				logger.WithFields(log.Fields{
@@ -236,9 +237,9 @@ func main() {
 			logger.WithFields(log.Fields{
 				"offset":    msg.offset,
 				"timestamp": msg.timeStamp.Format(time.RFC3339Nano),
-			}).Info("consumed message")
+			}).Info("Consumed canary message")
 			LastConsumed.SetToCurrentTime()
-			CanaryConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
+			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
 		case err := <-quit:
 			logger.Errorf("terminating unexpectedly: %s", err)
 			os.Exit(ExitRuntime)
