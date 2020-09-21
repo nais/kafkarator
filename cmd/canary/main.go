@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -209,10 +210,13 @@ func main() {
 
 	logger.Infof("started message consumer")
 
+	metricLock := &sync.Mutex{}
+
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
 		for {
+			metricLock.Lock()
 			timer := time.Now()
 			offset, err := prod.Produce(kafka.Message(time.Now().Format(time.RFC3339Nano)))
 			ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
@@ -225,6 +229,7 @@ func main() {
 			} else {
 				logger.Infof("unable to produce canary message on Kafka: %s", err)
 			}
+			metricLock.Unlock()
 			time.Sleep(viper.GetDuration(CanaryMessageInterval))
 		}
 	}()
@@ -234,12 +239,14 @@ func main() {
 	for {
 		select {
 		case msg := <-cons:
+			metricLock.Lock()
 			logger.WithFields(log.Fields{
 				"offset":    msg.offset,
 				"timestamp": msg.timeStamp.Format(time.RFC3339Nano),
 			}).Info("Consumed canary message")
 			LastConsumed.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
+			metricLock.Unlock()
 		case err := <-quit:
 			logger.Errorf("terminating unexpectedly: %s", err)
 			os.Exit(ExitRuntime)
