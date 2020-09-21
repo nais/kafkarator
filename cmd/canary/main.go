@@ -23,6 +23,7 @@ import (
 
 const (
 	ExitOK = iota
+	ExitConfig
 	ExitRuntime
 
 	Namespace = "kafkarator_canary"
@@ -39,6 +40,11 @@ const (
 	LogFormat             = "log-format"
 	MetricsAddress        = "metrics-address"
 	CanaryMessageInterval = "canary-message-interval"
+)
+
+const (
+	LogFormatJSON = "json"
+	LogFormatText = "text"
 )
 
 type Consume struct {
@@ -109,13 +115,39 @@ func init() {
 		CanaryProduceLatency)
 }
 
+func formatter(logFormat string) (log.Formatter, error) {
+	switch logFormat {
+	case LogFormatJSON:
+		return &log.JSONFormatter{
+			TimestampFormat:   time.RFC3339Nano,
+			DisableHTMLEscape: true,
+		}, nil
+	case LogFormatText:
+		return &log.TextFormatter{
+			FullTimestamp:   true,
+			TimestampFormat: time.RFC3339Nano,
+		}, nil
+	}
+	return nil, fmt.Errorf("unsupported log format '%s'", logFormat)
+}
+
 func main() {
 	type QuitChannel chan error
 
 	quit := make(QuitChannel, 1)
 	signals := make(chan os.Signal, 1)
 	cons := make(chan Consume, 32)
+
 	logger := log.New()
+	logfmt, err := formatter(viper.GetString(LogFormat))
+	if err != nil {
+		logger.Error(err)
+		os.Exit(ExitConfig)
+	}
+
+	logger.SetFormatter(logfmt)
+
+	logger.Infof("kafkarator-canary starting up...")
 
 	go func() {
 		quit <- http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler())
@@ -138,6 +170,8 @@ func main() {
 		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
 		return
 	}
+
+	logger.Infof("started message producer")
 
 	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
 		t, err := time.Parse(time.RFC3339Nano, string(msg.Value))
@@ -165,6 +199,8 @@ func main() {
 		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
 	}
 
+	logger.Infof("started message consumer")
+
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
@@ -184,6 +220,8 @@ func main() {
 			time.Sleep(viper.GetDuration(CanaryMessageInterval))
 		}
 	}()
+
+	logger.Infof("Ready.")
 
 	for {
 		select {
