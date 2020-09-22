@@ -53,16 +53,28 @@ type Consume struct {
 }
 
 var (
-	LastProduced = prometheus.NewGauge(prometheus.GaugeOpts{
+	LastProducedTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "last_produced",
 		Help:      "timestamp of last produced canary message",
 	})
 
-	LastConsumed = prometheus.NewGauge(prometheus.GaugeOpts{
+	LastConsumedTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "last_consumed",
 		Help:      "timestamp of last consumed canary message",
+	})
+
+	LastProducedOffset = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "last_produced_offset",
+		Help:      "offset of last produced canary message",
+	})
+
+	LastConsumedOffset = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "last_consumed_offset",
+		Help:      "offset of last consumed canary message",
 	})
 
 	ProduceLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -116,10 +128,13 @@ func init() {
 	}
 
 	prometheus.MustRegister(
-		LastProduced,
-		LastConsumed,
+		LastProducedTimestamp,
+		LastConsumedTimestamp,
+		LastProducedOffset,
+		LastConsumedOffset,
 		ConsumeLatency,
-		ProduceLatency)
+		ProduceLatency,
+	)
 }
 
 func formatter(logFormat string) (log.Formatter, error) {
@@ -216,13 +231,10 @@ func main() {
 		offset, err := prod.Produce(kafka.Message(time.Now().Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
-			LastProduced.SetToCurrentTime()
-			logger.WithFields(log.Fields{
-				"offset":    offset,
-				"timestamp": timer.Format(time.RFC3339Nano),
-			}).Info("Produced canary message")
+			LastProducedTimestamp.SetToCurrentTime()
+			LastProducedOffset.Set(float64(offset))
 		} else {
-			logger.Infof("unable to produce canary message on Kafka: %s", err)
+			logger.Errorf("unable to produce canary message on Kafka: %s", err)
 		}
 	}
 
@@ -235,12 +247,9 @@ func main() {
 		case <-produceTicker.C:
 			produce()
 		case msg := <-cons:
-			logger.WithFields(log.Fields{
-				"offset":    msg.offset,
-				"timestamp": msg.timeStamp.Format(time.RFC3339Nano),
-			}).Info("Consumed canary message")
-			LastConsumed.SetToCurrentTime()
+			LastConsumedTimestamp.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
+			LastConsumedOffset.Set(float64(msg.offset))
 		case err := <-quit:
 			logger.Errorf("terminating unexpectedly: %s", err)
 			os.Exit(ExitRuntime)
