@@ -31,15 +31,15 @@ const (
 
 // Configuration options
 const (
-	KafkaBrokers          = "kafka-brokers"
-	KafkaCAPath           = "kafka-ca-path"
-	KafkaCertificatePath  = "kafka-certificate-path"
-	KafkaGroupID          = "kafka-group-id"
-	KafkaKeyPath          = "kafka-key-path"
-	KafkaTopic            = "kafka-topic"
-	LogFormat             = "log-format"
-	MetricsAddress        = "metrics-address"
-	CanaryMessageInterval = "canary-message-interval"
+	KafkaBrokers         = "kafka-brokers"
+	KafkaCAPath          = "kafka-ca-path"
+	KafkaCertificatePath = "kafka-certificate-path"
+	KafkaGroupID         = "kafka-group-id"
+	KafkaKeyPath         = "kafka-key-path"
+	KafkaTopic           = "kafka-topic"
+	LogFormat            = "log-format"
+	MessageInterval      = "message-interval"
+	MetricsAddress       = "metrics-address"
 )
 
 const (
@@ -102,7 +102,7 @@ func init() {
 	flag.String(MetricsAddress, "127.0.0.1:8080", "The address the metric endpoint binds to.")
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 
-	flag.Duration(CanaryMessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
+	flag.Duration(MessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -240,7 +240,7 @@ func main() {
 
 	logger.Infof("Ready.")
 
-	produceTicker := time.NewTicker(viper.GetDuration(CanaryMessageInterval))
+	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
 
 	for {
 		select {
