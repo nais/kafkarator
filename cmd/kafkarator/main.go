@@ -61,6 +61,7 @@ const (
 	MetricsAddress               = "metrics-address"
 	PreSharedKey                 = "psk"
 	Primary                      = "primary"
+	Projects                     = "projects"
 	SecretWriteTimeout           = "secret-write-timeout"
 	TopicReportInterval          = "topic-report-interval"
 )
@@ -87,6 +88,7 @@ func init() {
 	flag.Duration(KubernetesWriteRetryInterval, time.Second*10, "Requeueing interval when Kubernetes writes fail")
 	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
 	flag.Bool(Follower, false, "If true, consume secrets from Kafka topic and persist them to Kubernetes")
+	flag.StringSlice(Projects, []string{"nav-integration-test"}, "List of projects allowed to operate on")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -221,6 +223,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 		Scheme:          mgr.GetScheme(),
 		Aiven:           aivenClient,
 		Producer:        prod,
+		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
 		Logger:          logger,
 	}

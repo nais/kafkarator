@@ -61,7 +61,17 @@ type TopicReconciler struct {
 	Scheme          *runtime.Scheme
 	Logger          *log.Logger
 	Producer        *producer.Producer
+	Projects        []string
 	RequeueInterval time.Duration
+}
+
+func (r *TopicReconciler) projectWhitelisted(project string) bool {
+	for _, p := range r.Projects {
+		if p == project {
+			return true
+		}
+	}
+	return false
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
@@ -82,6 +92,32 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	var topicResource kafka_nais_io_v1.Topic
 
+	fail := func(err error, state string, retry bool) (ctrl.Result, error) {
+		aivenError, ok := err.(aiven.Error)
+		if !ok {
+			topicResource.Status.Message = err.Error()
+			topicResource.Status.Errors = []string{
+				err.Error(),
+			}
+		} else {
+			topicResource.Status.Message = aivenError.Message
+			topicResource.Status.Errors = []string{
+				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+			}
+		}
+		topicResource.Status.SynchronizationState = state
+
+		logger.Errorf("%s: %s", state, err)
+
+		if retry {
+			return ctrl.Result{
+				RequeueAfter: r.RequeueInterval,
+			}, nil
+		} else {
+			return ctrl.Result{}, nil
+		}
+	}
+
 	defer func() {
 		logger.Infof("Finished processing request")
 	}()
@@ -100,8 +136,9 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"team":        topicResource.Labels["team"],
-		"aiven_topic": topicResource.FullName(),
+		"team":          topicResource.Labels["team"],
+		"aiven_project": topicResource.Spec.Pool,
+		"aiven_topic":   topicResource.FullName(),
 	})
 
 	if topicResource.Status == nil {
@@ -116,6 +153,11 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if topicResource.Status.SynchronizationHash == hash {
 		logger.Infof("Synchronization already complete")
 		return ctrl.Result{}, nil
+	}
+
+	// Processing starts here
+	if !r.projectWhitelisted(topicResource.Spec.Pool) {
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", topicResource.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
 	// Update Topic resource with status event
@@ -142,25 +184,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	err = r.commit(*tx)
 
 	if err != nil {
-		aivenError, ok := err.(aiven.Error)
-		if !ok {
-			topicResource.Status.Message = err.Error()
-			topicResource.Status.Errors = []string{
-				err.Error(),
-			}
-		} else {
-			topicResource.Status.Message = aivenError.Message
-			topicResource.Status.Errors = []string{
-				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
-			}
-		}
-		topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventFailedSynchronization
-
-		logger.Errorf("Failed synchronization: %s", err)
-
-		return ctrl.Result{
-			RequeueAfter: r.RequeueInterval,
-		}, nil
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 
 	topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
