@@ -81,14 +81,14 @@ var (
 		Name:      "produce_latency",
 		Namespace: Namespace,
 		Help:      "latency in message production",
-		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
 	ConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:      "consume_latency",
 		Namespace: Namespace,
 		Help:      "latency in message consumption",
-		Buckets:   prometheus.LinearBuckets(0.001, 0.001, 100),
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 )
 
