@@ -142,11 +142,6 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
-	cryptInterceptor := &kafka.CryptInterceptor{
-		Key:    key,
-		Logger: logger,
-	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: viper.GetString(MetricsAddress),
@@ -157,16 +152,18 @@ func main() {
 		os.Exit(ExitController)
 	}
 
+	cryptManager := crypto.NewManager(key)
+
 	terminator := make(chan struct{}, 1)
 
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
-		go primary(quit, logger, mgr, cryptInterceptor)
+		go primary(quit, logger, mgr, cryptManager)
 	}
 
 	if viper.GetBool(Follower) {
-		go follower(quit, logger, mgr.GetClient(), cryptInterceptor)
+		go follower(quit, logger, mgr.GetClient(), cryptManager)
 	}
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -192,7 +189,7 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, interceptor sarama.ProducerInterceptor) {
+func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptManager crypto.Manager) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
@@ -212,7 +209,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 		return
 	}
 
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger, interceptor)
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
 		return
@@ -221,6 +218,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 	reconciler := &controllers.TopicReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
+		CryptManager:    cryptManager,
 		Aiven:           aivenClient,
 		Producer:        prod,
 		Projects:        viper.GetStringSlice(Projects),
@@ -245,7 +243,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, intercep
 	go collector.Run()
 }
 
-func follower(quit QuitChannel, logger *log.Logger, client client.Client, interceptor sarama.ConsumerInterceptor) {
+func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptManager crypto.Manager) {
 	logger.Info("Follower started")
 
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
@@ -267,8 +265,14 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, interc
 
 	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
 		logger.Infof("Incoming message from Kafka")
+
+		plaintext, err := cryptManager.Decrypt(msg.Value)
+		if err != nil {
+			return false, fmt.Errorf("decryption error in received message: %s", err)
+		}
+
 		secret := &v1.Secret{}
-		err := secret.Unmarshal(msg.Value)
+		err = secret.Unmarshal(plaintext)
 		if err != nil {
 			return false, fmt.Errorf("unmarshal error in received secret: %s", err)
 		}
@@ -295,7 +299,6 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, interc
 		RetryInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
 		Topic:             viper.GetString(KafkaTopic),
 		Callback:          callback,
-		Interceptor:       interceptor,
 		Logger:            logger,
 		TlsConfig:         tlsConfig,
 	})

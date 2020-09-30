@@ -187,7 +187,7 @@ func main() {
 		return
 	}
 
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger, nil)
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
 	if err != nil {
 		logger.Errorf("unable to set up kafka producer: %s", err)
 		return

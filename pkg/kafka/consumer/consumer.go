@@ -29,7 +29,6 @@ type Config struct {
 	Brokers           []string
 	Callback          Callback
 	GroupID           string
-	Interceptor       sarama.ConsumerInterceptor
 	MaxProcessingTime time.Duration
 	Logger            *log.Logger
 	RetryInterval     time.Duration
@@ -87,9 +86,6 @@ func New(cfg Config) (*Consumer, error) {
 	config.Version = sarama.V2_6_0_0
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	if cfg.Interceptor != nil {
-		config.Consumer.Interceptors = []sarama.ConsumerInterceptor{cfg.Interceptor}
-	}
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
 	config.ClientID, _ = os.Hostname()
 	sarama.Logger = cfg.Logger

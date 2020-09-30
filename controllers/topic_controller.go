@@ -12,6 +12,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/utils"
@@ -57,6 +58,7 @@ type secretData struct {
 
 type TopicReconciler struct {
 	client.Client
+	CryptManager    crypto.Manager
 	Aiven           *aiven.Client
 	Scheme          *runtime.Scheme
 	Logger          *log.Logger
@@ -276,12 +278,17 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		}
 		secret := ConvertSecret(opts)
 
-		payload, err := secret.Marshal()
+		plaintext, err := secret.Marshal()
 		if err != nil {
 			return fmt.Errorf("unable to marshal secret: %w", err)
 		}
 
-		offset, err := r.Producer.Produce(payload)
+		ciphertext, err := r.CryptManager.Encrypt(plaintext)
+		if err != nil {
+			return fmt.Errorf("unable to encrypt secret: %w", err)
+		}
+
+		offset, err := r.Producer.Produce(ciphertext)
 		if err != nil {
 			return fmt.Errorf("unable to produce secret on Kafka: %w", err)
 		}
