@@ -12,6 +12,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
@@ -33,6 +34,9 @@ const (
 	KafkaCertificate    = "KAFKA_CERTIFICATE"
 	KafkaPrivateKey     = "KAFKA_PRIVATE_KEY"
 	KafkaCA             = "KAFKA_CA"
+	KafkaStorePassword  = "KAFKA_STORE_PASSWORD"
+	KafkaKeystore       = "KAFKA_KEYSTORE"
+	KafkaTruststore     = "KAFKA_TRUSTSTORE"
 	maxSecretNameLength = 63
 )
 
@@ -65,6 +69,7 @@ type TopicReconciler struct {
 	Producer        *producer.Producer
 	Projects        []string
 	RequeueInterval time.Duration
+	StoreGenerator  certificate.Generator
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -276,7 +281,10 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			registry: kafkaSchemaRegistryAddress,
 			ca:       kafkaCA,
 		}
-		secret := ConvertSecret(opts)
+		secret, err := r.ConvertSecret(opts)
+		if err != nil {
+			return fmt.Errorf("unable to convert secret: %w", err)
+		}
 
 		plaintext, err := secret.Marshal()
 		if err != nil {
@@ -318,7 +326,11 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func ConvertSecret(data secretData) v1.Secret {
+func (r *TopicReconciler) ConvertSecret(data secretData) (v1.Secret, error) {
+	storeData, err := r.StoreGenerator.MakeStores(data.user.AccessCert, data.user.AccessKey, data.ca)
+	if err != nil {
+		return v1.Secret{}, err
+	}
 	return v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -342,7 +354,12 @@ func ConvertSecret(data secretData) v1.Secret {
 			KafkaBrokers:        data.brokers,
 			KafkaSchemaRegistry: data.registry,
 			KafkaCA:             data.ca,
+			KafkaStorePassword:  storeData.Secret,
+		},
+		Data: map[string][]byte{
+			KafkaKeystore:   storeData.Keystore,
+			KafkaTruststore: storeData.Truststore,
 		},
 		Type: v1.SecretTypeOpaque,
-	}
+	}, nil
 }

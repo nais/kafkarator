@@ -32,4 +32,9 @@ WORKDIR /
 COPY --from=builder /workspace/kafkarator /kafkarator
 COPY --from=builder /workspace/canary /canary
 
+# Add utilities for creating keystore and truststore
+RUN apk --no-cache add \
+    openssl \
+    openjdk11-jre-headless
+
 CMD ["/kafkarator"]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/nais/kafkarator/pkg/certificate"
 	"os"
 	"os/signal"
 	"strings"
@@ -224,6 +225,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
 		Logger:          logger,
+		StoreGenerator:  certificate.NewExecGenerator(),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
