@@ -35,8 +35,8 @@ const (
 	KafkaPrivateKey     = "KAFKA_PRIVATE_KEY"
 	KafkaCA             = "KAFKA_CA"
 	KafkaStorePassword  = "KAFKA_STORE_PASSWORD"
-	KafkaKeystore       = "KAFKA_KEYSTORE"
-	KafkaTruststore     = "KAFKA_TRUSTSTORE"
+	KafkaKeystore       = "client.keystore.p12"
+	KafkaTruststore     = "client.truststore.jks"
 	maxSecretNameLength = 63
 )
 
