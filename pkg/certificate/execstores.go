@@ -2,6 +2,7 @@ package certificate
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -20,6 +21,7 @@ func NewExecGenerator() ExecGenerator {
 
 func (e ExecGenerator) MakeStores(accessKey, accessCert, caCert string) (*StoreData, error) {
 	workdir, err := ioutil.TempDir("", "exec-store-workdir-*")
+	defer os.RemoveAll(workdir)
 	if err != nil {
 		return nil, err
 	}
