@@ -29,15 +29,15 @@ import (
 )
 
 const (
-	KafkaBrokers        = "KAFKA_BROKERS"
-	KafkaSchemaRegistry = "KAFKA_SCHEMA_REGISTRY"
-	KafkaCertificate    = "KAFKA_CERTIFICATE"
-	KafkaPrivateKey     = "KAFKA_PRIVATE_KEY"
-	KafkaCA             = "KAFKA_CA"
-	KafkaStorePassword  = "KAFKA_STORE_PASSWORD"
-	KafkaKeystore       = "client.keystore.p12"
-	KafkaTruststore     = "client.truststore.jks"
-	maxSecretNameLength = 63
+	KafkaBrokers           = "KAFKA_BROKERS"
+	KafkaSchemaRegistry    = "KAFKA_SCHEMA_REGISTRY"
+	KafkaCertificate       = "KAFKA_CERTIFICATE"
+	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
+	KafkaCA                = "KAFKA_CA"
+	KafkaCredStorePassword = "KAFKA_CREDSTORE_PASSWORD"
+	KafkaKeystore          = "client.keystore.p12"
+	KafkaTruststore        = "client.truststore.jks"
+	maxSecretNameLength    = 63
 )
 
 type transaction struct {
@@ -58,7 +58,7 @@ type secretData struct {
 	brokers         string
 	registry        string
 	ca              string
-	credstoreData   certificate.StoreData
+	credstoreData   certificate.CredStoreData
 }
 
 type TopicReconciler struct {
@@ -272,7 +272,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"secret_name":      key.Name,
 		})
 
-		storeData, err := r.StoreGenerator.MakeStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
+		storeData, err := r.StoreGenerator.MakeCredStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
 		if err != nil {
 			return fmt.Errorf("unable to generate truststore/keystore: %w", err)
 		}
@@ -349,12 +349,12 @@ func (r *TopicReconciler) ConvertSecret(data secretData) v1.Secret {
 			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:    data.user.AccessCert,
-			KafkaPrivateKey:     data.user.AccessKey,
-			KafkaBrokers:        data.brokers,
-			KafkaSchemaRegistry: data.registry,
-			KafkaCA:             data.ca,
-			KafkaStorePassword:  data.credstoreData.Secret,
+			KafkaCertificate:       data.user.AccessCert,
+			KafkaPrivateKey:        data.user.AccessKey,
+			KafkaBrokers:           data.brokers,
+			KafkaSchemaRegistry:    data.registry,
+			KafkaCA:                data.ca,
+			KafkaCredStorePassword: data.credstoreData.Secret,
 		},
 		Data: map[string][]byte{
 			KafkaKeystore:   data.credstoreData.Keystore,

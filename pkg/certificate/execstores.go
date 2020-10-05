@@ -23,7 +23,7 @@ func NewExecGenerator() (ExecGenerator, error) {
 	return e, nil
 }
 
-func (e ExecGenerator) MakeStores(accessKey, accessCert, caCert string) (*StoreData, error) {
+func (e ExecGenerator) MakeCredStores(accessKey, accessCert, caCert string) (*CredStoreData, error) {
 	workdir, err := ioutil.TempDir("", "exec-store-workdir-*")
 	defer os.RemoveAll(workdir)
 	if err != nil {
@@ -37,7 +37,7 @@ func (e ExecGenerator) MakeStores(accessKey, accessCert, caCert string) (*StoreD
 	if err != nil {
 		return nil, err
 	}
-	return &StoreData{
+	return &CredStoreData{
 		Keystore:   keystore,
 		Truststore: truststore,
 		Secret:     e.secret,

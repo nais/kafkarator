@@ -18,12 +18,12 @@ func GetSecret() (string, error) {
 	return base64.StdEncoding.EncodeToString(b), nil
 }
 
-type StoreData struct {
+type CredStoreData struct {
 	Keystore   []byte
 	Truststore []byte
 	Secret     string
 }
 
 type Generator interface {
-	MakeStores(accessKey, accessCert, caCert string) (*StoreData, error)
+	MakeCredStores(accessKey, accessCert, caCert string) (*CredStoreData, error)
 }
