@@ -58,6 +58,7 @@ type secretData struct {
 	brokers         string
 	registry        string
 	ca              string
+	credstoreData   certificate.StoreData
 }
 
 type TopicReconciler struct {
@@ -271,20 +272,23 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"secret_name":      key.Name,
 		})
 
-		opts := secretData{
-			user:     *user.AivenUser,
-			name:     key.Name,
-			app:      user.Application,
-			pool:     tx.topic.Spec.Pool,
-			team:     user.Team,
-			brokers:  kafkaBrokerAddress,
-			registry: kafkaSchemaRegistryAddress,
-			ca:       kafkaCA,
-		}
-		secret, err := r.ConvertSecret(opts)
+		storeData, err := r.StoreGenerator.MakeStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
 		if err != nil {
-			return fmt.Errorf("unable to convert secret: %w", err)
+			return fmt.Errorf("unable to generate truststore/keystore: %w", err)
 		}
+
+		opts := secretData{
+			user:          *user.AivenUser,
+			name:          key.Name,
+			app:           user.Application,
+			pool:          tx.topic.Spec.Pool,
+			team:          user.Team,
+			brokers:       kafkaBrokerAddress,
+			registry:      kafkaSchemaRegistryAddress,
+			ca:            kafkaCA,
+			credstoreData: *storeData,
+		}
+		secret := r.ConvertSecret(opts)
 
 		plaintext, err := secret.Marshal()
 		if err != nil {
@@ -326,11 +330,7 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *TopicReconciler) ConvertSecret(data secretData) (v1.Secret, error) {
-	storeData, err := r.StoreGenerator.MakeStores(data.user.AccessCert, data.user.AccessKey, data.ca)
-	if err != nil {
-		return v1.Secret{}, err
-	}
+func (r *TopicReconciler) ConvertSecret(data secretData) v1.Secret {
 	return v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -354,12 +354,12 @@ func (r *TopicReconciler) ConvertSecret(data secretData) (v1.Secret, error) {
 			KafkaBrokers:        data.brokers,
 			KafkaSchemaRegistry: data.registry,
 			KafkaCA:             data.ca,
-			KafkaStorePassword:  storeData.Secret,
+			KafkaStorePassword:  data.credstoreData.Secret,
 		},
 		Data: map[string][]byte{
-			KafkaKeystore:   storeData.Keystore,
-			KafkaTruststore: storeData.Truststore,
+			KafkaKeystore:   data.credstoreData.Keystore,
+			KafkaTruststore: data.credstoreData.Truststore,
 		},
 		Type: v1.SecretTypeOpaque,
-	}, nil
+	}
 }
