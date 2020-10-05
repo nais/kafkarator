@@ -77,7 +77,7 @@ func (r *Manager) createServiceUsers(users []*UserMap) error {
 		})
 
 		if user.AivenUser != nil {
-			logger.Infof("Service user already exists, deleting...")
+			logger.Infof("Deleting already existing service user")
 			err = r.AivenServiceUsers.Delete(r.Project, r.Service, user.Username)
 			if err != nil {
 				return err

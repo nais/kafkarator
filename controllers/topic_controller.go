@@ -154,8 +154,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	credentialsThreshold := time.Now().Add(r.CredentialsLifetime)
-	if !topicResource.NeedsSynchronization(hash, credentialsThreshold) {
+	if !topicResource.NeedsSynchronization(hash) {
 		logger.Infof("Synchronization already complete")
 		return ctrl.Result{}, nil
 	}
@@ -192,9 +191,11 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 
+	credentialsThreshold := time.Now().Add(r.CredentialsLifetime)
+
 	topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
 	topicResource.Status.SynchronizationHash = hash
-	topicResource.Status.CredentialsExpiryTime = topicResource.CredentialsThreshold(r.CredentialsLifetime).Format(time.RFC3339)
+	topicResource.Status.CredentialsExpiryTime = credentialsThreshold.Format(time.RFC3339)
 	topicResource.Status.Message = "Topic configuration synchronized to Kafka pool"
 	topicResource.Status.Errors = nil
 

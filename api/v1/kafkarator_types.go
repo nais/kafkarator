@@ -108,36 +108,25 @@ func (in TopicACLs) Users() []User {
 	return result
 }
 
-func (in *Topic) CredentialsThreshold(lifetime time.Duration) time.Time {
-	if in.Status == nil {
-		return time.Now()
-	}
-	syncTime, err := time.Parse(time.RFC3339, in.Status.SynchronizationTime)
-	if err != nil {
-		return time.Now()
-	}
-	return syncTime.Add(lifetime)
-}
-
-func (in *Topic) NeedsSynchronization(hash string, credentialsThreshold time.Time) bool {
+func (in *Topic) NeedsSynchronization(hash string) bool {
 	if in.Status == nil {
 		return true
 	}
 	if in.Status.SynchronizationHash != hash {
 		return true
 	}
-	return in.CredentialsExpired(credentialsThreshold)
+	return in.CredentialsExpired()
 }
 
-func (in *Topic) CredentialsExpired(threshold time.Time) bool {
+func (in *Topic) CredentialsExpired() bool {
 	if in.Status == nil {
 		return true
 	}
-	max, err := time.Parse(time.RFC3339, in.Status.CredentialsExpiryTime)
+	expiry, err := time.Parse(time.RFC3339, in.Status.CredentialsExpiryTime)
 	if err != nil {
 		return true
 	}
-	return max.After(threshold)
+	return time.Now().After(expiry)
 }
 
 func init() {
