@@ -216,6 +216,12 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		return
 	}
 
+	generator, err := certificate.NewExecGenerator()
+	if err != nil {
+		quit <- fmt.Errorf("Failed to generate secret for credential stores: %w", err)
+		return
+	}
+
 	reconciler := &controllers.TopicReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
@@ -225,7 +231,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
 		Logger:          logger,
-		StoreGenerator:  certificate.NewExecGenerator(),
+		StoreGenerator:  generator,
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {

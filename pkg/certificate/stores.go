@@ -1,22 +1,21 @@
 package certificate
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"encoding/base64"
 )
 
 const (
 	secretLength = 32
-	charset      = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
-func GetSecret() string {
-	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+func GetSecret() (string, error) {
 	b := make([]byte, secretLength)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
 	}
-	return string(b)
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 type StoreData struct {

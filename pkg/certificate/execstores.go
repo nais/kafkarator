@@ -12,11 +12,15 @@ type ExecGenerator struct {
 	secret string
 }
 
-func NewExecGenerator() ExecGenerator {
-	e := ExecGenerator{
-		secret: GetSecret(),
+func NewExecGenerator() (ExecGenerator, error) {
+	secret, err := GetSecret()
+	if err != nil {
+		return ExecGenerator{}, err
 	}
-	return e
+	e := ExecGenerator{
+		secret: secret,
+	}
+	return e, nil
 }
 
 func (e ExecGenerator) MakeStores(accessKey, accessCert, caCert string) (*StoreData, error) {
