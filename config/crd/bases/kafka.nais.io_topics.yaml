@@ -85,6 +85,8 @@ spec:
           type: object
         status:
           properties:
+            credentialsExpiryTime:
+              type: string
             errors:
               items:
                 type: string
