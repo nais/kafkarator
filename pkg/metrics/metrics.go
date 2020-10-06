@@ -78,8 +78,12 @@ func ObserveAivenLatency(operation, pool string, fun func() error) error {
 	used := time.Now().Sub(timer)
 	status := 200
 	if err != nil {
-		aivenErr := err.(aiven.Error)
-		status = aivenErr.Status
+		aivenErr, ok := err.(aiven.Error)
+		if ok {
+			status = aivenErr.Status
+		} else {
+			status = 0
+		}
 	}
 	AivenLatency.With(prometheus.Labels{
 		LabelAivenOperation: operation,

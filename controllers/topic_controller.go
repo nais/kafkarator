@@ -63,14 +63,15 @@ type secretData struct {
 
 type TopicReconciler struct {
 	client.Client
-	CryptManager    crypto.Manager
-	Aiven           *aiven.Client
-	Scheme          *runtime.Scheme
-	Logger          *log.Logger
-	Producer        *producer.Producer
-	Projects        []string
-	RequeueInterval time.Duration
-	StoreGenerator  certificate.Generator
+	CryptManager        crypto.Manager
+	Aiven               *aiven.Client
+	Scheme              *runtime.Scheme
+	Logger              *log.Logger
+	Producer            *producer.Producer
+	Projects            []string
+	RequeueInterval     time.Duration
+	CredentialsLifetime time.Duration
+	StoreGenerator      certificate.Generator
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -158,7 +159,8 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		logger.Errorf("Unable to calculate synchronization hash")
 		return ctrl.Result{}, err
 	}
-	if topicResource.Status.SynchronizationHash == hash {
+
+	if !topicResource.NeedsSynchronization(hash) {
 		logger.Infof("Synchronization already complete")
 		return ctrl.Result{}, nil
 	}
@@ -195,8 +197,11 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 
+	credentialsThreshold := time.Now().Add(r.CredentialsLifetime)
+
 	topicResource.Status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
 	topicResource.Status.SynchronizationHash = hash
+	topicResource.Status.CredentialsExpiryTime = credentialsThreshold.Format(time.RFC3339)
 	topicResource.Status.Message = "Topic configuration synchronized to Kafka pool"
 	topicResource.Status.Errors = nil
 

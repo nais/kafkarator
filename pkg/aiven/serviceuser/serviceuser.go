@@ -19,6 +19,7 @@ type UserMap struct {
 type ServiceUser interface {
 	Create(project, service string, req aiven.CreateServiceUserRequest) (*aiven.ServiceUser, error)
 	List(project, serviceName string) ([]*aiven.ServiceUser, error)
+	Delete(project, service, user string) error
 }
 
 type Manager struct {
@@ -74,9 +75,13 @@ func (r *Manager) createServiceUsers(users []*UserMap) error {
 		logger := r.Logger.WithFields(log.Fields{
 			"username": user.Username,
 		})
+
 		if user.AivenUser != nil {
-			logger.Infof("Skip creating service user")
-			continue
+			logger.Infof("Deleting already existing service user")
+			err = r.AivenServiceUsers.Delete(r.Project, r.Service, user.Username)
+			if err != nil {
+				return err
+			}
 		}
 
 		logger.Infof("Creating service user")

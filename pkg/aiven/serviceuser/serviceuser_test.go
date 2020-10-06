@@ -6,9 +6,9 @@ import (
 	"github.com/aiven/aiven-go-client"
 	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
+	"github.com/nais/kafkarator/pkg/aiven/serviceuser/mocks"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 const (
@@ -16,38 +16,24 @@ const (
 	service = "myservice"
 )
 
-type ServiceUsersMock struct {
-	mock.Mock
-}
-
-func (s *ServiceUsersMock) Create(project, service string, req aiven.CreateServiceUserRequest) (*aiven.ServiceUser, error) {
-	args := s.Called(project, service, req)
-	return args.Get(0).(*aiven.ServiceUser), args.Error(1)
-}
-
-func (s *ServiceUsersMock) List(project, serviceName string) ([]*aiven.ServiceUser, error) {
-	args := s.Called(project, serviceName)
-	return args.Get(0).([]*aiven.ServiceUser), args.Error(1)
-}
-
 func TestManager_Synchronize(t *testing.T) {
-	m := &ServiceUsersMock{}
+	m := &mocks.ServiceUser{}
 
 	usernames := make([]kafka_nais_io_v1.User, 0)
+
+	// Existing user, should be deleted and re-created
 	usernames = append(usernames, kafka_nais_io_v1.User{
 		Username:    "app1-team1",
 		Application: "app1",
 		Team:        "team1",
 	})
+
+	// Missing user, should be created
 	usernames = append(usernames, kafka_nais_io_v1.User{
 		Username:    "app2-team1",
 		Application: "app2",
 		Team:        "team1",
 	})
-
-	req := aiven.CreateServiceUserRequest{
-		Username: "app2-team1",
-	}
 
 	existingUsers := []*aiven.ServiceUser{
 		{
@@ -55,12 +41,19 @@ func TestManager_Synchronize(t *testing.T) {
 		},
 	}
 
-	expectedCreateArgs := &aiven.ServiceUser{
-		Username: "app2-team1",
-	}
-
-	m.On("Create", project, service, req).Return(expectedCreateArgs, nil)
-	m.On("List", project, service).Return(existingUsers, nil)
+	// Order of calls is correct
+	m.
+		On("List", project, service).
+		Return(existingUsers, nil)
+	m.
+		On("Delete", project, service, "app1-team1").
+		Return(nil)
+	m.
+		On("Create", project, service, aiven.CreateServiceUserRequest{Username: "app1-team1"}).
+		Return(&aiven.ServiceUser{Username: "app1-team1"}, nil)
+	m.
+		On("Create", project, service, aiven.CreateServiceUserRequest{Username: "app2-team1"}).
+		Return(&aiven.ServiceUser{Username: "app2-team1"}, nil)
 
 	manager := serviceuser.Manager{
 		AivenServiceUsers: m,

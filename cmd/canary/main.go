@@ -235,6 +235,9 @@ func main() {
 			LastProducedOffset.Set(float64(offset))
 		} else {
 			logger.Errorf("unable to produce canary message on Kafka: %s", err)
+			if kafka.IsErrUnauthorized(err) {
+				quit <- fmt.Errorf("credentials rotated or invalidated")
+			}
 		}
 	}
 
@@ -251,7 +254,7 @@ func main() {
 			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
 			LastConsumedOffset.Set(float64(msg.offset))
 		case err := <-quit:
-			logger.Errorf("terminating unexpectedly: %s", err)
+			logger.Errorf("quit: %s", err)
 			os.Exit(ExitRuntime)
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))

@@ -2,6 +2,8 @@
 package kafka_nais_io_v1
 
 import (
+	"time"
+
 	"github.com/nais/kafkarator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,11 +52,12 @@ type TopicSpec struct {
 }
 
 type TopicStatus struct {
-	SynchronizationState string   `json:"synchronizationState,omitempty"`
-	SynchronizationHash  string   `json:"synchronizationHash,omitempty"`
-	SynchronizationTime  string   `json:"synchronizationTime,omitempty"`
-	Errors               []string `json:"errors,omitempty"`
-	Message              string   `json:"message,omitempty"`
+	SynchronizationState  string   `json:"synchronizationState,omitempty"`
+	SynchronizationHash   string   `json:"synchronizationHash,omitempty"`
+	SynchronizationTime   string   `json:"synchronizationTime,omitempty"`
+	CredentialsExpiryTime string   `json:"credentialsExpiryTime,omitempty"`
+	Errors                []string `json:"errors,omitempty"`
+	Message               string   `json:"message,omitempty"`
 }
 
 type TopicACLs []TopicACL
@@ -103,6 +106,27 @@ func (in TopicACLs) Users() []User {
 		result = append(result, k)
 	}
 	return result
+}
+
+func (in *Topic) NeedsSynchronization(hash string) bool {
+	if in.Status == nil {
+		return true
+	}
+	if in.Status.SynchronizationHash != hash {
+		return true
+	}
+	return in.CredentialsExpired()
+}
+
+func (in *Topic) CredentialsExpired() bool {
+	if in.Status == nil {
+		return true
+	}
+	expiry, err := time.Parse(time.RFC3339, in.Status.CredentialsExpiryTime)
+	if err != nil {
+		return true
+	}
+	return time.Now().After(expiry)
 }
 
 func init() {
