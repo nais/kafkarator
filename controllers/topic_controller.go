@@ -293,7 +293,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			ca:            kafkaCA,
 			credstoreData: *storeData,
 		}
-		secret := r.ConvertSecret(opts)
+		secret := ConvertSecret(opts)
 
 		plaintext, err := secret.Marshal()
 		if err != nil {
@@ -335,7 +335,7 @@ func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *TopicReconciler) ConvertSecret(data secretData) v1.Secret {
+func ConvertSecret(data secretData) v1.Secret {
 	return v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
