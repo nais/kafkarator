@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"github.com/Shopify/sarama"
 	"k8s.io/client-go/util/keyutil"
 )
 
@@ -45,4 +46,20 @@ func TLSConfig(certificate, key, ca []byte) (*tls.Config, error) {
 		RootCAs:            certpool,
 		InsecureSkipVerify: false,
 	}, nil
+}
+
+// Returns true if a sarama/kafka error is due to invalid credentials.
+func IsErrUnauthorized(err error) bool {
+	switch err.Error() {
+	case sarama.ErrTopicAuthorizationFailed.Error():
+		return true
+	case sarama.ErrClusterAuthorizationFailed.Error():
+		return true
+	case sarama.ErrGroupAuthorizationFailed.Error():
+		return true
+	case sarama.ErrSASLAuthenticationFailed.Error():
+		return true
+	default:
+		return false
+	}
 }
