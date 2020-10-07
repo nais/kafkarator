@@ -12,6 +12,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
@@ -28,12 +29,15 @@ import (
 )
 
 const (
-	KafkaBrokers        = "KAFKA_BROKERS"
-	KafkaSchemaRegistry = "KAFKA_SCHEMA_REGISTRY"
-	KafkaCertificate    = "KAFKA_CERTIFICATE"
-	KafkaPrivateKey     = "KAFKA_PRIVATE_KEY"
-	KafkaCA             = "KAFKA_CA"
-	maxSecretNameLength = 63
+	KafkaBrokers           = "KAFKA_BROKERS"
+	KafkaSchemaRegistry    = "KAFKA_SCHEMA_REGISTRY"
+	KafkaCertificate       = "KAFKA_CERTIFICATE"
+	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
+	KafkaCA                = "KAFKA_CA"
+	KafkaCredStorePassword = "KAFKA_CREDSTORE_PASSWORD"
+	KafkaKeystore          = "client.keystore.p12"
+	KafkaTruststore        = "client.truststore.jks"
+	maxSecretNameLength    = 63
 )
 
 type transaction struct {
@@ -54,6 +58,7 @@ type secretData struct {
 	brokers         string
 	registry        string
 	ca              string
+	credstoreData   certificate.CredStoreData
 }
 
 type TopicReconciler struct {
@@ -66,6 +71,7 @@ type TopicReconciler struct {
 	Projects            []string
 	RequeueInterval     time.Duration
 	CredentialsLifetime time.Duration
+	StoreGenerator      certificate.Generator
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -271,15 +277,21 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"secret_name":      key.Name,
 		})
 
+		storeData, err := r.StoreGenerator.MakeCredStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
+		if err != nil {
+			return fmt.Errorf("unable to generate truststore/keystore: %w", err)
+		}
+
 		opts := secretData{
-			user:     *user.AivenUser,
-			name:     key.Name,
-			app:      user.Application,
-			pool:     tx.topic.Spec.Pool,
-			team:     user.Team,
-			brokers:  kafkaBrokerAddress,
-			registry: kafkaSchemaRegistryAddress,
-			ca:       kafkaCA,
+			user:          *user.AivenUser,
+			name:          key.Name,
+			app:           user.Application,
+			pool:          tx.topic.Spec.Pool,
+			team:          user.Team,
+			brokers:       kafkaBrokerAddress,
+			registry:      kafkaSchemaRegistryAddress,
+			ca:            kafkaCA,
+			credstoreData: *storeData,
 		}
 		secret := ConvertSecret(opts)
 
@@ -342,11 +354,16 @@ func ConvertSecret(data secretData) v1.Secret {
 			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:    data.user.AccessCert,
-			KafkaPrivateKey:     data.user.AccessKey,
-			KafkaBrokers:        data.brokers,
-			KafkaSchemaRegistry: data.registry,
-			KafkaCA:             data.ca,
+			KafkaCertificate:       data.user.AccessCert,
+			KafkaPrivateKey:        data.user.AccessKey,
+			KafkaBrokers:           data.brokers,
+			KafkaSchemaRegistry:    data.registry,
+			KafkaCA:                data.ca,
+			KafkaCredStorePassword: data.credstoreData.Secret,
+		},
+		Data: map[string][]byte{
+			KafkaKeystore:   data.credstoreData.Keystore,
+			KafkaTruststore: data.credstoreData.Truststore,
 		},
 		Type: v1.SecretTypeOpaque,
 	}
