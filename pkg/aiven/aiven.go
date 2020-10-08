@@ -15,6 +15,6 @@ type Interfaces struct {
 	ACLs         acl.Interface
 	CA           service.CA
 	ServiceUsers serviceuser.Interface
-	Services     service.Interface
+	Service      service.Interface
 	Topics       topic.Interface
 }

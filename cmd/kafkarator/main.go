@@ -223,7 +223,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 			ACLs:         aivenClient.KafkaACLs,
 			CA:           aivenClient.CA,
 			ServiceUsers: aivenClient.ServiceUsers,
-			Services:     aivenClient.Services,
+			Service:      aivenClient.Services,
 			Topics:       aivenClient.KafkaTopics,
 		},
 		Client:              mgr.GetClient(),

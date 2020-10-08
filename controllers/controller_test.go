@@ -11,7 +11,7 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/ghodss/yaml"
-	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
@@ -24,10 +24,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
-)
-
-var (
-	defaultExclude = []string{".apiVersion", ".kind", ".metadata.name"}
 )
 
 const (
@@ -43,10 +39,11 @@ type testCase struct {
 }
 
 type aivenData struct {
-	Topics       []aiven.KafkaTopic
-	Serviceusers []aiven.ServiceUser
-	Acls         []aiven.KafkaACL
-	Service      aiven.Service
+	Topics       []*aiven.KafkaTopic
+	Serviceusers []*aiven.ServiceUser
+	Acls         []*aiven.KafkaACL
+	Service      *aiven.Service
+	CA           string
 }
 
 type output struct {
@@ -92,13 +89,38 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	generator := &mocks.Generator{}
+	aclMock := &acl.MockInterface{}
+	caMock := &service.MockCA{}
+	serviceUserMock := &serviceuser.MockInterface{}
+	serviceMock := &service.MockInterface{}
+	topicMock := &topic_package.MockInterface{}
+	generatorMock := &mocks.Generator{}
+
+	for _, project := range test.Config.Projects {
+		svc := kafkarator_aiven.ServiceName(project)
+		serviceMock.
+			On("Get", project, svc).
+			Return(test.Aiven.Service, nil)
+		caMock.
+			On("Get", project).
+			Return(test.Aiven.CA, nil)
+		aclMock.
+			On("List", project, svc).
+			Return(test.Aiven.Acls, nil)
+		serviceUserMock.
+			On("List", project, svc).
+			Return(test.Aiven.Serviceusers, nil)
+		topicMock.
+			On("List", project, svc).
+			Return(test.Aiven.Topics, nil)
+	}
+
 	aivenMocks := kafkarator_aiven.Interfaces{
-		ACLs:         &acl.MockInterface{},
-		CA:           &service.MockCA{},
-		ServiceUsers: &serviceuser.MockInterface{},
-		Services:     &service.MockInterface{},
-		Topics:       &topic_package.MockInterface{},
+		ACLs:         aclMock,
+		CA:           caMock,
+		ServiceUsers: serviceUserMock,
+		Service:      serviceMock,
+		Topics:       topicMock,
 	}
 
 	reconciler := controllers.TopicReconciler{
@@ -106,7 +128,7 @@ func yamlSubTest(t *testing.T, path string) {
 		Logger:              log.New(),
 		Projects:            test.Config.Projects,
 		CredentialsLifetime: 3600,
-		StoreGenerator:      generator,
+		StoreGenerator:      generatorMock,
 	}
 
 	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))

@@ -4,9 +4,15 @@ config:
     - nav-integration-test
 
 aiven:
+  acls: []
   serviceusers: []
   topics: []
-  ca: []
+  service:
+    name: nav-integration-test
+    service_uri: well-known-kafka-brokers:12345
+    connection_info:
+      schema_registry_uri: https://schema-registry.tld:9876
+  ca: "--- CERTIFICATE AUTHORITY ---"
 
 topic:
   apiVersion: kafka.nais.io/v1

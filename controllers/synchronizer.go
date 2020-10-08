@@ -59,7 +59,7 @@ func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, lo
 		},
 		Services: service.Manager{
 			AivenCA:      a.CA,
-			AivenService: a.Services,
+			AivenService: a.Service,
 			Project:      t.Spec.Pool,
 			Service:      kafkarator_aiven.ServiceName(t.Spec.Pool),
 			Logger:       logger,
