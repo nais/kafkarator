@@ -228,7 +228,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		RequeueInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
 		CredentialsLifetime: viper.GetDuration(CredentialsLifetime),
 		Logger:              logger,
-		StoreGenerator:      certificate.NewExecGenerator(),
+		StoreGenerator:      certificate.NewExecGenerator(logger),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
