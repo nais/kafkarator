@@ -66,7 +66,7 @@ func (e ExecGenerator) MakeKeystore(workdir, accessKey, accessCert string) ([]by
 	cmd.Stdin = strings.NewReader(e.secret)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		e.logger.Errorf("Failed to generate keystore! Output from command: \n%v", output)
+		e.logger.Errorf("Failed to generate keystore! Output from command: \n%s", output)
 		return nil, fmt.Errorf("failed to generate keystore: %w", err)
 	}
 	keystore, err := ioutil.ReadFile(keystorePath)
@@ -93,7 +93,7 @@ func (e ExecGenerator) MakeTruststore(workdir, caCert string) ([]byte, error) {
 	)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		e.logger.Errorf("Failed to generate truststore! Output from command: \n%v", output)
+		e.logger.Errorf("Failed to generate truststore! Output from command: \n%s", output)
 		return nil, fmt.Errorf("failed to generate truststore: %w", err)
 	}
 	truststore, err := ioutil.ReadFile(truststorePath)
