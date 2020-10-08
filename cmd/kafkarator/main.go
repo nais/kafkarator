@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
@@ -233,7 +232,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		Producer:            prod,
 		Projects:            viper.GetStringSlice(Projects),
 		RequeueInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
-		StoreGenerator:      certificate.NewExecGenerator(),
+		StoreGenerator:      certificate.NewExecGenerator(logger),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {

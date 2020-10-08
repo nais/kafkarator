@@ -1,6 +1,8 @@
 package certificate
 
 import (
+	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,11 +12,13 @@ import (
 
 type ExecGenerator struct {
 	secret string
+	logger *log.Entry
 }
 
-func NewExecGenerator() ExecGenerator {
+func NewExecGenerator(logger *log.Logger) ExecGenerator {
 	e := ExecGenerator{
 		secret: GetSecret(),
+		logger: log.NewEntry(logger),
 	}
 	return e
 }
@@ -23,7 +27,7 @@ func (e ExecGenerator) MakeCredStores(accessKey, accessCert, caCert string) (*Cr
 	workdir, err := ioutil.TempDir("", "exec-store-workdir-*")
 	defer os.RemoveAll(workdir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create workdir: %w", err)
 	}
 	keystore, err := e.MakeKeystore(workdir, accessKey, accessCert)
 	if err != nil {
@@ -45,12 +49,12 @@ func (e ExecGenerator) MakeKeystore(workdir, accessKey, accessCert string) ([]by
 	keyPath := path.Join(workdir, "access.key")
 	err := ioutil.WriteFile(keyPath, []byte(accessKey), 0644)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to write accessKey to temporary file: %w", err)
 	}
 	certPath := path.Join(workdir, "access.cert")
 	err = ioutil.WriteFile(certPath, []byte(accessCert), 0644)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to write accessCert to temporary file: %w", err)
 	}
 	cmd := exec.Command("openssl", "pkcs12",
 		"-export",
@@ -60,13 +64,14 @@ func (e ExecGenerator) MakeKeystore(workdir, accessKey, accessCert string) ([]by
 		"-passout", "stdin",
 	)
 	cmd.Stdin = strings.NewReader(e.secret)
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		e.logger.Errorf("Failed to generate keystore! Output from command: \n%s", output)
+		return nil, fmt.Errorf("failed to generate keystore: %w", err)
 	}
 	keystore, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read keystore from generated file: %w", err)
 	}
 	return keystore, nil
 }
@@ -76,7 +81,7 @@ func (e ExecGenerator) MakeTruststore(workdir, caCert string) ([]byte, error) {
 	caPath := path.Join(workdir, "ca.cert")
 	err := ioutil.WriteFile(caPath, []byte(caCert), 0644)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to write caCert to temporary file: %w", err)
 	}
 	cmd := exec.Command("keytool",
 		"-importcert",
@@ -86,13 +91,14 @@ func (e ExecGenerator) MakeTruststore(workdir, caCert string) ([]byte, error) {
 		"-keystore", truststorePath,
 		"-storepass", e.secret,
 	)
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		e.logger.Errorf("Failed to generate truststore! Output from command: \n%s", output)
+		return nil, fmt.Errorf("failed to generate truststore: %w", err)
 	}
 	truststore, err := ioutil.ReadFile(truststorePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read truststore from generated file: %w", err)
 	}
 	return truststore, nil
 }
