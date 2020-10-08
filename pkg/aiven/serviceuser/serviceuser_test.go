@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"github.com/aiven/aiven-go-client"
-	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
-	"github.com/nais/kafkarator/pkg/aiven/serviceuser/mocks"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +16,7 @@ const (
 )
 
 func TestManager_Synchronize(t *testing.T) {
-	m := &mocks.ServiceUser{}
+	m := &serviceuser.MockInterface{}
 
 	usernames := make([]kafka_nais_io_v1.User, 0)
 

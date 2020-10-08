@@ -5,15 +5,12 @@ import (
 	"testing"
 
 	"github.com/aiven/aiven-go-client"
-	kafka_nais_io_v1 "github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/api/v1"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
-	"github.com/nais/kafkarator/pkg/aiven/topic/mocks"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var _ topic.Interface = &mocks.Topic{}
 
 func intp(i int) *int {
 	return &i
@@ -215,7 +212,7 @@ func TestManager_Synchronize(t *testing.T) {
 			test.error = map[string]bool{}
 		}
 
-		m := &mocks.Topic{}
+		m := &topic.MockInterface{}
 
 		if test.error["get"] {
 			m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{

@@ -1,0 +1,38 @@
+config:
+  description: hello world
+  projects:
+    - nav-integration-test
+
+aiven:
+  serviceusers: []
+  topics: []
+  ca: []
+
+topic:
+  apiVersion: kafka.nais.io/v1
+  kind: Topic
+  metadata:
+    name: mytopic
+    namespace: myteam
+    labels:
+      team: myteam
+  spec:
+    pool: nav-integration-test
+    config:
+      retentionHours: 900
+    acl:
+      - access: read
+        team: myteam
+        application: myapplication
+      - access: write
+        team: otherteam
+        application: otherapplication
+
+output:
+  status:
+    foo: bar
+  secrets:
+    - apiVersion: v1
+      kind: Secret
+      stringData:
+        foo: bar

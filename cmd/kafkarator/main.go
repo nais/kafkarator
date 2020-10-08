@@ -331,14 +331,6 @@ func init() {
 		panic(err)
 	}
 
-	metrics.Registry.MustRegister(
-		kafkaratormetrics.Acls,
-		kafkaratormetrics.AivenLatency,
-		kafkaratormetrics.KubernetesResourcesWritten,
-		kafkaratormetrics.SecretQueueSize,
-		kafkaratormetrics.ServiceUsers,
-		kafkaratormetrics.Topics,
-		kafkaratormetrics.TopicsProcessed,
-	)
+	kafkaratormetrics.Register(metrics.Registry)
 	// +kubebuilder:scaffold:scheme
 }

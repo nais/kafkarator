@@ -41,13 +41,13 @@ type ReconcileResult struct {
 
 type TopicReconciler struct {
 	client.Client
-	CryptManager        crypto.Manager
 	Aiven               kafkarator_aiven.Interfaces
+	CredentialsLifetime time.Duration
+	CryptManager        crypto.Manager
 	Logger              *log.Logger
 	Producer            producer.Interface
 	Projects            []string
 	RequeueInterval     time.Duration
-	CredentialsLifetime time.Duration
 	StoreGenerator      certificate.Generator
 }
 
@@ -61,19 +61,14 @@ func (r *TopicReconciler) projectWhitelisted(project string) bool {
 }
 
 // Write changes to Aiven and return a topic processing status and a list of secrets to send to clusters
-func (r *TopicReconciler) Process(topicResource kafka_nais_io_v1.Topic, logger *log.Entry) ReconcileResult {
+func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entry) ReconcileResult {
 	var err error
 	var hash string
 	var status kafka_nais_io_v1.TopicStatus
 
-	if topicResource.Status != nil {
-		status = *topicResource.Status
+	if topic.Status != nil {
+		status = *topic.Status
 	}
-
-	metrics.TopicsProcessed.With(prometheus.Labels{
-		metrics.LabelSyncState: topicResource.Status.SynchronizationState,
-		metrics.LabelPool:      topicResource.Spec.Pool,
-	}).Inc()
 
 	fail := func(err error, state string, retry bool) ReconcileResult {
 		aivenError, ok := err.(aiven.Error)
@@ -97,29 +92,29 @@ func (r *TopicReconciler) Process(topicResource kafka_nais_io_v1.Topic, logger *
 		}
 	}
 
-	hash, err = topicResource.Spec.Hash()
+	hash, err = topic.Spec.Hash()
 	if err != nil {
 		return fail(fmt.Errorf("unable to calculate synchronization hash"), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	if !topicResource.NeedsSynchronization(hash) {
+	if !topic.NeedsSynchronization(hash) {
 		logger.Infof("Synchronization already complete")
 		return ReconcileResult{}
 	}
 
-	if !r.projectWhitelisted(topicResource.Spec.Pool) {
-		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", topicResource.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
+	if !r.projectWhitelisted(topic.Spec.Pool) {
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", topic.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer := NewSynchronizer(r.Aiven, topicResource, logger)
-	result, err := synchronizer.Synchronize(topicResource)
+	synchronizer := NewSynchronizer(r.Aiven, topic, logger)
+	result, err := synchronizer.Synchronize(topic)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 
 	secrets := make([]v1.Secret, len(result.users))
 	for i, user := range result.users {
-		secret, err := Secret(topicResource, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
+		secret, err := Secret(topic, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
 		if err != nil {
 			return fail(err, kafka_nais_io_v1.EventFailedPrepare, false)
 		}
@@ -185,6 +180,14 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	logger.Infof("Processing request")
 	defer func() {
 		logger.Infof("Finished processing request")
+	}()
+
+	defer func() {
+		metrics.TopicsProcessed.With(prometheus.Labels{
+			metrics.LabelSyncState: topic.Status.SynchronizationState,
+			metrics.LabelPool:      topic.Spec.Pool,
+		}).Inc()
+
 	}()
 
 	ctx := context.Background()
