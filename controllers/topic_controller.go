@@ -7,21 +7,12 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
-	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/service"
-	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
-	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
-	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -209,91 +200,24 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *TopicReconciler) commit(tx transaction) error {
-	aclManager := acl.Manager{
-		Aiven:   r.Aiven,
-		Project: tx.topic.Spec.Pool,
-		Service: kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
-		Topic:   tx.topic,
-		Logger:  tx.logger,
-	}
-
-	tx.logger.Infof("Synchronizing access control lists")
-	err := aclManager.Synchronize()
-	if err != nil {
-		return err
-	}
-
-	userManager := serviceuser.Manager{
-		AivenServiceUsers: r.Aiven.ServiceUsers,
-		Project:           tx.topic.Spec.Pool,
-		Service:           kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
-		Logger:            tx.logger,
-	}
-
-	tx.logger.Infof("Synchronizing service users")
-	users, err := userManager.Synchronize(tx.topic.Spec.ACL.Users())
+	synchronizer := NewSynchronizer(r.Aiven, tx.topic, tx.logger)
+	result, err := synchronizer.Synchronize(tx.topic)
 	if err != nil {
 		return err
 	}
 
 	tx.logger.Infof("Producing secrets")
-	serviceManager := service.Manager{
-		AivenCA:      r.Aiven.CA,
-		AivenService: r.Aiven.Services,
-		Project:      tx.topic.Spec.Pool,
-		Service:      kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
-		Logger:       tx.logger,
-	}
-	svc, err := serviceManager.Get()
-	if err != nil {
-		return err
-	}
-
-	kafkaBrokerAddress := service.GetKafkaBrokerAddress(*svc)
-	kafkaSchemaRegistryAddress := service.GetSchemaRegistryAddress(*svc)
-
-	kafkaCA, err := serviceManager.GetCA()
-	if err != nil {
-		return err
-	}
-
-	for _, user := range users {
-		tx.logger = tx.logger.WithFields(log.Fields{
-			"username": user.Username,
-		})
-
-		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, tx.topic.Spec.Pool), maxSecretNameLength)
+	for _, user := range result.users {
+		secret, err := Secret(tx.topic, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
 		if err != nil {
-			return fmt.Errorf("unable to generate secret name: %s", err)
-		}
-
-		key := client.ObjectKey{
-			Namespace: user.Team,
-			Name:      secretName,
+			return err
 		}
 
 		tx.logger = tx.logger.WithFields(log.Fields{
-			"secret_namespace": key.Namespace,
-			"secret_name":      key.Name,
+			"username":         user.Username,
+			"secret_namespace": secret.Namespace,
+			"secret_name":      secret.Name,
 		})
-
-		storeData, err := r.StoreGenerator.MakeCredStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
-		if err != nil {
-			return fmt.Errorf("unable to generate truststore/keystore: %w", err)
-		}
-
-		opts := secretData{
-			user:          *user.AivenUser,
-			name:          key.Name,
-			app:           user.Application,
-			pool:          tx.topic.Spec.Pool,
-			team:          user.Team,
-			brokers:       kafkaBrokerAddress,
-			registry:      kafkaSchemaRegistryAddress,
-			ca:            kafkaCA,
-			credstoreData: *storeData,
-		}
-		secret := ConvertSecret(opts)
 
 		plaintext, err := secret.Marshal()
 		if err != nil {
@@ -315,56 +239,11 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		}).Infof("Produced secret")
 	}
 
-	tx.logger.Infof("Synchronizing topic")
-	topicManager := topic.Manager{
-		AivenTopics: r.Aiven.KafkaTopics,
-		Project:     tx.topic.Spec.Pool,
-		Service:     kafkarator_aiven.ServiceName(tx.topic.Spec.Pool),
-		Topic:       tx.topic,
-		Logger:      tx.logger,
-	}
-
-	err = topicManager.Synchronize()
-
-	return err
+	return nil
 }
 
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kafka_nais_io_v1.Topic{}).
 		Complete(r)
-}
-
-func ConvertSecret(data secretData) v1.Secret {
-	return v1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      data.name,
-			Namespace: data.team,
-			Labels: map[string]string{
-				"team": data.team,
-			},
-			Annotations: map[string]string{
-				"kafka.nais.io/pool":        data.pool,
-				"kafka.nais.io/application": data.app,
-			},
-			ResourceVersion: data.resourceVersion,
-		},
-		StringData: map[string]string{
-			KafkaCertificate:       data.user.AccessCert,
-			KafkaPrivateKey:        data.user.AccessKey,
-			KafkaBrokers:           data.brokers,
-			KafkaSchemaRegistry:    data.registry,
-			KafkaCA:                data.ca,
-			KafkaCredStorePassword: data.credstoreData.Secret,
-		},
-		Data: map[string][]byte{
-			KafkaKeystore:   data.credstoreData.Keystore,
-			KafkaTruststore: data.credstoreData.Truststore,
-		},
-		Type: v1.SecretTypeOpaque,
-	}
 }
