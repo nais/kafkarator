@@ -16,14 +16,14 @@ type UserMap struct {
 	AivenUser *aiven.ServiceUser
 }
 
-type ServiceUser interface {
+type Interface interface {
 	Create(project, service string, req aiven.CreateServiceUserRequest) (*aiven.ServiceUser, error)
 	List(project, serviceName string) ([]*aiven.ServiceUser, error)
 	Delete(project, service, user string) error
 }
 
 type Manager struct {
-	AivenServiceUsers ServiceUser
+	AivenServiceUsers Interface
 	Project           string
 	Service           string
 	Logger            *log.Entry

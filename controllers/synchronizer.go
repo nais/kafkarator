@@ -3,9 +3,8 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
-	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
@@ -35,22 +34,22 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(a *aiven.Client, t kafka_nais_io_v1.Topic, logger *log.Entry) *Synchronizer {
+func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) *Synchronizer {
 	return &Synchronizer{
 		Logger: logger,
 		Topics: topic.Manager{
-			AivenTopics: a.KafkaTopics,
+			AivenTopics: a.Topics,
 			Project:     t.Spec.Pool,
 			Service:     kafkarator_aiven.ServiceName(t.Spec.Pool),
 			Topic:       t,
 			Logger:      logger,
 		},
 		ACLs: acl.Manager{
-			Aiven:   a,
-			Project: t.Spec.Pool,
-			Service: kafkarator_aiven.ServiceName(t.Spec.Pool),
-			Topic:   t,
-			Logger:  logger,
+			AivenACLs: a.ACLs,
+			Project:   t.Spec.Pool,
+			Service:   kafkarator_aiven.ServiceName(t.Spec.Pool),
+			Topic:     t,
+			Logger:    logger,
 		},
 		Users: serviceuser.Manager{
 			AivenServiceUsers: a.ServiceUsers,

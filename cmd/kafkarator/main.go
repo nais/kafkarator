@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/nais/kafkarator/pkg/certificate"
 	"os"
 	"os/signal"
 	"strings"
@@ -10,6 +9,11 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/aiven/aiven-go-client"
+	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/controllers"
+	"github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
@@ -18,21 +22,17 @@ import (
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
 	"github.com/nais/kafkarator/pkg/secretsync"
 	"github.com/nais/kafkarator/pkg/utils"
-	"github.com/spf13/viper"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
-
-	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/api/v1"
-	"github.com/nais/kafkarator/controllers"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -219,15 +219,20 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 	}
 
 	reconciler := &controllers.TopicReconciler{
+		Aiven: kafkarator_aiven.Interfaces{
+			ACLs:         aivenClient.KafkaACLs,
+			CA:           aivenClient.CA,
+			ServiceUsers: aivenClient.ServiceUsers,
+			Services:     aivenClient.Services,
+			Topics:       aivenClient.KafkaTopics,
+		},
 		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
+		CredentialsLifetime: viper.GetDuration(CredentialsLifetime),
 		CryptManager:        cryptManager,
-		Aiven:               aivenClient,
+		Logger:              logger,
 		Producer:            prod,
 		Projects:            viper.GetStringSlice(Projects),
 		RequeueInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
-		CredentialsLifetime: viper.GetDuration(CredentialsLifetime),
-		Logger:              logger,
 		StoreGenerator:      certificate.NewExecGenerator(),
 	}
 

@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ topic.Topic = &mocks.Topic{}
+var _ topic.Interface = &mocks.Topic{}
 
 func intp(i int) *int {
 	return &i

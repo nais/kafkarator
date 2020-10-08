@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Service interface {
+type Interface interface {
 	Get(project, service string) (*aiven.Service, error)
 }
 
@@ -15,7 +15,7 @@ type CA interface {
 }
 
 type Manager struct {
-	AivenService Service
+	AivenService Interface
 	AivenCA      CA
 	Project      string
 	Service      string

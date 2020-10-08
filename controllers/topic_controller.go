@@ -7,6 +7,7 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
@@ -14,7 +15,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,26 +39,12 @@ type transaction struct {
 	logger     *log.Entry
 }
 
-type secretData struct {
-	user            aiven.ServiceUser
-	resourceVersion string
-	app             string
-	pool            string
-	name            string
-	team            string
-	brokers         string
-	registry        string
-	ca              string
-	credstoreData   certificate.CredStoreData
-}
-
 type TopicReconciler struct {
 	client.Client
 	CryptManager        crypto.Manager
-	Aiven               *aiven.Client
-	Scheme              *runtime.Scheme
+	Aiven               kafkarator_aiven.Interfaces
 	Logger              *log.Logger
-	Producer            *producer.Producer
+	Producer            producer.Interface
 	Projects            []string
 	RequeueInterval     time.Duration
 	CredentialsLifetime time.Duration
