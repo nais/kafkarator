@@ -222,6 +222,10 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
+	// hard to test current time with static data
+	test.Output.Status.CredentialsExpiryTime = result.Status.CredentialsExpiryTime
+	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
+
 	assert.Equal(t, test.Output, result)
 }
 

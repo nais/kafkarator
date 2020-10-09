@@ -129,7 +129,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	status.Errors = nil
 
 	return ReconcileResult{
-		Status:  kafka_nais_io_v1.TopicStatus{},
+		Status:  status,
 		Secrets: secrets,
 	}
 }
