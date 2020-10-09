@@ -92,3 +92,15 @@ func ObserveAivenLatency(operation, pool string, fun func() error) error {
 	}).Observe(used.Seconds())
 	return err
 }
+
+func Register(registry prometheus.Registerer) {
+	registry.MustRegister(
+		Acls,
+		AivenLatency,
+		KubernetesResourcesWritten,
+		SecretQueueSize,
+		ServiceUsers,
+		Topics,
+		TopicsProcessed,
+	)
+}

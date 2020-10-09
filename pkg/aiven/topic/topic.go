@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Topic interface {
+type Interface interface {
 	Get(project, service, topic string) (*aiven.KafkaTopic, error)
 	List(project, service string) ([]*aiven.KafkaListTopic, error)
 	Create(project, service string, req aiven.CreateKafkaTopicRequest) error
@@ -18,7 +18,7 @@ type Topic interface {
 }
 
 type Manager struct {
-	AivenTopics Topic
+	AivenTopics Interface
 	Project     string
 	Service     string
 	Topic       kafka_nais_io_v1.Topic
@@ -33,7 +33,6 @@ func aivenError(err error) *aiven.Error {
 	return nil
 }
 
-// given a list of usernames, create Aiven users not found in that list
 func (r *Manager) Synchronize() error {
 	var topic *aiven.KafkaTopic
 	err := metrics.ObserveAivenLatency("Topic_Get", r.Project, func() error {

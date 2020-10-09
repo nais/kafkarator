@@ -15,6 +15,10 @@ type Producer struct {
 	topic    string
 }
 
+type Interface interface {
+	Produce(msg kafka.Message) (int64, error)
+}
+
 func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
