@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/service"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	topic_package "github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/certificate/mocks"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,14 +30,45 @@ import (
 
 const (
 	testDataDirectory = "testdata"
+
+	// Use these in your test data
+	wellKnownID                   = "well-known-id"
+	wellKnownPassword             = "well-known-password"
+	wellKnownCertificateAuthority = "well-known-certificate-authority"
+	wellKnownAccessCertificate    = "well-known-access-cert"
+	wellKnownAccessKey            = "well-known-access-key"
+	wellKnownKeyStore             = "well-known-keystore"
+	wellKnownTrustStore           = "well-known-truststore"
+	wellKnownStoreSecret          = "changeme"
 )
 
 type testCase struct {
 	Config testCaseConfig
 	Error  *string
-	Aiven  aivenData
+	Aiven  aivenSpec
 	Topic  json.RawMessage
 	Output controllers.ReconcileResult
+}
+
+type aivenSpec struct {
+	Created  aivenCreated
+	Deleted  aivenDeleted
+	Existing aivenData
+	Updated  aivenUpdated
+}
+
+type aivenCreated struct {
+	Topics       []aiven.CreateKafkaTopicRequest
+	Acls         []aiven.CreateKafkaACLRequest
+	Serviceusers []aiven.CreateServiceUserRequest
+}
+
+type aivenUpdated struct {
+	Topics map[string]aiven.UpdateKafkaTopicRequest
+}
+
+type aivenDeleted struct {
+	Acls []string
 }
 
 type aivenData struct {
@@ -64,6 +97,81 @@ func fileReader(file string) io.Reader {
 	return f
 }
 
+func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
+	aclMock := &acl.MockInterface{}
+	caMock := &service.MockCA{}
+	serviceUserMock := &serviceuser.MockInterface{}
+	serviceMock := &service.MockInterface{}
+	topicMock := &topic_package.MockInterface{}
+
+	for _, project := range test.Config.Projects {
+		svc := kafkarator_aiven.ServiceName(project)
+		serviceMock.
+			On("Get", project, svc).
+			Return(test.Aiven.Existing.Service, nil)
+		caMock.
+			On("Get", project).
+			Return(test.Aiven.Existing.CA, nil)
+		aclMock.
+			On("List", project, svc).
+			Return(test.Aiven.Existing.Acls, nil)
+		serviceUserMock.
+			On("List", project, svc).
+			Return(test.Aiven.Existing.Serviceusers, nil)
+		topicMock.
+			On("List", project, svc).
+			Return(test.Aiven.Existing.Topics, nil)
+
+		for _, topic := range test.Aiven.Created.Topics {
+			topicMock.
+				On("Get", project, svc, topic.TopicName).
+				Return(nil, aiven.Error{
+					Status: http.StatusNotFound,
+				})
+			topicMock.
+				On("Create", project, svc, topic).
+				Return(nil)
+		}
+
+		for _, serviceUser := range test.Aiven.Created.Serviceusers {
+			serviceUserMock.
+				On("Create", project, svc, serviceUser).
+				Return(
+					&aiven.ServiceUser{
+						Username:   serviceUser.Username,
+						Password:   wellKnownPassword,
+						Type:       "who-cares",
+						AccessCert: wellKnownAccessCertificate,
+						AccessKey:  wellKnownAccessKey,
+					},
+					nil,
+				)
+		}
+
+		for _, a := range test.Aiven.Created.Acls {
+			aclMock.
+				On("Create", project, svc, a).
+				Return(
+					&aiven.KafkaACL{
+						ID:         wellKnownID,
+						Permission: a.Permission,
+						Topic:      a.Topic,
+						Username:   a.Username,
+					},
+					nil,
+				)
+		}
+	}
+
+	return kafkarator_aiven.Interfaces{
+		ACLs:         aclMock,
+		CA:           caMock,
+		ServiceUsers: serviceUserMock,
+		Service:      serviceMock,
+		Topics:       topicMock,
+	}
+}
+
 func yamlSubTest(t *testing.T, path string) {
 	fixture := fileReader(path)
 	data, err := ioutil.ReadAll(fixture)
@@ -89,39 +197,16 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	aclMock := &acl.MockInterface{}
-	caMock := &service.MockCA{}
-	serviceUserMock := &serviceuser.MockInterface{}
-	serviceMock := &service.MockInterface{}
-	topicMock := &topic_package.MockInterface{}
 	generatorMock := &mocks.Generator{}
+	aivenMocks := aivenMockInterfaces(test)
 
-	for _, project := range test.Config.Projects {
-		svc := kafkarator_aiven.ServiceName(project)
-		serviceMock.
-			On("Get", project, svc).
-			Return(test.Aiven.Service, nil)
-		caMock.
-			On("Get", project).
-			Return(test.Aiven.CA, nil)
-		aclMock.
-			On("List", project, svc).
-			Return(test.Aiven.Acls, nil)
-		serviceUserMock.
-			On("List", project, svc).
-			Return(test.Aiven.Serviceusers, nil)
-		topicMock.
-			On("List", project, svc).
-			Return(test.Aiven.Topics, nil)
-	}
-
-	aivenMocks := kafkarator_aiven.Interfaces{
-		ACLs:         aclMock,
-		CA:           caMock,
-		ServiceUsers: serviceUserMock,
-		Service:      serviceMock,
-		Topics:       topicMock,
-	}
+	generatorMock.
+		On("MakeCredStores", wellKnownAccessKey, wellKnownAccessCertificate, wellKnownCertificateAuthority).
+		Return(&certificate.CredStoreData{
+			Keystore:   []byte(wellKnownKeyStore),
+			Truststore: []byte(wellKnownTrustStore),
+			Secret:     wellKnownStoreSecret,
+		}, nil)
 
 	reconciler := controllers.TopicReconciler{
 		Aiven:               aivenMocks,

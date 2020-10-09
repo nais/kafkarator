@@ -33,7 +33,6 @@ func aivenError(err error) *aiven.Error {
 	return nil
 }
 
-// given a list of usernames, create Aiven users not found in that list
 func (r *Manager) Synchronize() error {
 	var topic *aiven.KafkaTopic
 	err := metrics.ObserveAivenLatency("Topic_Get", r.Project, func() error {
