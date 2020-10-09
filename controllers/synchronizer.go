@@ -115,7 +115,7 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 		return nil, fmt.Errorf("unable to generate secret name: %s", err)
 	}
 
-	credStore, err := generator.MakeCredStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, ca)
+	credStore, err := generator.MakeCredStores(user.AivenUser.AccessKey, user.AivenUser.AccessCert, ca)
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate truststore/keystore: %w", err)
 	}
