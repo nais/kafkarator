@@ -277,7 +277,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 			"secret_name":      key.Name,
 		})
 
-		storeData, err := r.StoreGenerator.MakeCredStores(user.AivenUser.AccessCert, user.AivenUser.AccessKey, kafkaCA)
+		storeData, err := r.StoreGenerator.MakeCredStores(user.AivenUser.AccessKey, user.AivenUser.AccessCert, kafkaCA)
 		if err != nil {
 			return fmt.Errorf("unable to generate truststore/keystore: %w", err)
 		}
