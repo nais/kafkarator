@@ -140,7 +140,6 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 				"kafka.nais.io/pool":        topic.Spec.Pool,
 				"kafka.nais.io/application": user.Application,
 			},
-			ResourceVersion: topic.ObjectMeta.ResourceVersion,
 		},
 		StringData: map[string]string{
 			KafkaCertificate:       user.AivenUser.AccessCert,

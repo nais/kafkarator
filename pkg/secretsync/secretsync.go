@@ -32,8 +32,6 @@ func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Infof("Creating secret")
-			// TODO: this field should always be empty, why isn't it?
-			secret.ResourceVersion = "" // fix "resourceVersion should not be set on objects to be created"
 			err = s.Create(ctx, secret)
 		}
 	} else {

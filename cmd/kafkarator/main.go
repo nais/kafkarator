@@ -288,9 +288,8 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptM
 		}
 
 		logger = logger.WithFields(log.Fields{
-			"secret_namespace":       secret.Namespace,
-			"secret_name":            secret.Name,
-			"secret_resourceversion": secret.ResourceVersion,
+			"secret_namespace": secret.Namespace,
+			"secret_name":      secret.Name,
 		})
 
 		err = secretsyncer.Write(secret, logger)
