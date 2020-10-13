@@ -33,6 +33,7 @@ const (
 )
 
 type ReconcileResult struct {
+	Skipped bool
 	Requeue bool
 	Status  kafka_nais_io_v1.TopicStatus
 	Secrets []v1.Secret
@@ -99,7 +100,9 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	if !topic.NeedsSynchronization(hash) {
 		logger.Infof("Synchronization already complete")
-		return ReconcileResult{}
+		return ReconcileResult{
+			Skipped: true,
+		}
 	}
 
 	if !r.projectWhitelisted(topic.Spec.Pool) {
@@ -217,6 +220,10 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			metrics.LabelPool:      topic.Spec.Pool,
 		}).Inc()
 	}()
+
+	if result.Skipped {
+		return ctrl.Result{}, nil
+	}
 
 	if result.Error != nil {
 		return fail(err, result.Requeue)
