@@ -182,14 +182,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		logger.Infof("Finished processing request")
 	}()
 
-	defer func() {
-		metrics.TopicsProcessed.With(prometheus.Labels{
-			metrics.LabelSyncState: topic.Status.SynchronizationState,
-			metrics.LabelPool:      topic.Spec.Pool,
-		}).Inc()
-
-	}()
-
 	ctx := context.Background()
 
 	fail := func(err error, requeue bool) (ctrl.Result, error) {
@@ -218,6 +210,14 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Sync to Aiven; retry if necessary
 	result := r.Process(topic, logger)
+
+	defer func() {
+		metrics.TopicsProcessed.With(prometheus.Labels{
+			metrics.LabelSyncState: result.Status.SynchronizationState,
+			metrics.LabelPool:      topic.Spec.Pool,
+		}).Inc()
+	}()
+
 	if result.Error != nil {
 		return fail(err, result.Requeue)
 	}
