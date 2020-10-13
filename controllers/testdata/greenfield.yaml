@@ -1,5 +1,5 @@
 config:
-  description: hello world
+  description: creation of topics, users, and acls in a clean environment
   projects:
     - nav-integration-test
 

@@ -1,0 +1,85 @@
+config:
+  description: topic configuration updates are propagated
+  projects:
+    - nav-integration-test
+
+aiven:
+  existing:
+    acls:
+      - acl_id: well-known-id
+        username: myteam.myapplication-6580c2d3
+        permission: read
+        topic: myteam.mytopic
+    serviceusers:
+      - username: myteam.myapplication-6580c2d3
+    topics:
+      - topic_name: myteam.mytopic
+        retention_hours: 900
+        replication: 3
+    service:
+      name: nav-integration-test
+      service_uri: well-known-kafka-brokers:12345
+      connection_info:
+        schema_registry_uri: https://schema-registry.tld:9876
+    ca: well-known-certificate-authority
+  created:
+    serviceusers:
+      - username: myteam.myapplication-6580c2d3
+    topics: []
+    acls: []
+  updated:
+    topics:
+      myteam.mytopic:
+        topic_name: myteam.mytopic
+        retention_hours: 12
+        partitions: 2
+  deleted:
+    acls: []
+    serviceusers:
+      - myteam.myapplication-6580c2d3
+
+topic:
+  apiVersion: kafka.nais.io/v1
+  kind: Topic
+  metadata:
+    name: mytopic
+    namespace: myteam
+    labels:
+      team: myteam
+  spec:
+    pool: nav-integration-test
+    config:
+      retentionHours: 12
+      partitions: 2
+    acl:
+      - access: read
+        team: myteam
+        application: myapplication
+
+output:
+  status:
+    synchronizationState: RolloutComplete
+    synchronizationHash: 1c3a7a5f0371bc8a
+    message: Topic configuration synchronized to Kafka pool
+  secrets:
+    - apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: kafka-myapplication-nav-integration-test-42edfcd6
+        namespace: myteam
+        labels:
+          team: myteam
+        annotations:
+          kafka.nais.io/application: myapplication
+          kafka.nais.io/pool: nav-integration-test
+      data:
+        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
+        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
+      stringData:
+        KAFKA_BROKERS: well-known-kafka-brokers:12345
+        KAFKA_CA: well-known-certificate-authority
+        KAFKA_CERTIFICATE: well-known-access-cert
+        KAFKA_PRIVATE_KEY: well-known-access-key
+        KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876

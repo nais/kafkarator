@@ -68,7 +68,8 @@ type aivenUpdated struct {
 }
 
 type aivenDeleted struct {
-	Acls []string
+	Serviceusers []string
+	Acls         []string
 }
 
 type aivenData struct {
@@ -122,6 +123,12 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 			On("List", project, svc).
 			Return(test.Aiven.Existing.Topics, nil)
 
+		for _, topic := range test.Aiven.Existing.Topics {
+			topicMock.
+				On("Get", project, svc, topic.TopicName).
+				Return(topic, nil)
+		}
+
 		for _, topic := range test.Aiven.Created.Topics {
 			topicMock.
 				On("Get", project, svc, topic.TopicName).
@@ -160,6 +167,24 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 					},
 					nil,
 				)
+		}
+
+		for topicName, topic := range test.Aiven.Updated.Topics {
+			topicMock.
+				On("Update", project, svc, topicName, topic).
+				Return(nil)
+		}
+
+		for _, u := range test.Aiven.Deleted.Serviceusers {
+			serviceUserMock.
+				On("Delete", project, svc, u).
+				Return(nil)
+		}
+
+		for _, a := range test.Aiven.Deleted.Acls {
+			aclMock.
+				On("Delete", project, svc, a).
+				Return(nil)
 		}
 	}
 
