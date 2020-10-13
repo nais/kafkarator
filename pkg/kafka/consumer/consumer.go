@@ -84,7 +84,6 @@ func New(cfg Config) (*Consumer, error) {
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = cfg.TlsConfig
 	config.Version = sarama.V2_6_0_0
-	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
 	config.ClientID, _ = os.Hostname()
