@@ -1,0 +1,111 @@
+config:
+  description: changing ACLs for a topic triggers deletion of invalid ACLs, creation of new ones, and not touching valid ones
+  projects:
+    - nav-integration-test
+
+aiven:
+  existing:
+    acls:
+      - id: acl-1
+        username: myteam.myapplication-6580c2d3
+        permission: read
+        topic: myteam.mytopic
+      - id: acl-2
+        username: otherteam.otherapplication-fb9c8478
+        permission: write
+        topic: myteam.mytopic
+    serviceusers:
+      - username: myteam.myapplication-6580c2d3
+      - username: otherteam.otherapplication-fb9c8478
+    topics:
+      - topic_name: myteam.mytopic
+    service:
+      name: nav-integration-test
+      service_uri: well-known-kafka-brokers:12345
+      connection_info:
+        schema_registry_uri: https://schema-registry.tld:9876
+    ca: well-known-certificate-authority
+  created:
+    serviceusers:
+      - username: myteam.myapplication-6580c2d3
+      - username: otherteam.otherapplication-fb9c8478
+    topics: []
+    acls:
+      - username: myteam.myapplication-6580c2d3
+        permission: readwrite
+        topic: myteam.mytopic
+  updated:
+    topics: {}
+  deleted:
+    acls:
+      - acl-1
+    serviceusers:
+      - myteam.myapplication-6580c2d3
+      - otherteam.otherapplication-fb9c8478
+
+topic:
+  apiVersion: kafka.nais.io/v1
+  kind: Topic
+  metadata:
+    name: mytopic
+    namespace: myteam
+    labels:
+      team: myteam
+  spec:
+    pool: nav-integration-test
+    acl:
+      - access: write
+        team: otherteam
+        application: otherapplication
+      - access: readwrite
+        team: myteam
+        application: myapplication
+
+output:
+  status:
+    synchronizationState: RolloutComplete
+    synchronizationHash: 5b9b9ebe3a8508d5
+    message: Topic configuration synchronized to Kafka pool
+  secrets:
+    - apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: kafka-otherapplication-nav-integration-test-5ed2b9b5
+        namespace: otherteam
+        labels:
+          team: otherteam
+        annotations:
+          kafka.nais.io/application: otherapplication
+          kafka.nais.io/pool: nav-integration-test
+      data:
+        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
+        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
+      stringData:
+        KAFKA_BROKERS: well-known-kafka-brokers:12345
+        KAFKA_CA: well-known-certificate-authority
+        KAFKA_CERTIFICATE: well-known-access-cert
+        KAFKA_PRIVATE_KEY: well-known-access-key
+        KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
+    - apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: kafka-myapplication-nav-integration-test-42edfcd6
+        namespace: myteam
+        labels:
+          team: myteam
+        annotations:
+          kafka.nais.io/application: myapplication
+          kafka.nais.io/pool: nav-integration-test
+      data:
+        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
+        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
+      stringData:
+        KAFKA_BROKERS: well-known-kafka-brokers:12345
+        KAFKA_CA: well-known-certificate-authority
+        KAFKA_CERTIFICATE: well-known-access-cert
+        KAFKA_PRIVATE_KEY: well-known-access-key
+        KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
