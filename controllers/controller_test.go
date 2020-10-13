@@ -251,7 +251,9 @@ func yamlSubTest(t *testing.T, path string) {
 	test.Output.Status.CredentialsExpiryTime = result.Status.CredentialsExpiryTime
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
 
-	assert.Equal(t, test.Output, result)
+	assert.Equal(t, test.Output.Status, result.Status)
+	assert.Equal(t, test.Output.Requeue, result.Requeue)
+	assert.ElementsMatch(t, test.Output.Secrets, result.Secrets)
 }
 
 func TestGoldenFile(t *testing.T) {
