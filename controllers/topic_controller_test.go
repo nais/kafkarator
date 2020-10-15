@@ -1,29 +1,30 @@
-package controllers
+package controllers_test
 
 import (
 	"testing"
 
 	"github.com/aiven/aiven-go-client"
+	"github.com/nais/kafkarator/controllers"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestConvertSecret(t *testing.T) {
-	testSecret := secretData{
-		user: aiven.ServiceUser{
+	testSecret := controllers.SecretData{
+		User: aiven.ServiceUser{
 			Username:   "testapp-team1",
 			AccessCert: "cert",
 			AccessKey:  "key",
 		},
-		resourceVersion: "testSecret-resourceVersion",
-		app:             "testSecret-app",
-		pool:            "testSecret-pool",
-		name:            "testSecret-name",
-		team:            "testSecret-team",
-		brokers:         "testSecret-brokers",
-		registry:        "testSecret-registry",
-		ca:              "testSecret-ca",
+		ResourceVersion: "testSecret-ResourceVersion",
+		App:             "testSecret-App",
+		Pool:            "testSecret-Pool",
+		Name:            "testSecret-Name",
+		Team:            "testSecret-Team",
+		Brokers:         "testSecret-Brokers",
+		Registry:        "testSecret-Registry",
+		Ca:              "testSecret-Ca",
 	}
 
 	expectedSecret := v1.Secret{
@@ -32,32 +33,28 @@ func TestConvertSecret(t *testing.T) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testSecret.name,
-			Namespace: testSecret.team,
+			Name:      testSecret.Name,
+			Namespace: testSecret.Team,
 			Labels: map[string]string{
-				"team": testSecret.team,
+				"Team": testSecret.Team,
 			},
 			Annotations: map[string]string{
-				"kafka.nais.io/pool":        testSecret.pool,
-				"kafka.nais.io/application": testSecret.app,
+				"kafka.nais.io/Pool":        testSecret.Pool,
+				"kafka.nais.io/application": testSecret.App,
 			},
-			ResourceVersion: testSecret.resourceVersion,
+			ResourceVersion: testSecret.ResourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:    testSecret.user.AccessCert,
-			KafkaPrivateKey:     testSecret.user.AccessKey,
-			KafkaBrokers:        testSecret.brokers,
-			KafkaSchemaRegistry: testSecret.registry,
-			KafkaCA:             testSecret.ca,
+			controllers.KafkaCertificate:    testSecret.User.AccessCert,
+			controllers.KafkaPrivateKey:     testSecret.User.AccessKey,
+			controllers.KafkaBrokers:        testSecret.Brokers,
+			controllers.KafkaSchemaRegistry: testSecret.Registry,
+			controllers.KafkaCA:             testSecret.Ca,
 		},
 		Type: v1.SecretTypeOpaque,
 	}
 
-	convertedTestSecret := ConvertSecret(testSecret)
+	convertedTestSecret := controllers.ConvertSecret(testSecret)
 
-	assert.NotEmpty(t, convertedTestSecret)
-	assert.NotZero(t, convertedTestSecret)
-	assert.NotEqual(t, testSecret, convertedTestSecret)
 	assert.Equal(t, expectedSecret, convertedTestSecret)
-	assert.EqualValues(t, expectedSecret, convertedTestSecret)
 }
