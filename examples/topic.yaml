@@ -2,18 +2,20 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
+  annotations:
+    kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
   name: mytopic
-  namespace: aura
+  namespace: default
   labels:
-    team: aura
+    team: default
 spec:
   pool: nav-integration-test
   config:
     retentionHours: 900
   acl:
     - access: read
-      team: aura
+      team: default
       application: myapplication
     - access: write
-      team: aura
+      team: default
       application: otherapplication

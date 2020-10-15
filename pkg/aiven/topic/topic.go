@@ -15,6 +15,7 @@ type Interface interface {
 	List(project, service string) ([]*aiven.KafkaListTopic, error)
 	Create(project, service string, req aiven.CreateKafkaTopicRequest) error
 	Update(project, service, topic string, req aiven.UpdateKafkaTopicRequest) error
+	Delete(project, service, topic string) error
 }
 
 type Manager struct {

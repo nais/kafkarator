@@ -17,6 +17,9 @@ canary:
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+mocks:
+	cd pkg/aiven && mockery -inpkg -all -case snake
+
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="code-generation/header.go.txt" paths="./..."

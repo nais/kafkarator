@@ -56,7 +56,6 @@ topic:
 output:
   status:
     synchronizationState: RolloutComplete
-    synchronizationHash: c68032f161f62b60
     message: Topic configuration synchronized to Kafka pool
   secrets:
     - apiVersion: v1

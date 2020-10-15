@@ -7,8 +7,22 @@ import (
 	hash "github.com/mitchellh/hashstructure"
 )
 
-func (in *TopicSpec) Hash() (string, error) {
-	marshalled, err := json.Marshal(in)
+func (in *Topic) Hash() (string, error) {
+	type hashFields struct {
+		Annotations map[string]string
+		Spec        TopicSpec
+	}
+	annotations := in.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	data := hashFields{
+		Annotations: map[string]string{
+			RemoveDataAnnotation: annotations[RemoveDataAnnotation],
+		},
+		Spec: in.Spec,
+	}
+	marshalled, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}

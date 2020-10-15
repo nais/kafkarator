@@ -1,0 +1,48 @@
+config:
+  description: topic is permanently deleted when annotation is set
+  projects:
+    - nav-integration-test
+
+aiven:
+  existing:
+    topics:
+      - topic_name: myteam.mytopic
+        retention_hours: 900
+        replication: 3
+    service:
+      name: nav-integration-test
+      service_uri: well-known-kafka-brokers:12345
+      connection_info:
+        schema_registry_uri: https://schema-registry.tld:9876
+    ca: well-known-certificate-authority
+  created: {}
+  updated: {}
+  deleted:
+    topics:
+      - myteam.mytopic
+
+topic:
+  apiVersion: kafka.nais.io/v1
+  kind: Topic
+  metadata:
+    name: mytopic
+    namespace: myteam
+    annotations:
+      kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
+    deletionTimestamp: 1970-01-01T00:00:00Z
+    labels:
+      team: myteam
+  spec:
+    pool: nav-integration-test
+    config:
+      retentionHours: 12
+      partitions: 2
+    acl:
+      - access: read
+        team: myteam
+        application: myapplication
+
+output:
+  deleteFinalized: true
+  status:
+    message: Topic and data permanently deleted
