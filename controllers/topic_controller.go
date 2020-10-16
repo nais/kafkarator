@@ -29,15 +29,17 @@ const (
 	KafkaCredStorePassword = "KAFKA_CREDSTORE_PASSWORD"
 	KafkaKeystore          = "client.keystore.p12"
 	KafkaTruststore        = "client.truststore.jks"
-	maxSecretNameLength    = 63
+
+	maxSecretNameLength = 63
 )
 
 type ReconcileResult struct {
-	Skipped bool
-	Requeue bool
-	Status  kafka_nais_io_v1.TopicStatus
-	Secrets []v1.Secret
-	Error   error
+	DeleteFinalized bool
+	Skipped         bool
+	Requeue         bool
+	Status          kafka_nais_io_v1.TopicStatus
+	Secrets         []v1.Secret
+	Error           error
 }
 
 type TopicReconciler struct {
@@ -93,7 +95,25 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		}
 	}
 
-	hash, err = topic.Spec.Hash()
+	// Process or delete?
+	if topic.ObjectMeta.DeletionTimestamp != nil {
+		if topic.RemoveDataWhenDeleted() {
+			logger.Infof("Permanently deleting Aiven topic and its data")
+			err = r.Aiven.Topics.Delete(topic.Spec.Pool, kafkarator_aiven.ServiceName(topic.Spec.Pool), topic.FullName())
+			if err != nil {
+				return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+			}
+			status.Message = "Topic and data permanently deleted"
+		}
+		status.SynchronizationTime = time.Now().Format(time.RFC3339)
+		status.Errors = nil
+		return ReconcileResult{
+			DeleteFinalized: true,
+			Status:          status,
+		}
+	}
+
+	hash, err = topic.Hash()
 	if err != nil {
 		return fail(fmt.Errorf("unable to calculate synchronization hash"), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
@@ -196,7 +216,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return *cr, nil
 	}
 
-	// todo: purge Aiven if resource was deleted and annotation is set?
 	err := r.Get(ctx, req.NamespacedName, &topic)
 	switch {
 	case errors.IsNotFound(err):
@@ -227,6 +246,14 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	if result.Error != nil {
 		return fail(err, result.Requeue)
+	}
+
+	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
+	// Otherwise, append Kafkarator to finalizers if data is to be removed when topic is deleted.
+	if result.DeleteFinalized {
+		topic.RemoveFinalizer()
+	} else if topic.RemoveDataWhenDeleted() {
+		topic.AppendFinalizer()
 	}
 
 	// Produce secrets; retry always

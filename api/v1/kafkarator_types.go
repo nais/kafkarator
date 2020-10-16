@@ -2,6 +2,7 @@
 package kafka_nais_io_v1
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/nais/kafkarator/pkg/utils"
@@ -14,6 +15,9 @@ const (
 	EventFailedSynchronization = "FailedSynchronization"
 
 	MaxServiceUserNameLength = 40
+
+	Finalizer            = "kafkarator.kafka.nais.io"
+	RemoveDataAnnotation = "kafka.nais.io/removeDataWhenResourceIsDeleted"
 )
 
 // +genclient
@@ -73,6 +77,36 @@ type User struct {
 	Username    string
 	Application string
 	Team        string
+}
+
+func (in Topic) RemoveDataWhenDeleted() bool {
+	if in.Annotations == nil {
+		return false
+	}
+	b, err := strconv.ParseBool(in.Annotations[RemoveDataAnnotation])
+	return b && err == nil
+}
+
+func (in *Topic) AppendFinalizer() {
+	if in.Finalizers == nil {
+		in.Finalizers = make([]string, 0)
+	}
+	for _, v := range in.Finalizers {
+		if v == Finalizer {
+			return
+		}
+	}
+	in.Finalizers = append(in.Finalizers, Finalizer)
+}
+
+func (in *Topic) RemoveFinalizer() {
+	finalizers := make([]string, 0, len(in.Finalizers))
+	for _, v := range in.Finalizers {
+		if v != Finalizer {
+			finalizers = append(finalizers, v)
+		}
+	}
+	in.Finalizers = finalizers
 }
 
 func (in Topic) FullName() string {

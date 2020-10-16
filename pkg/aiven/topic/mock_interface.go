@@ -26,6 +26,20 @@ func (_m *MockInterface) Create(project string, service string, req aiven.Create
 	return r0
 }
 
+// Delete provides a mock function with given fields: project, service, topic
+func (_m *MockInterface) Delete(project string, service string, topic string) error {
+	ret := _m.Called(project, service, topic)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = rf(project, service, topic)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Get provides a mock function with given fields: project, service, topic
 func (_m *MockInterface) Get(project string, service string, topic string) (*aiven.KafkaTopic, error) {
 	ret := _m.Called(project, service, topic)

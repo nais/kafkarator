@@ -68,6 +68,7 @@ type aivenUpdated struct {
 }
 
 type aivenDeleted struct {
+	Topics       []string
 	Serviceusers []string
 	Acls         []string
 }
@@ -175,6 +176,12 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 				Return(nil)
 		}
 
+		for _, t := range test.Aiven.Deleted.Topics {
+			topicMock.
+				On("Delete", project, svc, t).
+				Return(nil)
+		}
+
 		for _, u := range test.Aiven.Deleted.Serviceusers {
 			serviceUserMock.
 				On("Delete", project, svc, u).
@@ -250,6 +257,7 @@ func yamlSubTest(t *testing.T, path string) {
 	// hard to test current time with static data
 	test.Output.Status.CredentialsExpiryTime = result.Status.CredentialsExpiryTime
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
+	test.Output.Status.SynchronizationHash = result.Status.SynchronizationHash
 
 	assert.Equal(t, test.Output.Status, result.Status)
 	assert.Equal(t, test.Output.Requeue, result.Requeue)
