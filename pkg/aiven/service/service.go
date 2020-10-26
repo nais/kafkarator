@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/metrics"
 	log "github.com/sirupsen/logrus"
@@ -47,5 +48,18 @@ func GetKafkaBrokerAddress(service aiven.Service) string {
 }
 
 func GetSchemaRegistryAddress(service aiven.Service) string {
-	return service.ConnectionInfo.SchemaRegistryURI
+	schemaRegistryComponent := findComponent("schema_registry", service.Components)
+	if schemaRegistryComponent != nil {
+		return fmt.Sprintf("https://%s:%d", schemaRegistryComponent.Host, schemaRegistryComponent.Port)
+	}
+	return ""
+}
+
+func findComponent(needle string, haystack []*aiven.ServiceComponents) *aiven.ServiceComponents {
+	for _, c := range haystack {
+		if c.Component == needle {
+			return c
+		}
+	}
+	return nil
 }

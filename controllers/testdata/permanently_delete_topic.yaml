@@ -12,8 +12,13 @@ aiven:
     service:
       name: nav-integration-test
       service_uri: well-known-kafka-brokers:12345
-      connection_info:
-        schema_registry_uri: https://schema-registry.tld:9876
+      components:
+        - component: kafka
+          host: kafka-host.tld
+          port: 123
+        - component: schema_registry
+          host: schema-registry.tld
+          port: 9876
     ca: well-known-certificate-authority
   created: {}
   updated: {}
