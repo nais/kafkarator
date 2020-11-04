@@ -15,9 +15,9 @@ jobs:
       - name: Generate image environment variable
         run: |
           version=$(./version.sh)
-          echo ::set-env name=version::${version}
-          echo ::set-env name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}
-          echo ::set-env name=CANARY_IMAGE::${canary_image}:${version}
+          echo "version=${version}" >> $GITHUB_ENV
+          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
+          echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
       - name: Build kafkarator docker image
         run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
       - name: Build canary docker image
@@ -40,10 +40,10 @@ jobs:
     - name: Generate image environment variable
       run: |
         version=$(./version.sh)
-        echo ::set-env name=version::${version}
-        echo ::set-env name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}
-        echo ::set-env name=CANARY_IMAGE::${canary_image}:${version}
-        echo ::set-env name=NAIS_YAML::${GITHUB_WORKSPACE}/nais-yaml
+        echo "version=${version}" >> $GITHUB_ENV
+        echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
+        echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
+        echo "NAIS_YAML=${GITHUB_WORKSPACE}/nais-yaml" >> $GITHUB_ENV
         pwd
     - name: Bump version in nais-yaml
       env:
