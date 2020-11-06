@@ -23,8 +23,8 @@ import (
 const (
 	KafkaBrokers           = "KAFKA_BROKERS"
 	KafkaSchemaRegistry    = "KAFKA_SCHEMA_REGISTRY"
-	KafkaSchemaUser        = "KAFKA_SCHEMA_USER"
-	KafkaSchemaPassword    = "KAFKA_SCHEMA_PASSWORD"
+	KafkaSchemaUser        = "KAFKA_SCHEMA_REGISTRY_USER"
+	KafkaSchemaPassword    = "KAFKA_SCHEMA_REGISTRY_PASSWORD"
 	KafkaCertificate       = "KAFKA_CERTIFICATE"
 	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
 	KafkaCA                = "KAFKA_CA"

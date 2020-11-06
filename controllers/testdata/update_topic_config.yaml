@@ -87,5 +87,5 @@ output:
         KAFKA_PRIVATE_KEY: well-known-access-key
         KAFKA_CREDSTORE_PASSWORD: changeme
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
-        KAFKA_SCHEMA_USER: myteam.myapplication-6580c2d3
-        KAFKA_SCHEMA_PASSWORD: well-known-password
+        KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
+        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
