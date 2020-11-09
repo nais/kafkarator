@@ -22,8 +22,13 @@ aiven:
     service:
       name: nav-integration-test
       service_uri: well-known-kafka-brokers:12345
-      connection_info:
-        schema_registry_uri: https://schema-registry.tld:9876
+      components:
+        - component: kafka
+          host: kafka-host.tld
+          port: 123
+        - component: schema_registry
+          host: schema-registry.tld
+          port: 9876
     ca: well-known-certificate-authority
   created:
     serviceusers:
@@ -87,6 +92,8 @@ output:
         KAFKA_PRIVATE_KEY: well-known-access-key
         KAFKA_CREDSTORE_PASSWORD: changeme
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
+        KAFKA_SCHEMA_REGISTRY_USER: otherteam.otherapplication-fb9c8478
+        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
     - apiVersion: v1
       kind: Secret
       type: Opaque
@@ -108,3 +115,5 @@ output:
         KAFKA_PRIVATE_KEY: well-known-access-key
         KAFKA_CREDSTORE_PASSWORD: changeme
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
+        KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
+        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password

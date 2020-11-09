@@ -146,6 +146,8 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 			KafkaPrivateKey:        user.AivenUser.AccessKey,
 			KafkaBrokers:           brokers,
 			KafkaSchemaRegistry:    registry,
+			KafkaSchemaUser:        user.AivenUser.Username,
+			KafkaSchemaPassword:    user.AivenUser.Password,
 			KafkaCA:                ca,
 			KafkaCredStorePassword: credStore.Secret,
 		},
