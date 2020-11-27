@@ -33,6 +33,13 @@ const (
 	KafkaTruststore        = "client.truststore.jks"
 
 	maxSecretNameLength = 63
+
+	// Credentials should expire only between 0100 and 0500.
+	// If the lifetime of credentials doesn't fall in under these constraints,
+	// increase them by three hours until they do.
+	credentialRotationMinHour          = 1
+	credentialRotationMaxHour          = 5
+	credentialRotationIncreaseInterval = 3 * time.Hour
 )
 
 type ReconcileResult struct {
@@ -54,6 +61,14 @@ type TopicReconciler struct {
 	Projects            []string
 	RequeueInterval     time.Duration
 	StoreGenerator      certificate.Generator
+}
+
+func GenerateCredentialRotationTime(lifetime time.Duration, minHour, maxHour int, increase time.Duration) time.Time {
+	base := time.Now().Add(lifetime)
+	for !(base.Hour() >= minHour && base.Hour() <= maxHour) {
+		base = base.Add(increase)
+	}
+	return base
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -146,10 +161,16 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		secrets[i] = *secret
 	}
 
+	credentialsExpiryTime := GenerateCredentialRotationTime(
+		r.CredentialsLifetime,
+		credentialRotationMinHour,
+		credentialRotationMaxHour,
+		credentialRotationIncreaseInterval,
+	)
 	status.SynchronizationTime = time.Now().Format(time.RFC3339)
 	status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
 	status.SynchronizationHash = hash
-	status.CredentialsExpiryTime = time.Now().Add(r.CredentialsLifetime).Format(time.RFC3339)
+	status.CredentialsExpiryTime = credentialsExpiryTime.Format(time.RFC3339)
 	status.Message = "Topic configuration synchronized to Kafka pool"
 	status.Errors = nil
 
