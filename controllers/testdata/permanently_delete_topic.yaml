@@ -51,3 +51,4 @@ output:
   deleteFinalized: true
   status:
     message: Topic and data permanently deleted
+    fullName: myteam.mytopic

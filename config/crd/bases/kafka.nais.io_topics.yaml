@@ -91,6 +91,8 @@ spec:
               items:
                 type: string
               type: array
+            fullName:
+              type: string
             message:
               type: string
             synchronizationHash:

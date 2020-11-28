@@ -70,6 +70,7 @@ output:
   status:
     synchronizationState: RolloutComplete
     message: Topic configuration synchronized to Kafka pool
+    fullName: myteam.mytopic
   secrets:
     - apiVersion: v1
       kind: Secret
