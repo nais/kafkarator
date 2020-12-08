@@ -91,7 +91,7 @@ spec:
               items:
                 type: string
               type: array
-            fullName:
+            fullyQualifiedName:
               type: string
             message:
               type: string

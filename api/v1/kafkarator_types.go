@@ -62,7 +62,7 @@ type TopicStatus struct {
 	CredentialsExpiryTime string   `json:"credentialsExpiryTime,omitempty"`
 	Errors                []string `json:"errors,omitempty"`
 	Message               string   `json:"message,omitempty"`
-	FullName              string   `json:"fullName,omitempty"`
+	FullyQualifiedName    string   `json:"fullyQualifiedName,omitempty"`
 }
 
 type TopicACLs []TopicACL
