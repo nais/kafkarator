@@ -18,6 +18,9 @@ spec:
   - JSONPath: .status.synchronizationState
     name: State
     type: string
+  - JSONPath: .status.fullyQualifiedName
+    name: Fully Qualified Name
+    type: string
   group: kafka.nais.io
   names:
     kind: Topic
