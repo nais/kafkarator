@@ -90,6 +90,8 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		status = *topic.Status
 	}
 
+	status.FullyQualifiedName = topic.FullName()
+
 	fail := func(err error, state string, retry bool) ReconcileResult {
 		aivenError, ok := err.(aiven.Error)
 		if !ok {
