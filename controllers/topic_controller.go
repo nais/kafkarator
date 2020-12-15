@@ -270,7 +270,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if result.Error != nil {
-		return fail(err, result.Requeue)
+		return fail(result.Error, result.Requeue)
 	}
 
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
