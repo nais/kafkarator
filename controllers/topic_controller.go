@@ -32,6 +32,9 @@ const (
 	KafkaKeystore          = "client.keystore.p12"
 	KafkaTruststore        = "client.truststore.jks"
 
+	LogFieldCredentialsExpiryTime = "credentials_expiry_time"
+	LogFieldSynchronizationState  = "synchronization_state"
+
 	maxSecretNameLength = 63
 
 	// Credentials should expire only between 0100 and 0500.
@@ -255,6 +258,8 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		"aiven_topic":   topic.FullName(),
 	})
 
+	logger.Infof("Last synchronization time: %s", topic.Status.SynchronizationTime)
+
 	// Sync to Aiven; retry if necessary
 	result := r.Process(topic, logger)
 
@@ -295,6 +300,13 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return fail(err, true)
 	}
+
+	logger.WithFields(
+		log.Fields{
+			LogFieldCredentialsExpiryTime: topic.Status.CredentialsExpiryTime,
+			LogFieldSynchronizationState:  topic.Status.SynchronizationState,
+		},
+	).Infof("Topic object written back to Kubernetes: %s", topic.Status.Message)
 
 	return ctrl.Result{}, nil
 }
