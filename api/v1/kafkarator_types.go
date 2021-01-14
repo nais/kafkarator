@@ -30,9 +30,9 @@ type TopicList struct {
 
 // +genclient
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-// +kubebuilder:printcolumn:name="Team",type="string",JSONPath=".metadata.labels.team"
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.synchronizationState"
 // +kubebuilder:printcolumn:name="Fully Qualified Name",type="string",JSONPath=".status.fullyQualifiedName"
+// +kubebuilder:printcolumn:name="Credentials expiry time",type="string",JSONPath=".status.credentialsExpiryTime"
 // +kubebuilder:object:root=true
 type Topic struct {
 	metav1.TypeMeta   `json:",inline"`
