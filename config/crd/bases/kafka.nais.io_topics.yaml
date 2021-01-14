@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
   name: topics.kafka.nais.io
 spec:
@@ -12,14 +12,14 @@ spec:
   - JSONPath: .metadata.creationTimestamp
     name: Age
     type: date
-  - JSONPath: .metadata.labels.team
-    name: Team
-    type: string
   - JSONPath: .status.synchronizationState
     name: State
     type: string
   - JSONPath: .status.fullyQualifiedName
     name: Fully Qualified Name
+    type: string
+  - JSONPath: .status.credentialsExpiryTime
+    name: Credentials expiry time
     type: string
   group: kafka.nais.io
   names:
