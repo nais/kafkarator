@@ -3,7 +3,7 @@ module github.com/nais/kafkarator
 go 1.15
 
 require (
-	github.com/Shopify/sarama v1.27.0
+	github.com/Shopify/sarama v1.27.2
 	github.com/aiven/aiven-go-client v1.5.7
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/protobuf v1.3.1 // indirect
