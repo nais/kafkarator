@@ -2,7 +2,7 @@ package acl
 
 import (
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"

@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/service"

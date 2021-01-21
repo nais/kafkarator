@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 )
 

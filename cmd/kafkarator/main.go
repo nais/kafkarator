@@ -10,7 +10,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/api/v1"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/certificate"
