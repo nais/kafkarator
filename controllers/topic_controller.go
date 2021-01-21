@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -258,7 +258,11 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		"aiven_topic":   topic.FullName(),
 	})
 
-	logger.Infof("Last synchronization time: %s", topic.Status.SynchronizationTime)
+	if topic.Status != nil {
+		logger.Infof("Last synchronization time: %s", topic.Status.SynchronizationTime)
+	} else {
+		logger.Info("Topic not synchronized before")
+	}
 
 	// Sync to Aiven; retry if necessary
 	result := r.Process(topic, logger)
