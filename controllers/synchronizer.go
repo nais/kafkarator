@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/service"
@@ -11,6 +10,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +29,7 @@ type Synchronizer struct {
 type SyncResult struct {
 	brokers  string
 	registry string
+	restApi  string
 	ca       string
 	users    []*serviceuser.UserMap
 	topic    kafka_nais_io_v1.Topic
@@ -76,6 +77,7 @@ func (c *Synchronizer) Synchronize(topic kafka_nais_io_v1.Topic) (*SyncResult, e
 
 	kafkaBrokerAddress := service.GetKafkaBrokerAddress(*svc)
 	kafkaSchemaRegistryAddress := service.GetSchemaRegistryAddress(*svc)
+	restApiAddress := service.GetRestApiAddress(*svc)
 
 	kafkaCA, err := c.Services.GetCA()
 	if err != nil {
@@ -103,13 +105,14 @@ func (c *Synchronizer) Synchronize(topic kafka_nais_io_v1.Topic) (*SyncResult, e
 	return &SyncResult{
 		brokers:  kafkaBrokerAddress,
 		registry: kafkaSchemaRegistryAddress,
+		restApi:  restApiAddress,
 		ca:       kafkaCA,
 		users:    users,
 		topic:    topic,
 	}, nil
 }
 
-func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user serviceuser.UserMap, brokers, registry, ca string) (*v1.Secret, error) {
+func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user serviceuser.UserMap, brokers, registry, restApi, ca string) (*v1.Secret, error) {
 	secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, topic.Spec.Pool), maxSecretNameLength)
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate secret name: %s", err)
@@ -148,6 +151,7 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 			KafkaSchemaRegistry:    registry,
 			KafkaSchemaUser:        user.AivenUser.Username,
 			KafkaSchemaPassword:    user.AivenUser.Password,
+			KafkaRestApi:           restApi,
 			KafkaCA:                ca,
 			KafkaCredStorePassword: credStore.Secret,
 		},

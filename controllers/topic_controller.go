@@ -25,6 +25,7 @@ const (
 	KafkaSchemaRegistry    = "KAFKA_SCHEMA_REGISTRY"
 	KafkaSchemaUser        = "KAFKA_SCHEMA_REGISTRY_USER"
 	KafkaSchemaPassword    = "KAFKA_SCHEMA_REGISTRY_PASSWORD"
+	KafkaRestApi           = "KAFKA_REST_API"
 	KafkaCertificate       = "KAFKA_CERTIFICATE"
 	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
 	KafkaCA                = "KAFKA_CA"
@@ -159,7 +160,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	secrets := make([]v1.Secret, len(result.users))
 	for i, user := range result.users {
-		secret, err := Secret(topic, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
+		secret, err := Secret(topic, r.StoreGenerator, *user, result.brokers, result.registry, result.restApi, result.ca)
 		if err != nil {
 			return fail(err, kafka_nais_io_v1.EventFailedPrepare, false)
 		}

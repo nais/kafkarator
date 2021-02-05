@@ -55,6 +55,14 @@ func GetSchemaRegistryAddress(service aiven.Service) string {
 	return ""
 }
 
+func GetRestApiAddress(service aiven.Service) string {
+	restApiComponent := findComponent("kafka_rest", service.Components)
+	if restApiComponent != nil {
+		return fmt.Sprintf("https://%s:%d", restApiComponent.Host, restApiComponent.Port)
+	}
+	return ""
+}
+
 func findComponent(needle string, haystack []*aiven.ServiceComponents) *aiven.ServiceComponents {
 	for _, c := range haystack {
 		if c.Component == needle {

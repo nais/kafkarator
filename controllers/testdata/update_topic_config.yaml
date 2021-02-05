@@ -26,6 +26,9 @@ aiven:
         - component: schema_registry
           host: schema-registry.tld
           port: 9876
+        - component: kafka_rest
+          host: rest-api.tld
+          port: 23456
     ca: well-known-certificate-authority
   created:
     serviceusers:
@@ -87,6 +90,7 @@ output:
         KAFKA_CERTIFICATE: well-known-access-cert
         KAFKA_PRIVATE_KEY: well-known-access-key
         KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_REST_API: https://rest-api.tld:23456
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
         KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
         KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
