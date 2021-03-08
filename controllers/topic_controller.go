@@ -157,9 +157,9 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 
-	secrets := make([]v1.Secret, len(result.users))
-	for i, user := range result.users {
-		secret, err := Secret(topic, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
+	secrets := make([]v1.Secret, len(result.Users))
+	for i, user := range result.Users {
+		secret, err := Secret(topic, r.StoreGenerator, *user, result.Brokers, result.Registry, result.CA)
 		if err != nil {
 			return fail(err, kafka_nais_io_v1.EventFailedPrepare, false)
 		}

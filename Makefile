@@ -4,6 +4,9 @@ kafkarator:
 canary:
 	go build -o bin/canary cmd/canary/*.go
 
+aiven_tester:
+	go build -o bin/aiven_tester cmd/aiven_tester/*.go
+
 mocks:
 	cd pkg/aiven && mockery -inpkg -all -case snake
 

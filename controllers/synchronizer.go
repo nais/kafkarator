@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/service"
@@ -11,6 +10,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,11 +27,11 @@ type Synchronizer struct {
 }
 
 type SyncResult struct {
-	brokers  string
-	registry string
-	ca       string
-	users    []*serviceuser.UserMap
-	topic    kafka_nais_io_v1.Topic
+	Brokers  string
+	Registry string
+	CA       string
+	Users    []*serviceuser.UserMap
+	Topic    kafka_nais_io_v1.Topic
 }
 
 func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) *Synchronizer {
@@ -101,11 +101,11 @@ func (c *Synchronizer) Synchronize(topic kafka_nais_io_v1.Topic) (*SyncResult, e
 	}
 
 	return &SyncResult{
-		brokers:  kafkaBrokerAddress,
-		registry: kafkaSchemaRegistryAddress,
-		ca:       kafkaCA,
-		users:    users,
-		topic:    topic,
+		Brokers:  kafkaBrokerAddress,
+		Registry: kafkaSchemaRegistryAddress,
+		CA:       kafkaCA,
+		Users:    users,
+		Topic:    topic,
 	}, nil
 }
 
