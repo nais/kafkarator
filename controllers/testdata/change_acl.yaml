@@ -95,6 +95,7 @@ output:
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
         KAFKA_SCHEMA_REGISTRY_USER: otherteam.otherapplication-fb9c8478
         KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
+        KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z
     - apiVersion: v1
       kind: Secret
       type: Opaque
@@ -118,3 +119,4 @@ output:
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
         KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
         KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
+        KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven"
@@ -150,6 +151,7 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 			KafkaSchemaPassword:    user.AivenUser.Password,
 			KafkaCA:                ca,
 			KafkaCredStorePassword: credStore.Secret,
+			KafkaSecretUpdated: time.Now().Format(time.RFC3339),
 		},
 		Data: map[string][]byte{
 			KafkaKeystore:   credStore.Keystore,

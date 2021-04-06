@@ -29,6 +29,7 @@ const (
 	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
 	KafkaCA                = "KAFKA_CA"
 	KafkaCredStorePassword = "KAFKA_CREDSTORE_PASSWORD"
+	KafkaSecretUpdated     = "KAFKA_SECRET_UPDATED"
 	KafkaKeystore          = "client.keystore.p12"
 	KafkaTruststore        = "client.truststore.jks"
 

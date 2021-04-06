@@ -259,6 +259,9 @@ func yamlSubTest(t *testing.T, path string) {
 	test.Output.Status.CredentialsExpiryTime = result.Status.CredentialsExpiryTime
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
 	test.Output.Status.SynchronizationHash = result.Status.SynchronizationHash
+	for i := range test.Output.Secrets {
+		test.Output.Secrets[i].StringData[controllers.KafkaSecretUpdated] = result.Secrets[i].StringData[controllers.KafkaSecretUpdated]
+	}
 
 	assert.Equal(t, test.Output.Status, result.Status)
 	assert.Equal(t, test.Output.Requeue, result.Requeue)
