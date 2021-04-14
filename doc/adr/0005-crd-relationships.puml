@@ -1,0 +1,37 @@
+@startuml
+
+entity Topic #lightblue {
+    * name
+    * namespace
+    ---
+    * acl
+    * config
+}
+
+entity AivenUser #red {
+    * name
+    * namespace
+    ---
+    * service_users
+}
+
+entity ServiceUser {
+    * <color:red>username</color>
+    ---
+    * <color:red>expiration timestamp</color>
+    * <color:green>credentials</color>
+}
+
+entity Secret #green {
+    * name
+    * namespace
+    ---
+    *
+    *
+}
+
+Topic }|--|{ AivenUser
+AivenUser ||--|{ ServiceUser
+ServiceUser ||--|| Secret
+
+@enduml

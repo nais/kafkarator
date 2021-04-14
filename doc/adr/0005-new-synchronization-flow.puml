@@ -1,0 +1,31 @@
+@startuml
+
+title New flow for credentials management in Kafkarator
+
+control kubernetes as "Kubernetes"
+control primary as "Primary"
+control userManager as "User Manager"
+boundary aiven as "Aiven"
+database kafka as "Aiven Kafka topic\nkafkarator-secrets"
+
+loop until success
+kubernetes -> primary : Topic resource created/updated
+primary -> aiven : Create or update topics
+primary -> aiven : Create and/or delete ACLs
+primary -> kubernetes : Create or update AivenUser resources
+primary -> kubernetes : Write back status and sync hash
+note right: RolloutComplete
+end
+
+loop until success
+kubernetes -> userManager : AivenUser resource created/updated
+userManager -> aiven : Create or update service users
+note right: Check for expired credentials
+userManager -> userManager : Generate secrets
+note right: Each team/application combination\nresults in a two secrets.
+userManager -> kafka : Produce encrypted secrets
+userManager -> kubernetes : Write back status and sync hash
+note right: RolloutComplete
+end
+
+@enduml
