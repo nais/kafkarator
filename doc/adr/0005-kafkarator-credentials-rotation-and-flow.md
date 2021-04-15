@@ -91,10 +91,10 @@ We will split the loop in two parts. The existing main loop will now perform the
 
 1. Create or update topics
 2. Create and/or delete ACLs
-3. Create or update an AivenUser resouce for each application with access to the topic
+3. Create or update an AivenApplication resouce for each application with access to the topic
 4. Write back status and sync hash
 
-A new loop will take over the management of AivenUsers and perform these steps:
+A new loop will take over the management of AivenApplications and perform these steps:
 
 1. Create or update service users in Aiven
 2. Check for expired credentials
