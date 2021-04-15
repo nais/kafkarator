@@ -73,7 +73,17 @@ In the Primary main loop, the steps are roughly these:
 5. Produce encrypted secrets to send to Follower
 6. Write back status and sync hash
 
+### Deterministic names
+
+Names of service users, and secrets are deterministic and possible to generate with only the name and namespace of the owning application.
+
+### There is a limit to the number of service users we can have in each Aiven project
+
+Aiven has a limit to the number of service users allowed. This current limit is 1000 service users for nav-dev and nav-prod projects. This is "the maximum that has been applied so far for any customer".
+
 ## Decision
+
+### New synchronization flow
 
 ![New synchronization flow](0005-new-synchronization-flow.png)
 
@@ -99,5 +109,27 @@ Additional information we need:
 - List of service users for this application
 - Expiration timestamps for service user' credentials
 
+### Overlapping valid credentials
+
+To allow applications a smoother transition when rotating credentials, maintain two sets of valid credentials for every application.
+Each set of credentials should be rotated on different days (odd and even days of the month for instance), and with a suitable interval.
+When one set of credentials are rotated, update the application secret with the latest version.
+
+### Deterministic names for service users
+
+Since we will change to two service users for every application, we need to change our naming convention.
+We will make sure the names continue to be deterministic.
+
+### Monitor number of service users
+
+Since service users is a limited resource, we need to ensure that we monitor it and take steps to increase the limit before it becomes a problem.
 
 ## Consequences
+
+The number of service users generated for Kafka will double. It is likely that this limit can be increased.
+
+Complexity in Kafkarator increases, with an additional resource to manage. 
+
+It will be possible for teams to control when to reload credentials (within limits), making the effects of rotation less problematic.
+
+Rotation of credentials will happen at predictable times for each application.
