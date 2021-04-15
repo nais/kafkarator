@@ -108,6 +108,10 @@ Additional information we need:
 
 - List of service users for this application
 - Expiration timestamps for service user' credentials
+- Configuration for the application
+  - Rotation interval
+
+Most of these fields will be managed by Kafkarator, but should be editable by the team that owns the application.
 
 ### Overlapping valid credentials
 
@@ -123,6 +127,12 @@ We will make sure the names continue to be deterministic.
 ### Monitor number of service users
 
 Since service users is a limited resource, we need to ensure that we monitor it and take steps to increase the limit before it becomes a problem.
+
+### Add option to disable auto-rotation of credentials
+
+To allow applications on legacy platforms to use Aiven, we should make it possible to configure rotation interval.
+It should be possible to disable the rotation interval in this configuration.
+
 
 ## Consequences
 
