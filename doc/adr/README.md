@@ -4,6 +4,6 @@
 * [2. Combine topic creation and credentials management in same app](0002-combine-topic-creation-and-credentials-management-in-same-app.md)
 * [3. Kafkarator API is focused around dedicated CRDs](0003-kafkarator-api-is-focused-around-dedicated-crds.md)
 * [4. Only for Aiven](0004-only-for-aiven.md)
-
+* [5. Kafkarator credentials rotation and flow](0005-kafkarator-credentials-rotation-and-flow.md)
 
 > Update this file using the command `adr generate toc -o $(git rev-parse --show-toplevel)/doc/adr/.outro.md > $(git rev-parse --show-toplevel)/doc/adr/README.md`
