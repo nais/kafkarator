@@ -10,7 +10,6 @@ Proposed
 
 ![Concepts](0005-concepts.png)
 
-
 ### Credentials are available as both files and environment variables
 
 Credentials are made available in the clusters as secrets with an expected name.
@@ -75,7 +74,7 @@ In the Primary main loop, the steps are roughly these:
 
 ### Deterministic names
 
-Names of service users, and secrets are deterministic and possible to generate with only the name and namespace of the owning application.
+Names of service users, and secrets are deterministic generated and possible to recreate with only name and namespace of the owning application.
 
 ### There is a limit to the number of service users we can have in each Aiven project
 
@@ -91,7 +90,7 @@ We will split the loop in two parts. The existing main loop will now perform the
 
 1. Create or update topics
 2. Create and/or delete ACLs
-3. Create or update an AivenApplication resouce for each application with access to the topic
+3. Create or update an AivenApplication resource for each application with access to the topic
 4. Write back status and sync hash
 
 A new loop will take over the management of AivenApplications and perform these steps:
@@ -115,7 +114,7 @@ Most of these fields will be managed by Kafkarator, but should be editable by th
 
 ### Overlapping valid credentials
 
-To allow applications a smoother transition when rotating credentials, maintain two sets of valid credentials for every application.
+To allow applications a smoother transition during Credentials rotation, this proposed solution will maintain two sets of valid credentials for every application.
 Each set of credentials should be rotated on different days (odd and even days of the month for instance), and with a suitable interval.
 When one set of credentials are rotated, update the application secret with the latest version.
 
@@ -126,20 +125,18 @@ We will make sure the names continue to be deterministic.
 
 ### Monitor number of service users
 
-Since service users is a limited resource, we need to ensure that we monitor it and take steps to increase the limit before it becomes a problem.
+Since service users are a limited resource (at Aiven.io), we need to ensure that we monitor their numbers.
+When we approach this limit, we must take steps to handle it - like requesting Aiven.io to increase the limit.
 
 ### Add option to disable auto-rotation of credentials
 
 To allow applications on legacy platforms to use Aiven, we should make it possible to configure rotation interval.
-It should be possible to disable the rotation interval in this configuration.
-
+It should be possible to disable the rotation interval with this configuration.
 
 ## Consequences
 
-The number of service users generated for Kafka will double. It is likely that this limit can be increased.
-
-Complexity in Kafkarator increases, with an additional resource to manage. 
-
-It will be possible for teams to control when to reload credentials (within limits), making the effects of rotation less problematic.
-
-Rotation of credentials will happen at predictable times for each application.
+1. The number of service users generated for Kafka will double.
+   It is likely that this limit can be increased.
+2. Complexity in Kafkarator increases, with an additional resource to manage.
+3. It will be possible for teams to control the frequency of credentials rotation (within limits).
+4. Rotation of credentials will happen at predictable times for each application.
