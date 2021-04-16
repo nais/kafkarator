@@ -28,4 +28,10 @@ userManager -> kubernetes : Write back status and sync hash
 note right: RolloutComplete
 end
 
+kafka --> follower : Consume secrets
+
+loop until success or permanent error
+    follower -> kubernetes : Create secrets
+end
+
 @enduml

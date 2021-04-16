@@ -26,9 +26,9 @@ In addition, it will request a full list of topics from the Kubernetes API serve
 
 Events will typically happen when a developer makes changes to the Topic's Kubernetes resource.
 For instance when:
- - adding an application to the topic's ACLs
- - changing topic configuration
- - removing an application from the topic's ACLs
+- adding an application to the topic's ACLs
+- changing topic configuration
+- removing an application from the topic's ACLs
 
 ### Credentials expire on a "faulty schedule"
 
@@ -46,7 +46,7 @@ Due to the same implementation details as [discussed here](#credentials-expire-o
 
 This has resulted in massive Credential purges (and subsequent restarts) of applications with access to topics with many producers and consumers.
 
-### All applications attached to a topic has their credentials rotated whenever there is a change to the topic
+### Kafkarator purges all service users when processing a topic
 
 When a topic is updated, the synchronization loop in Kafkarator kicks in. 
 As part of this loop, all service users are re-created, rotating their credentials. 
@@ -57,6 +57,8 @@ Some teams have legacy systems that are not able to run in the NAIS platform's c
 This makes it difficult for them to make use of Aiven Kafka, since their applications can not get automated access to rotated Credentials.
 
 ### Current flow
+
+![Current flow](./0005-old-kafkarator-flow.png)
 
 Kafkarator has two modes of operation: Primary and Follower.
 
@@ -74,7 +76,7 @@ In the Primary main loop, the steps are roughly these:
 
 ### Deterministic names
 
-Names of service users, and secrets are deterministic generated and possible to recreate with only name and namespace of the owning application.
+Names of service users, and secrets are deterministically generated and possible to recreate with only name and namespace of the owning application.
 
 ### There is a limit to the number of service users we can have in each Aiven project
 
@@ -84,9 +86,10 @@ Aiven has a limit to the number of service users allowed. This current limit is 
 
 ### New synchronization flow
 
-![New synchronization flow](0005-new-synchronization-flow.png)
+![New synchronization flow](./0005-new-synchronization-flow.png)
 
-We will split the loop in two parts. The existing main loop will now perform these steps:
+We will split the loop into two parts.
+The existing main loop will now perform these steps:
 
 1. Create or update topics
 2. Create and/or delete ACLs
@@ -105,16 +108,18 @@ This solves the problem of a topic's expiration timestamp triggering rotation, a
 
 Additional information we need:
 
+- Which pool (e.g. Kafka cluster at Aiven.io) this application uses
 - List of service users for this application
-- Expiration timestamps for service user' credentials
+    - Name of service user
+    - Expiration timestamp for service user' credentials
 - Configuration for the application
-  - Rotation interval
+    - Rotation interval
 
 Most of these fields will be managed by Kafkarator, but should be editable by the team that owns the application.
 
 ### Overlapping valid credentials
 
-To allow applications a smoother transition during Credentials rotation, this proposed solution will maintain two sets of valid credentials for every application.
+To allow applications a smoother transition during Credential rotation, this proposed solution will maintain two sets of valid credentials for every application.
 Each set of credentials should be rotated on different days (odd and even days of the month for instance), and with a suitable interval.
 When one set of credentials are rotated, update the application secret with the latest version.
 
