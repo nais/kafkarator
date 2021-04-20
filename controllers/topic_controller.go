@@ -45,15 +45,15 @@ type transaction struct {
 }
 
 type SecretData struct {
-	User            aiven.ServiceUser
-	ResourceVersion string
-	App             string
-	Pool            string
-	Name            string
-	Team            string
-	Brokers         string
-	Registry        string
-	Ca              string
+	user            aiven.ServiceUser
+	resourceVersion string
+	app             string
+	pool            string
+	name            string
+	team            string
+	brokers         string
+	registry        string
+	ca              string
 }
 
 type TopicReconciler struct {
@@ -139,7 +139,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"Team":          topicResource.Labels["Team"],
+		"team":          topicResource.Labels["Team"],
 		"aiven_project": topicResource.Spec.Pool,
 		"aiven_topic":   topicResource.FullName(),
 	})
@@ -258,7 +258,7 @@ func (r *TopicReconciler) commit(tx transaction) error {
 
 		secretName, err := utils.ShortName(fmt.Sprintf("kafka-%s-%s", user.Application, tx.topic.Spec.Pool), maxSecretNameLength)
 		if err != nil {
-			return fmt.Errorf("unable to generate secret Name: %s", err)
+			return fmt.Errorf("unable to generate secret name: %s", err)
 		}
 
 		key := client.ObjectKey{
@@ -272,14 +272,14 @@ func (r *TopicReconciler) commit(tx transaction) error {
 		})
 
 		opts := SecretData{
-			User:     *user.AivenUser,
-			Name:     key.Name,
-			App:      user.Application,
-			Pool:     tx.topic.Spec.Pool,
-			Team:     user.Team,
-			Brokers:  kafkaBrokerAddress,
-			Registry: kafkaSchemaRegistryAddress,
-			Ca:       kafkaCA,
+			user:     *user.AivenUser,
+			name:     key.Name,
+			app:      user.Application,
+			pool:     tx.topic.Spec.Pool,
+			team:     user.Team,
+			brokers:  kafkaBrokerAddress,
+			registry: kafkaSchemaRegistryAddress,
+			ca:       kafkaCA,
 		}
 		secret := ConvertSecret(opts)
 
@@ -330,23 +330,23 @@ func ConvertSecret(data SecretData) v1.Secret {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      data.Name,
-			Namespace: data.Team,
+			Name:      data.name,
+			Namespace: data.team,
 			Labels: map[string]string{
-				"Team": data.Team,
+				"team": data.team,
 			},
 			Annotations: map[string]string{
-				"kafka.nais.io/Pool":        data.Pool,
-				"kafka.nais.io/application": data.App,
+				"kafka.nais.io/pool":        data.pool,
+				"kafka.nais.io/application": data.app,
 			},
-			ResourceVersion: data.ResourceVersion,
+			ResourceVersion: data.resourceVersion,
 		},
 		StringData: map[string]string{
-			KafkaCertificate:    data.User.AccessCert,
-			KafkaPrivateKey:     data.User.AccessKey,
-			KafkaBrokers:        data.Brokers,
-			KafkaSchemaRegistry: data.Registry,
-			KafkaCA:             data.Ca,
+			KafkaCertificate:    data.user.AccessCert,
+			KafkaPrivateKey:     data.user.AccessKey,
+			KafkaBrokers:        data.brokers,
+			KafkaSchemaRegistry: data.registry,
+			KafkaCA:             data.ca,
 		},
 		Type: v1.SecretTypeOpaque,
 	}
