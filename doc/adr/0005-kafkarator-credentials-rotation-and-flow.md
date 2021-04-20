@@ -1,4 +1,4 @@
-# 8. Kafkarator credentials rotation and flow
+# 5. Kafkarator credentials rotation and flow
 
 Date: 2021-04-12
 
