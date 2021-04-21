@@ -20,6 +20,8 @@ const (
 	updatedPartitions = 2
 	replication       = 2
 	retentionHours    = 15
+	timeout           = 120 * time.Second
+	retryInterval     = 5 * time.Second
 )
 
 func intp(i int) *int {
@@ -75,7 +77,7 @@ func TestCreateTopic(t *testing.T) {
 		return waitFor(timeout, retry, func(topic *aiven.KafkaTopic) bool { return true })
 	}
 
-	topic, err := waitForTopic(time.Second*60, time.Second*5)
+	topic, err := waitForTopic(timeout, retryInterval)
 	assert.NoError(t, err)
 	if err != nil {
 		t.FailNow()
@@ -98,7 +100,7 @@ func TestCreateTopic(t *testing.T) {
 		t.Logf("Updating topic OK")
 	}
 
-	_, err = waitFor(time.Second*60, time.Second*5, func(topic *aiven.KafkaTopic) bool {
+	_, err = waitFor(timeout, retryInterval, func(topic *aiven.KafkaTopic) bool {
 		return len(topic.Partitions) == updatedPartitions
 	})
 	assert.NoError(t, err)

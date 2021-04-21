@@ -13,7 +13,6 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/ghodss/yaml"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
@@ -23,6 +22,7 @@ import (
 	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/certificate/mocks"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -106,6 +106,13 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 	serviceUserMock := &serviceuser.MockInterface{}
 	serviceMock := &service.MockInterface{}
 	topicMock := &topic_package.MockInterface{}
+
+	for _, user := range test.Aiven.Existing.Serviceusers {
+		user.Password = wellKnownPassword
+		user.Type = "who-cares"
+		user.AccessCert = wellKnownAccessCertificate
+		user.AccessKey = wellKnownAccessKey
+	}
 
 	for _, project := range test.Config.Projects {
 		svc := kafkarator_aiven.ServiceName(project)
