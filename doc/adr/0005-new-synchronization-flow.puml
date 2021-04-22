@@ -1,37 +1,36 @@
 @startuml
 
-title New flow for credentials management in Kafkarator
+title New flow for credentials management in Kafkarator/Aiven
 
 control kubernetes as "Kubernetes"
-control primary as "Primary"
-control userManager as "User Manager"
+control kafkarator as "Kafkarator"
+control userManager as "Aiven User Manager"
+control naiserator as "Naiserator"
 boundary aiven as "Aiven"
-database kafka as "Aiven Kafka topic\nkafkarator-secrets"
 
-loop until success
-kubernetes -> primary : Topic resource created/updated
-primary -> aiven : Create or update topics
-primary -> aiven : Create and/or delete ACLs
-primary -> kubernetes : Create or update AivenApplication resources
-primary -> kubernetes : Write back status and sync hash
+loop Kafkarator
+kubernetes -> kafkarator : Topic resource created/updated
+kafkarator -> aiven : Create or update topics
+kafkarator -> aiven : Create and/or delete ACLs
+note left: ACLs match username with wildcard
+kafkarator -> kubernetes : Write back status and sync hash
 note right: RolloutComplete
 end
 
-loop until success
+loop Naiserator
+kubernetes -> naiserator : Application resource created/updated
+naiserator -> kubernetes : AivenApplication with generated secretname
+naiserator -> kubernetes : Deployment referencing secretname
+end
+
+loop Aiven User Manager
 kubernetes -> userManager : AivenApplication resource created/updated
-userManager -> aiven : Create or update service users
-note right: Check for expired credentials
-userManager -> userManager : Generate secrets
-note right: Each team/application combination\nresults in a two secrets.
-userManager -> kafka : Produce encrypted secrets
+userManager -> aiven : Create service user
+userManager -> kubernetes : Create secret
 userManager -> kubernetes : Write back status and sync hash
 note right: RolloutComplete
-end
-
-kafka --> follower : Consume secrets
-
-loop until success or permanent error
-    follower -> kubernetes : Create secrets
+userManager -> kubernetes : Delete obsolete secrets
+userManager -> aiven : Delete obsolete service users
 end
 
 @enduml

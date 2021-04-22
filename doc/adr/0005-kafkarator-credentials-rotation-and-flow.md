@@ -1,6 +1,6 @@
 # 5. Kafkarator credentials rotation and flow
 
-Date: 2021-04-12
+Date: 2021-04-22
 
 ## Status
 
@@ -8,7 +8,7 @@ Proposed
 
 ## Context
 
-![Concepts](0005-concepts.png)
+![Concepts](0005-old-concepts.png)
 
 ### Credentials are available as both files and environment variables
 
@@ -82,66 +82,77 @@ Names of service users, and secrets are deterministically generated and possible
 
 Aiven has a limit to the number of service users allowed. This current limit is 1000 service users for nav-dev and nav-prod projects. This is "the maximum that has been applied so far for any customer".
 
+### Rotation is a security feature
+
+One way to solve these problems would be to drop rotation entirely.
+Instead we could rely on manual rotation when we discover that we need it.
+
+From a security perspective, that is not something we consider good enough.
+
+### Other NAIS operators dealing with credentials
+
+NAIS operates a number of operators, some of which deal with credentials.
+A common pattern is Just-in-time provisioning of credentials. 
+In this model credentials are generated/rotated on each deploy, which would remove much of the problems we have today.
+
 ## Decision
 
 ### New synchronization flow
 
-![New synchronization flow](./0005-new-synchronization-flow.png)
+![New synchronization flow](0005-new-synchronization-flow.png)
+
+![New concepts](0005-new-concepts.png)
 
 We will split the loop into two parts.
 The existing main loop will now perform these steps:
 
 1. Create or update topics
-2. Create and/or delete ACLs
-3. Create or update an AivenApplication resource for each application with access to the topic
-4. Write back status and sync hash
+2. Create and/or delete ACLs, using wildcards to match a set of service users
+3. Write back status and sync hash
 
-A new loop will take over the management of AivenApplications and perform these steps:
+When Naiserator deploys an application that requests kafka access, Naiserator will create the Deployment with a reference to a new secret.
+At the same time, it will create an AivenApplication resource, naming that secret.
 
-1. Create or update service users in Aiven
-2. Check for expired credentials
-3. Generate needed secrets
-5. Produce encrypted secrets to send to Follower
-6. Write back status and sync hash
+A new loop or possibly an entirely new operator will respond to AivenApplication resources and perform these steps:
+
+1. Create service user in Aiven
+2. Create secret in cluster
+3. Write back status and sync hash
+4. Delete obsolete secrets in cluster
+5. Delete obsolete service users in Aiven
 
 This solves the problem of a topic's expiration timestamp triggering rotation, and provides a place to store additional information for each application.
 
-Additional information we need:
+Information in AivenApplication:
 
-- Which pool (e.g. Kafka cluster at Aiven.io) this application uses
-- List of service users for this application
-    - Name of service user
-    - Expiration timestamp for service user' credentials
-- Configuration for the application
-    - Rotation interval
-
-Most of these fields will be managed by Kafkarator, but should be editable by the team that owns the application.
+- Name of secret
+- Aiven service (starting with only Kafka)
+    - Pool (Kafka cluster in Aiven) this application uses
 
 ### Overlapping valid credentials
 
-To allow applications a smoother transition during Credential rotation, this proposed solution will maintain two sets of valid credentials for every application.
-Each set of credentials should be rotated on different days (odd and even days of the month for instance), and with a suitable interval.
-When one set of credentials are rotated, update the application secret with the latest version.
+On every deploy of an application, a service user will be created for it. 
+This ensures fresh credentials on every deploy.
+
+Existing service users are not touched unless no longer in use.
 
 ### Deterministic names for service users
 
-Since we will change to two service users for every application, we need to change our naming convention.
-We will make sure the names continue to be deterministic.
+Service users need to have a fixed prefix, generated from application name, so that ACLs can be written to match using wildcards.
 
 ### Monitor number of service users
 
 Since service users are a limited resource (at Aiven.io), we need to ensure that we monitor their numbers.
 When we approach this limit, we must take steps to handle it - like requesting Aiven.io to increase the limit.
 
-### Add option to disable auto-rotation of credentials
-
-To allow applications on legacy platforms to use Aiven, we should make it possible to configure rotation interval.
-It should be possible to disable the rotation interval with this configuration.
-
 ## Consequences
 
-1. The number of service users generated for Kafka will double.
+1. The number of service users generated for Kafka will increase.
    It is likely that this limit can be increased.
 2. Complexity in Kafkarator increases, with an additional resource to manage.
-3. It will be possible for teams to control the frequency of credentials rotation (within limits).
-4. Rotation of credentials will happen at predictable times for each application.
+   This might be mitigated by separating the handling of credentials/users into a separate operator
+3. Rotation of credentials will happen at deploy for each application.
+4. Legacy applications can manually create an AivenApplication resource to get credentials.
+   These credentials can be rotated by updating the AivenApplication resource manually.
+5. We no longer need to propagate secrets between primary/follower using Kafka, as credentials are generated where the application lives.
+   Primary/follower concept is no longer needed.
