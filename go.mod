@@ -7,7 +7,7 @@ require (
 	github.com/aiven/aiven-go-client v1.5.7
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/nais/liberator v0.0.0-20210121133241-30cdca8d4c12
+	github.com/nais/liberator v0.0.0-20210421120235-5f3edcf81f86
 	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/pflag v1.0.5
