@@ -33,17 +33,9 @@ const (
 	KafkaKeystore          = "client.keystore.p12"
 	KafkaTruststore        = "client.truststore.jks"
 
-	LogFieldCredentialsExpiryTime = "credentials_expiry_time"
 	LogFieldSynchronizationState  = "synchronization_state"
 
 	maxSecretNameLength = 63
-
-	// Credentials should expire only between 0100 and 0500.
-	// If the lifetime of credentials doesn't fall in under these constraints,
-	// increase them by three hours until they do.
-	credentialRotationMinHour          = 1
-	credentialRotationMaxHour          = 5
-	credentialRotationIncreaseInterval = 3 * time.Hour
 )
 
 type ReconcileResult struct {
@@ -58,21 +50,12 @@ type ReconcileResult struct {
 type TopicReconciler struct {
 	client.Client
 	Aiven               kafkarator_aiven.Interfaces
-	CredentialsLifetime time.Duration
 	CryptManager        crypto.Manager
 	Logger              *log.Logger
 	Producer            producer.Interface
 	Projects            []string
 	RequeueInterval     time.Duration
 	StoreGenerator      certificate.Generator
-}
-
-func GenerateCredentialRotationTime(lifetime time.Duration, minHour, maxHour int, increase time.Duration) time.Time {
-	base := time.Now().Add(lifetime)
-	for !(base.Hour() >= minHour && base.Hour() <= maxHour) {
-		base = base.Add(increase)
-	}
-	return base
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -167,16 +150,9 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		secrets[i] = *secret
 	}
 
-	credentialsExpiryTime := GenerateCredentialRotationTime(
-		r.CredentialsLifetime,
-		credentialRotationMinHour,
-		credentialRotationMaxHour,
-		credentialRotationIncreaseInterval,
-	)
 	status.SynchronizationTime = time.Now().Format(time.RFC3339)
 	status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
 	status.SynchronizationHash = hash
-	status.CredentialsExpiryTime = credentialsExpiryTime.Format(time.RFC3339)
 	status.Message = "Topic configuration synchronized to Kafka pool"
 	status.Errors = nil
 
@@ -308,7 +284,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	logger.WithFields(
 		log.Fields{
-			LogFieldCredentialsExpiryTime: topic.Status.CredentialsExpiryTime,
 			LogFieldSynchronizationState:  topic.Status.SynchronizationState,
 		},
 	).Infof("Topic object written back to Kubernetes: %s", topic.Status.Message)

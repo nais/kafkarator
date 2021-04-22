@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/ghodss/yaml"
@@ -252,7 +251,6 @@ func yamlSubTest(t *testing.T, path string) {
 		Aiven:               aivenMocks,
 		Logger:              log.New(),
 		Projects:            test.Config.Projects,
-		CredentialsLifetime: 3600,
 		StoreGenerator:      generatorMock,
 	}
 
@@ -263,7 +261,6 @@ func yamlSubTest(t *testing.T, path string) {
 	}
 
 	// hard to test current time with static data
-	test.Output.Status.CredentialsExpiryTime = result.Status.CredentialsExpiryTime
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
 	test.Output.Status.SynchronizationHash = result.Status.SynchronizationHash
 	for i := range test.Output.Secrets {
@@ -297,17 +294,4 @@ func TestGoldenFile(t *testing.T) {
 			yamlSubTest(t, path)
 		})
 	}
-}
-
-func TestGenerateCredentialRotationTime(t *testing.T) {
-	lifetime := time.Hour * 1
-	minHour := 1
-	maxHour := 2
-	increase := time.Hour * 23
-	tm := controllers.GenerateCredentialRotationTime(lifetime, minHour, maxHour, increase)
-	diff := tm.Sub(time.Now())
-
-	assert.GreaterOrEqual(t, diff.Seconds(), lifetime.Seconds())
-	assert.LessOrEqual(t, tm.Hour(), maxHour)
-	assert.GreaterOrEqual(t, tm.Hour(), minHour)
 }

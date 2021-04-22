@@ -50,7 +50,6 @@ const (
 // Configuration options
 const (
 	AivenToken                   = "aiven-token"
-	CredentialsLifetime          = "credentials-lifetime"
 	Follower                     = "follower"
 	KafkaBrokers                 = "kafka-brokers"
 	KafkaCAPath                  = "kafka-ca-path"
@@ -83,7 +82,6 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 
 	flag.String(AivenToken, "", "Administrator credentials for Aiven")
-	flag.Duration(CredentialsLifetime, time.Hour*24, "Maximum allowed lifetime of Kafka service user credentials")
 	flag.String(PreSharedKey, "", "Secret pre-shared key for encrypting and decrypting secrets sent over Kafka")
 	flag.String(MetricsAddress, "127.0.0.1:8080", "The address the metric endpoint binds to.")
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
@@ -231,7 +229,6 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 			Topics:       aivenClient.KafkaTopics,
 		},
 		Client:              mgr.GetClient(),
-		CredentialsLifetime: viper.GetDuration(CredentialsLifetime),
 		CryptManager:        cryptManager,
 		Logger:              logger,
 		Producer:            prod,
