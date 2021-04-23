@@ -1,0 +1,36 @@
+@startuml
+
+title New flow for credentials management in Kafkarator/Aiven
+
+control kubernetes as "Kubernetes"
+control kafkarator as "Kafkarator"
+control userManager as "Aiven User Manager"
+control naiserator as "Naiserator"
+boundary aiven as "Aiven"
+
+loop Kafkarator
+kubernetes -> kafkarator : Topic resource created/updated
+kafkarator -> aiven : Create or update topics
+kafkarator -> aiven : Create and/or delete ACLs
+note left: ACLs match username with wildcard
+kafkarator -> kubernetes : Write back status and sync hash
+note right: RolloutComplete
+end
+
+loop Naiserator
+kubernetes -> naiserator : Application resource created/updated
+naiserator -> kubernetes : AivenApplication with generated secretname
+naiserator -> kubernetes : Deployment referencing secretname
+end
+
+loop Aiven User Manager
+kubernetes -> userManager : AivenApplication resource created/updated
+userManager -> aiven : Create service user
+userManager -> kubernetes : Create secret
+userManager -> kubernetes : Write back status and sync hash
+note right: RolloutComplete
+userManager -> kubernetes : Delete obsolete secrets
+userManager -> aiven : Delete obsolete service users
+end
+
+@enduml

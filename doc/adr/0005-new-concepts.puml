@@ -1,0 +1,34 @@
+@startuml
+
+entity app as "Application" {
+	* ApplicationName
+	---
+	* ServiceUser
+}
+
+entity su as "Service User" {
+	* ServiceUserName
+	---
+	* AclList
+	* Credentials
+}
+
+entity acl as "ACL" {
+	* AccessPermission
+	---
+	* ServiceUser
+	* Topic
+}
+
+entity topic as "Topic" {
+	* TopicName
+	---
+	* AclList
+}
+
+
+app	||--|{	su		: Many Service Users per Application
+su	}|--|{	acl		: One or more ACLs per group of ServiceUser
+acl	}|--||	topic	: Each ACL gives multiple ServiceUsers access to a single Topic
+
+@enduml
