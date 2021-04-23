@@ -44,9 +44,6 @@ aiven:
   deleted:
     acls:
       - acl-1
-    serviceusers:
-      - myteam.myapplication-6580c2d3
-      - otherteam.otherapplication-fb9c8478
 
 topic:
   apiVersion: kafka.nais.io/v1

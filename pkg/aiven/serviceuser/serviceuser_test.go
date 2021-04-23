@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ func TestManager_Synchronize(t *testing.T) {
 
 	usernames := make([]kafka_nais_io_v1.User, 0)
 
-	// Existing user, should be deleted and re-created
+	// Existing user, should be kept
 	usernames = append(usernames, kafka_nais_io_v1.User{
 		Username:    "app1-team1",
 		Application: "app1",
@@ -44,12 +44,6 @@ func TestManager_Synchronize(t *testing.T) {
 	m.
 		On("List", project, service).
 		Return(existingUsers, nil)
-	m.
-		On("Delete", project, service, "app1-team1").
-		Return(nil)
-	m.
-		On("Create", project, service, aiven.CreateServiceUserRequest{Username: "app1-team1"}).
-		Return(&aiven.ServiceUser{Username: "app1-team1"}, nil)
 	m.
 		On("Create", project, service, aiven.CreateServiceUserRequest{Username: "app2-team1"}).
 		Return(&aiven.ServiceUser{Username: "app2-team1"}, nil)
