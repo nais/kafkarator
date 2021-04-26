@@ -10,7 +10,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/certificate"
@@ -22,6 +21,8 @@ import (
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
 	"github.com/nais/kafkarator/pkg/secretsync"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
+	"github.com/nais/liberator/pkg/conftools"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -145,6 +146,15 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
+	log.Infof("--- Current configuration ---")
+	for _,cfg:=range conftools.Format([]string{
+		AivenToken,
+		PreSharedKey,
+	}) {
+		log.Info(cfg)
+	}
+	log.Infof("--- End configuration ---")
+
 	syncPeriod := viper.GetDuration(SyncPeriod)
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		SyncPeriod:         &syncPeriod,
@@ -228,13 +238,13 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 			Service:      aivenClient.Services,
 			Topics:       aivenClient.KafkaTopics,
 		},
-		Client:              mgr.GetClient(),
-		CryptManager:        cryptManager,
-		Logger:              logger,
-		Producer:            prod,
-		Projects:            viper.GetStringSlice(Projects),
-		RequeueInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
-		StoreGenerator:      certificate.NewExecGenerator(logger),
+		Client:          mgr.GetClient(),
+		CryptManager:    cryptManager,
+		Logger:          logger,
+		Producer:        prod,
+		Projects:        viper.GetStringSlice(Projects),
+		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
+		StoreGenerator:  certificate.NewExecGenerator(logger),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
