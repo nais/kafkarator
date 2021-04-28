@@ -13,6 +13,7 @@ import (
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/certificate"
+	"github.com/nais/kafkarator/pkg/constants"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
@@ -284,6 +285,11 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptM
 		Timeout: viper.GetDuration(SecretWriteTimeout),
 	}
 
+	pools := make(map[string]bool)
+	for _, pool := range viper.GetStringSlice(Projects) {
+		pools[pool] = true
+	}
+
 	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
 		logger.Infof("Incoming message from Kafka")
 
@@ -298,10 +304,17 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptM
 			return false, fmt.Errorf("unmarshal error in received secret: %s", err)
 		}
 
+		pool := secret.GetAnnotations()[constants.PoolAnnotation]
+
 		logger = logger.WithFields(log.Fields{
 			"secret_namespace": secret.Namespace,
 			"secret_name":      secret.Name,
+			"secret_pool":      pool,
 		})
+
+		if !pools[pool] {
+			return false, fmt.Errorf("ignoring secret addressed for non-managed pool '%s'", pool)
+		}
 
 		err = secretsyncer.Write(secret, logger)
 		if err != nil {
