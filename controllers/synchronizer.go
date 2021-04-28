@@ -10,6 +10,7 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/certificate"
+	"github.com/nais/kafkarator/pkg/constants"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/liberator/pkg/stringutil"
 	log "github.com/sirupsen/logrus"
@@ -135,8 +136,8 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 				"team": user.Team,
 			},
 			Annotations: map[string]string{
-				"kafka.nais.io/pool":        topic.Spec.Pool,
-				"kafka.nais.io/application": user.Application,
+				constants.PoolAnnotation:        topic.Spec.Pool,
+				constants.ApplicationAnnotation: user.Application,
 			},
 		},
 		StringData: map[string]string{
