@@ -147,7 +147,7 @@ func main() {
 	}
 
 	log.Infof("--- Current configuration ---")
-	for _,cfg:=range conftools.Format([]string{
+	for _, cfg := range conftools.Format([]string{
 		AivenToken,
 		PreSharedKey,
 	}) {
