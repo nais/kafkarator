@@ -65,6 +65,7 @@ const (
 	PreSharedKey                 = "psk"
 	Primary                      = "primary"
 	Projects                     = "projects"
+	RequeueInterval              = "requeue-interval"
 	SecretWriteTimeout           = "secret-write-timeout"
 	SyncPeriod                   = "sync-period"
 	TopicReportInterval          = "topic-report-interval"
@@ -90,6 +91,7 @@ func init() {
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
 	flag.Duration(SecretWriteTimeout, time.Second*2, "How much time to allocate for writing one secret to the cluster")
 	flag.Duration(KubernetesWriteRetryInterval, time.Second*10, "Requeueing interval when Kubernetes writes fail")
+	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
 	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
 	flag.Bool(Follower, false, "If true, consume secrets from Kafka topic and persist them to Kubernetes")
@@ -244,7 +246,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		Logger:          logger,
 		Producer:        prod,
 		Projects:        viper.GetStringSlice(Projects),
-		RequeueInterval: viper.GetDuration(KubernetesWriteRetryInterval),
+		RequeueInterval: viper.GetDuration(RequeueInterval),
 		StoreGenerator:  certificate.NewExecGenerator(logger),
 	}
 
