@@ -17,7 +17,7 @@ type Synchronizer struct {
 	Timeout time.Duration
 }
 
-func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
+func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) (retry bool, err error) {
 	key := client.ObjectKey{
 		Namespace: secret.Namespace,
 		Name:      secret.Name,
@@ -27,7 +27,7 @@ func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
 	defer cancel()
 
 	old := &v1.Secret{}
-	err := s.Get(ctx, key, old)
+	err = s.Get(ctx, key, old)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -40,12 +40,15 @@ func (s *Synchronizer) Write(secret *v1.Secret, logger *log.Entry) error {
 		err = s.Update(ctx, secret)
 	}
 
-	if err == nil {
+	switch {
+	case err == nil:
 		metrics.KubernetesResourcesWritten.With(prometheus.Labels{
 			metrics.LabelResourceType: "secret",
 			metrics.LabelNamespace:    key.Namespace,
 		}).Inc()
+	case errors.IsNotFound(err): // namespace does not exist
+		return false, err
 	}
 
-	return err
+	return true, err
 }

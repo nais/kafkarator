@@ -316,9 +316,13 @@ func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptM
 			return false, fmt.Errorf("ignoring secret addressed for non-managed pool '%s'", pool)
 		}
 
-		err = secretsyncer.Write(secret, logger)
+		retry, err := secretsyncer.Write(secret, logger)
 		if err != nil {
-			return true, fmt.Errorf("retriable error in persisting secret: %s", err)
+			if retry {
+				return true, fmt.Errorf("retriable error in persisting secret: %w", err)
+			} else {
+				return false, fmt.Errorf("permanent error in persisting secret: %w", err)
+			}
 		}
 
 		logger.Infof("Successfully synchronized secret")
