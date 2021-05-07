@@ -33,7 +33,7 @@ const (
 	KafkaKeystore          = "client.keystore.p12"
 	KafkaTruststore        = "client.truststore.jks"
 
-	LogFieldSynchronizationState  = "synchronization_state"
+	LogFieldSynchronizationState = "synchronization_state"
 
 	maxSecretNameLength = 63
 )
@@ -49,13 +49,13 @@ type ReconcileResult struct {
 
 type TopicReconciler struct {
 	client.Client
-	Aiven               kafkarator_aiven.Interfaces
-	CryptManager        crypto.Manager
-	Logger              *log.Logger
-	Producer            producer.Interface
-	Projects            []string
-	RequeueInterval     time.Duration
-	StoreGenerator      certificate.Generator
+	Aiven           kafkarator_aiven.Interfaces
+	CryptManager    crypto.Manager
+	Logger          *log.Logger
+	Producer        producer.Interface
+	Projects        []string
+	RequeueInterval time.Duration
+	StoreGenerator  certificate.Generator
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -256,6 +256,11 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if result.Error != nil {
+		topic.Status = &result.Status
+		err = r.Update(ctx, &topic)
+		if err != nil {
+			logger.Errorf("Write resource status: %s", err)
+		}
 		return fail(result.Error, result.Requeue)
 	}
 
@@ -284,7 +289,7 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	logger.WithFields(
 		log.Fields{
-			LogFieldSynchronizationState:  topic.Status.SynchronizationState,
+			LogFieldSynchronizationState: topic.Status.SynchronizationState,
 		},
 	).Infof("Topic object written back to Kubernetes: %s", topic.Status.Message)
 
