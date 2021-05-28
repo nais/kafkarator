@@ -71,10 +71,18 @@ output:
         name: kafka-myapplication-nav-integration-test-42edfcd6
         namespace: myteam
         labels:
+          aivenator.aiven.nais.io/migration: "true"
+          app: myapplication
           team: myteam
+          type: aivenator.aiven.nais.io
         annotations:
+          aivenator.aiven.nais.io/protected: "true"
+          kafka.aiven.nais.io/pool: nav-integration-test
+          kafka.aiven.nais.io/serviceUser: myteam.myapplication-6580c2d3
           kafka.nais.io/application: myapplication
           kafka.nais.io/pool: nav-integration-test
+        finalizers:
+          - aivenator.aiven.nais.io/finalizer
       data:
         client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
         client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
@@ -95,10 +103,18 @@ output:
         name: kafka-otherapplication-nav-integration-test-5ed2b9b5
         namespace: otherteam
         labels:
+          aivenator.aiven.nais.io/migration: "true"
+          app: otherapplication
           team: otherteam
+          type: aivenator.aiven.nais.io
         annotations:
+          aivenator.aiven.nais.io/protected: "true"
+          kafka.aiven.nais.io/pool: nav-integration-test
+          kafka.aiven.nais.io/serviceUser: otherteam.otherapplication-fb9c8478
           kafka.nais.io/application: otherapplication
           kafka.nais.io/pool: nav-integration-test
+        finalizers:
+          - aivenator.aiven.nais.io/finalizer
       data:
         client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
         client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore

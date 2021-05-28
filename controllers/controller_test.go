@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"encoding/json"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,7 +25,7 @@ import (
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -248,15 +249,15 @@ func yamlSubTest(t *testing.T, path string) {
 		}, nil)
 
 	reconciler := controllers.TopicReconciler{
-		Aiven:               aivenMocks,
-		Logger:              log.New(),
-		Projects:            test.Config.Projects,
-		StoreGenerator:      generatorMock,
+		Aiven:          aivenMocks,
+		Logger:         log.New(),
+		Projects:       test.Config.Projects,
+		StoreGenerator: generatorMock,
 	}
 
 	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))
 	if test.Error != nil {
-		assert.EqualError(t, result.Error, *test.Error)
+		assert.Equal(t, result.Error, *test.Error)
 		return
 	}
 
@@ -267,9 +268,11 @@ func yamlSubTest(t *testing.T, path string) {
 		test.Output.Secrets[i].StringData[controllers.KafkaSecretUpdated] = result.Secrets[i].StringData[controllers.KafkaSecretUpdated]
 	}
 
-	assert.Equal(t, test.Output.Status, result.Status)
+	assert.DeepEqual(t, test.Output.Status, result.Status)
 	assert.Equal(t, test.Output.Requeue, result.Requeue)
-	assert.ElementsMatch(t, test.Output.Secrets, result.Secrets)
+	assert.DeepEqual(t, test.Output.Secrets, result.Secrets, cmpopts.SortSlices(func(a v1.Secret, b v1.Secret) bool {
+		return a.GetName() < b.GetName()
+	}))
 }
 
 func TestGoldenFile(t *testing.T) {
