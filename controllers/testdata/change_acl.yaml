@@ -34,8 +34,12 @@ aiven:
     serviceusers:
       - username: myteam.myapplication-6580c2d3
       - username: otherteam.otherapplication-fb9c8478
+      - username: too-long-team.too-long-applicat-eacc7bda
     topics: []
     acls:
+      - username: too-long-team.too-long-applicat-eacc7bda
+        permission: read
+        topic: myteam.mytopic
       - username: myteam.myapplication-6580c2d3
         permission: readwrite
         topic: myteam.mytopic
@@ -62,6 +66,9 @@ topic:
       - access: readwrite
         team: myteam
         application: myapplication
+      - access: read
+        team: too-long-team
+        application: too-long-application
 
 output:
   status:
@@ -131,5 +138,37 @@ output:
         KAFKA_CREDSTORE_PASSWORD: changeme
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
         KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
+        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
+        KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z
+    - apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: kafka-too-long-application-nav-integration-test-e0bd18b9
+        namespace: too-long-team
+        labels:
+          aivenator.aiven.nais.io/migration: "true"
+          app: too-long-application
+          team: too-long-team
+          type: aivenator.aiven.nais.io
+        annotations:
+          aivenator.aiven.nais.io/protected: "true"
+          kafka.aiven.nais.io/pool: nav-integration-test
+          kafka.aiven.nais.io/serviceUser: too-long-team.too-long-applicat-eacc7bda
+          kafka.nais.io/application: too-long-application
+          kafka.nais.io/pool: nav-integration-test
+        finalizers:
+          - aivenator.aiven.nais.io/finalizer
+      data:
+        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
+        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
+      stringData:
+        KAFKA_BROKERS: well-known-kafka-brokers:12345
+        KAFKA_CA: well-known-certificate-authority
+        KAFKA_CERTIFICATE: well-known-access-cert
+        KAFKA_PRIVATE_KEY: well-known-access-key
+        KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
+        KAFKA_SCHEMA_REGISTRY_USER: too-long-team.too-long-applicat-eacc7bda
         KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
         KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z
