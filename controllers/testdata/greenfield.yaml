@@ -27,10 +27,10 @@ aiven:
       - topic_name: myteam.mytopic
         retention_hours: 900
     acls:
-      - username: myteam.myapplication-6580c2d3
+      - username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
-      - username: otherteam.otherapplication-fb9c8478
+      - username: otherteam.otherapplication*
         permission: write
         topic: myteam.mytopic
   updated:

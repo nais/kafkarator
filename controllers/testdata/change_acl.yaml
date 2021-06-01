@@ -7,11 +7,11 @@ aiven:
   existing:
     acls:
       - id: acl-1
-        username: myteam.myapplication-6580c2d3
+        username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
       - id: acl-2
-        username: otherteam.otherapplication-fb9c8478
+        username: otherteam.otherapplication*
         permission: write
         topic: myteam.mytopic
     serviceusers:
@@ -37,10 +37,10 @@ aiven:
       - username: too-long-team.too-long-applicat-eacc7bda
     topics: []
     acls:
-      - username: too-long-team.too-long-applicat-eacc7bda
+      - username: too-long-team.too-long-applicat*
         permission: read
         topic: myteam.mytopic
-      - username: myteam.myapplication-6580c2d3
+      - username: myteam.myapplication*
         permission: readwrite
         topic: myteam.mytopic
   updated:

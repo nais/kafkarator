@@ -7,7 +7,7 @@ aiven:
   existing:
     acls:
       - acl_id: well-known-id
-        username: myteam.myapplication-6580c2d3
+        username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
     serviceusers:
