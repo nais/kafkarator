@@ -2,8 +2,8 @@ package acl
 
 import (
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -89,7 +89,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
 			Topic:      r.Topic.FullName(),
-			Username:   topicAcl.Username(),
+			Username:   topicAcl.ACLname(),
 		}
 
 		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
@@ -163,7 +163,7 @@ func topicACLs(acls []*aiven.KafkaACL, topic string) []*aiven.KafkaACL {
 // returns true if the list of existing ACLs contains an ACL spec from the cluster
 func aclsContainsSpec(acls []*aiven.KafkaACL, aclSpec kafka_nais_io_v1.TopicACL) bool {
 	for _, acl := range acls {
-		if aclSpec.Username() == acl.Username && aclSpec.Access == acl.Permission {
+		if aclSpec.ACLname() == acl.Username && aclSpec.Access == acl.Permission {
 			return true
 		}
 	}
@@ -173,7 +173,7 @@ func aclsContainsSpec(acls []*aiven.KafkaACL, aclSpec kafka_nais_io_v1.TopicACL)
 // returns true if the list of cluster ACL specs contains an existing ACL
 func specsContainsACL(aclSpecs []kafka_nais_io_v1.TopicACL, acl *aiven.KafkaACL) bool {
 	for _, aclSpec := range aclSpecs {
-		if aclSpec.Username() == acl.Username && aclSpec.Access == acl.Permission {
+		if aclSpec.ACLname() == acl.Username && aclSpec.Access == acl.Permission {
 			return true
 		}
 	}

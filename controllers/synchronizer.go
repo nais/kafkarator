@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"github.com/nais/kafkarator/pkg/aiven"
@@ -17,6 +18,17 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	AppLabel        = "app"
+	TeamLabel       = "team"
+	SecretTypeLabel = "type"
+
+	// Temporary while migrating to Aivenator
+	AivenatorSecretType     = "aivenator.aiven.nais.io"
+	AivenatorMigrationLabel = "aivenator.aiven.nais.io/migration"
+	AivenFinalizer          = "aivenator.aiven.nais.io/finalizer"
 )
 
 type Synchronizer struct {
@@ -124,7 +136,7 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 		Name:      secretName,
 	}
 
-	return &v1.Secret{
+	secret := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -133,11 +145,17 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 			Name:      key.Name,
 			Namespace: key.Namespace,
 			Labels: map[string]string{
-				"team": user.Team,
+				AppLabel:                user.Application,
+				TeamLabel:               user.Team,
+				SecretTypeLabel:         AivenatorSecretType,
+				AivenatorMigrationLabel: "true",
 			},
 			Annotations: map[string]string{
-				constants.PoolAnnotation:        topic.Spec.Pool,
-				constants.ApplicationAnnotation: user.Application,
+				constants.PoolAnnotation:               topic.Spec.Pool,
+				constants.AivenatorPoolAnnotation:      topic.Spec.Pool,
+				constants.ApplicationAnnotation:        user.Application,
+				constants.ServiceUserAnnotation:        user.AivenUser.Username,
+				constants.AivenatorProtectedAnnotation: "true",
 			},
 		},
 		StringData: map[string]string{
@@ -156,5 +174,7 @@ func Secret(topic kafka_nais_io_v1.Topic, generator certificate.Generator, user 
 			KafkaTruststore: credStore.Truststore,
 		},
 		Type: v1.SecretTypeOpaque,
-	}, nil
+	}
+	controllerutil.AddFinalizer(secret, AivenFinalizer)
+	return secret, nil
 }
