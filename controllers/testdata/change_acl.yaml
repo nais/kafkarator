@@ -14,9 +14,14 @@ aiven:
         username: otherteam.otherapplication*
         permission: write
         topic: myteam.mytopic
+      - id: acl-3
+        username: myteam.no-wildcard-680515dc
+        permission: readwrite
+        topic: myteam.mytopic
     serviceusers:
       - username: myteam.myapplication-6580c2d3
       - username: otherteam.otherapplication-fb9c8478
+      - username: myteam.no-wildcard-680515dc
     topics:
       - topic_name: myteam.mytopic
     service:
@@ -43,11 +48,15 @@ aiven:
       - username: myteam.myapplication*
         permission: readwrite
         topic: myteam.mytopic
+      - username: myteam.no-wildcard*
+        permission: readwrite
+        topic: myteam.mytopic
   updated:
     topics: {}
   deleted:
     acls:
       - acl-1
+      - acl-3
 
 topic:
   apiVersion: kafka.nais.io/v1
@@ -69,6 +78,9 @@ topic:
       - access: read
         team: too-long-team
         application: too-long-application
+      - access: readwrite
+        team: myteam
+        application: no-wildcard
 
 output:
   status:
@@ -170,5 +182,37 @@ output:
         KAFKA_CREDSTORE_PASSWORD: changeme
         KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
         KAFKA_SCHEMA_REGISTRY_USER: too-long-team.too-long-applicat-eacc7bda
+        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
+        KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z
+    - apiVersion: v1
+      kind: Secret
+      type: Opaque
+      metadata:
+        name: kafka-no-wildcard-nav-integration-test-104cf1ba
+        namespace: myteam
+        labels:
+          aivenator.aiven.nais.io/migration: "true"
+          app: no-wildcard
+          team: myteam
+          type: aivenator.aiven.nais.io
+        annotations:
+          aivenator.aiven.nais.io/protected: "true"
+          kafka.aiven.nais.io/pool: nav-integration-test
+          kafka.aiven.nais.io/serviceUser: myteam.no-wildcard-680515dc
+          kafka.nais.io/application: no-wildcard
+          kafka.nais.io/pool: nav-integration-test
+        finalizers:
+          - aivenator.aiven.nais.io/finalizer
+      data:
+        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
+        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
+      stringData:
+        KAFKA_BROKERS: well-known-kafka-brokers:12345
+        KAFKA_CA: well-known-certificate-authority
+        KAFKA_CERTIFICATE: well-known-access-cert
+        KAFKA_PRIVATE_KEY: well-known-access-key
+        KAFKA_CREDSTORE_PASSWORD: changeme
+        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
+        KAFKA_SCHEMA_REGISTRY_USER: myteam.no-wildcard-680515dc
         KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
         KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z
