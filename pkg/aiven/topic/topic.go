@@ -78,7 +78,7 @@ func (r *Manager) create() error {
 	}
 
 	req := aiven.CreateKafkaTopicRequest{
-		CleanupPolicy:         cfg.CleanupPolicy,
+		CleanupPolicy:         r.Topic.CleanupPolicy(),
 		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
 		Partitions:            cfg.Partitions,
 		Replication:           cfg.Replication,
