@@ -12,12 +12,10 @@ import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/certificate"
 	"github.com/nais/kafkarator/pkg/constants"
 	"github.com/nais/kafkarator/pkg/crypto"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
-	"github.com/nais/kafkarator/pkg/kafka/producer"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
 	"github.com/nais/kafkarator/pkg/secretsync"
@@ -177,7 +175,7 @@ func main() {
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
-		go primary(quit, logger, mgr, cryptManager)
+		go primary(quit, logger, mgr)
 	}
 
 	if viper.GetBool(Follower) {
@@ -207,7 +205,7 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptManager crypto.Manager) {
+func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
@@ -215,39 +213,15 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		return
 	}
 
-	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
-		return
-	}
-
 	reconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:         aivenClient.KafkaACLs,
-			CA:           aivenClient.CA,
-			ServiceUsers: aivenClient.ServiceUsers,
-			Service:      aivenClient.Services,
-			Topics:       aivenClient.KafkaTopics,
+			ACLs:   aivenClient.KafkaACLs,
+			Topics: aivenClient.KafkaTopics,
 		},
 		Client:          mgr.GetClient(),
-		CryptManager:    cryptManager,
 		Logger:          logger,
-		Producer:        prod,
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(RequeueInterval),
-		StoreGenerator:  certificate.NewExecGenerator(logger),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {

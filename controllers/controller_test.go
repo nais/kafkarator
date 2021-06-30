@@ -2,7 +2,6 @@ package controllers_test
 
 import (
 	"encoding/json"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,31 +15,19 @@ import (
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/service"
-	"github.com/nais/kafkarator/pkg/aiven/serviceuser"
 	topic_package "github.com/nais/kafkarator/pkg/aiven/topic"
-	"github.com/nais/kafkarator/pkg/certificate"
-	"github.com/nais/kafkarator/pkg/certificate/mocks"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"gotest.tools/assert"
-	v1 "k8s.io/api/core/v1"
 )
 
 const (
 	testDataDirectory = "testdata"
 
 	// Use these in your test data
-	wellKnownID                   = "well-known-id"
-	wellKnownPassword             = "well-known-password"
-	wellKnownCertificateAuthority = "well-known-certificate-authority"
-	wellKnownAccessCertificate    = "well-known-access-cert"
-	wellKnownAccessKey            = "well-known-access-key"
-	wellKnownKeyStore             = "well-known-keystore"
-	wellKnownTrustStore           = "well-known-truststore"
-	wellKnownStoreSecret          = "changeme"
+	wellKnownID = "well-known-id"
 )
 
 type testCase struct {
@@ -59,9 +46,8 @@ type aivenSpec struct {
 }
 
 type aivenCreated struct {
-	Topics       []aiven.CreateKafkaTopicRequest
-	Acls         []aiven.CreateKafkaACLRequest
-	Serviceusers []aiven.CreateServiceUserRequest
+	Topics []aiven.CreateKafkaTopicRequest
+	Acls   []aiven.CreateKafkaACLRequest
 }
 
 type aivenUpdated struct {
@@ -69,22 +55,13 @@ type aivenUpdated struct {
 }
 
 type aivenDeleted struct {
-	Topics       []string
-	Serviceusers []string
-	Acls         []string
+	Topics []string
+	Acls   []string
 }
 
 type aivenData struct {
-	Topics       []*aiven.KafkaTopic
-	Serviceusers []*aiven.ServiceUser
-	Acls         []*aiven.KafkaACL
-	Service      *aiven.Service
-	CA           string
-}
-
-type output struct {
-	Status  json.RawMessage
-	Secrets []v1.Secret
+	Topics []*aiven.KafkaTopic
+	Acls   []*aiven.KafkaACL
 }
 
 type testCaseConfig struct {
@@ -102,32 +79,13 @@ func fileReader(file string) io.Reader {
 
 func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 	aclMock := &acl.MockInterface{}
-	caMock := &service.MockCA{}
-	serviceUserMock := &serviceuser.MockInterface{}
-	serviceMock := &service.MockInterface{}
 	topicMock := &topic_package.MockInterface{}
-
-	for _, user := range test.Aiven.Existing.Serviceusers {
-		user.Password = wellKnownPassword
-		user.Type = "who-cares"
-		user.AccessCert = wellKnownAccessCertificate
-		user.AccessKey = wellKnownAccessKey
-	}
 
 	for _, project := range test.Config.Projects {
 		svc := kafkarator_aiven.ServiceName(project)
-		serviceMock.
-			On("Get", project, svc).
-			Return(test.Aiven.Existing.Service, nil)
-		caMock.
-			On("Get", project).
-			Return(test.Aiven.Existing.CA, nil)
 		aclMock.
 			On("List", project, svc).
 			Return(test.Aiven.Existing.Acls, nil)
-		serviceUserMock.
-			On("List", project, svc).
-			Return(test.Aiven.Existing.Serviceusers, nil)
 		topicMock.
 			On("List", project, svc).
 			Return(test.Aiven.Existing.Topics, nil)
@@ -147,21 +105,6 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 			topicMock.
 				On("Create", project, svc, topic).
 				Return(nil)
-		}
-
-		for _, serviceUser := range test.Aiven.Created.Serviceusers {
-			serviceUserMock.
-				On("Create", project, svc, serviceUser).
-				Return(
-					&aiven.ServiceUser{
-						Username:   serviceUser.Username,
-						Password:   wellKnownPassword,
-						Type:       "who-cares",
-						AccessCert: wellKnownAccessCertificate,
-						AccessKey:  wellKnownAccessKey,
-					},
-					nil,
-				)
 		}
 
 		for _, a := range test.Aiven.Created.Acls {
@@ -190,12 +133,6 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 				Return(nil)
 		}
 
-		for _, u := range test.Aiven.Deleted.Serviceusers {
-			serviceUserMock.
-				On("Delete", project, svc, u).
-				Return(nil)
-		}
-
 		for _, a := range test.Aiven.Deleted.Acls {
 			aclMock.
 				On("Delete", project, svc, a).
@@ -204,11 +141,8 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 	}
 
 	return kafkarator_aiven.Interfaces{
-		ACLs:         aclMock,
-		CA:           caMock,
-		ServiceUsers: serviceUserMock,
-		Service:      serviceMock,
-		Topics:       topicMock,
+		ACLs:   aclMock,
+		Topics: topicMock,
 	}
 }
 
@@ -237,22 +171,12 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	generatorMock := &mocks.Generator{}
 	aivenMocks := aivenMockInterfaces(test)
 
-	generatorMock.
-		On("MakeCredStores", wellKnownAccessKey, wellKnownAccessCertificate, wellKnownCertificateAuthority).
-		Return(&certificate.CredStoreData{
-			Keystore:   []byte(wellKnownKeyStore),
-			Truststore: []byte(wellKnownTrustStore),
-			Secret:     wellKnownStoreSecret,
-		}, nil)
-
 	reconciler := controllers.TopicReconciler{
-		Aiven:          aivenMocks,
-		Logger:         log.New(),
-		Projects:       test.Config.Projects,
-		StoreGenerator: generatorMock,
+		Aiven:    aivenMocks,
+		Logger:   log.New(),
+		Projects: test.Config.Projects,
 	}
 
 	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))
@@ -264,15 +188,9 @@ func yamlSubTest(t *testing.T, path string) {
 	// hard to test current time with static data
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
 	test.Output.Status.SynchronizationHash = result.Status.SynchronizationHash
-	for i := range test.Output.Secrets {
-		test.Output.Secrets[i].StringData[controllers.KafkaSecretUpdated] = result.Secrets[i].StringData[controllers.KafkaSecretUpdated]
-	}
 
 	assert.DeepEqual(t, test.Output.Status, result.Status)
 	assert.Equal(t, test.Output.Requeue, result.Requeue)
-	assert.DeepEqual(t, test.Output.Secrets, result.Secrets, cmpopts.SortSlices(func(a v1.Secret, b v1.Secret) bool {
-		return a.GetName() < b.GetName()
-	}))
 }
 
 func TestGoldenFile(t *testing.T) {
