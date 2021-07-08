@@ -46,12 +46,6 @@ var (
 		Help:      "number of acls",
 	}, []string{LabelTopic, LabelTeam, LabelApp, LabelPool})
 
-	ServiceUsers = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name:      "service_users",
-		Namespace: Namespace,
-		Help:      "number of service users",
-	}, []string{LabelPool})
-
 	AivenLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:      "aiven_latency",
 		Namespace: Namespace,
@@ -99,7 +93,6 @@ func Register(registry prometheus.Registerer) {
 		AivenLatency,
 		KubernetesResourcesWritten,
 		SecretQueueSize,
-		ServiceUsers,
 		Topics,
 		TopicsProcessed,
 	)
