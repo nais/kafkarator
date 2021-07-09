@@ -10,26 +10,11 @@ aiven:
         username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
-    serviceusers:
-      - username: myteam.myapplication-6580c2d3
     topics:
       - topic_name: myteam.mytopic
         retention_hours: 900
         replication: 3
-    service:
-      name: nav-integration-test
-      service_uri: well-known-kafka-brokers:12345
-      components:
-        - component: kafka
-          host: kafka-host.tld
-          port: 123
-        - component: schema_registry
-          host: schema-registry.tld
-          port: 9876
-    ca: well-known-certificate-authority
   created:
-    serviceusers:
-      - username: myteam.myapplication-6580c2d3
     topics: []
     acls: []
   updated:
@@ -40,8 +25,6 @@ aiven:
         partitions: 2
   deleted:
     acls: []
-    serviceusers:
-      - myteam.myapplication-6580c2d3
 
 topic:
   apiVersion: kafka.nais.io/v1
@@ -66,36 +49,3 @@ output:
     synchronizationState: RolloutComplete
     message: Topic configuration synchronized to Kafka pool
     fullyQualifiedName: myteam.mytopic
-  secrets:
-    - apiVersion: v1
-      kind: Secret
-      type: Opaque
-      metadata:
-        name: kafka-myapplication-nav-integration-test-42edfcd6
-        namespace: myteam
-        labels:
-          aivenator.aiven.nais.io/migration: "true"
-          app: myapplication
-          team: myteam
-          type: aivenator.aiven.nais.io
-        annotations:
-          aivenator.aiven.nais.io/protected: "true"
-          kafka.aiven.nais.io/pool: nav-integration-test
-          kafka.aiven.nais.io/serviceUser: myteam.myapplication-6580c2d3
-          kafka.nais.io/application: myapplication
-          kafka.nais.io/pool: nav-integration-test
-        finalizers:
-          - aivenator.aiven.nais.io/finalizer
-      data:
-        client.keystore.p12: d2VsbC1rbm93bi1rZXlzdG9yZQ==    # well-known-keystore
-        client.truststore.jks: d2VsbC1rbm93bi10cnVzdHN0b3Jl  # well-known-truststore
-      stringData:
-        KAFKA_BROKERS: well-known-kafka-brokers:12345
-        KAFKA_CA: well-known-certificate-authority
-        KAFKA_CERTIFICATE: well-known-access-cert
-        KAFKA_PRIVATE_KEY: well-known-access-key
-        KAFKA_CREDSTORE_PASSWORD: changeme
-        KAFKA_SCHEMA_REGISTRY: https://schema-registry.tld:9876
-        KAFKA_SCHEMA_REGISTRY_USER: myteam.myapplication-6580c2d3
-        KAFKA_SCHEMA_REGISTRY_PASSWORD: well-known-password
-        KAFKA_SECRET_UPDATED: 1970-01-01T00:00:00Z

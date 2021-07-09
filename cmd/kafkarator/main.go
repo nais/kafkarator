@@ -8,31 +8,20 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/certificate"
-	"github.com/nais/kafkarator/pkg/constants"
-	"github.com/nais/kafkarator/pkg/crypto"
-	"github.com/nais/kafkarator/pkg/kafka"
-	"github.com/nais/kafkarator/pkg/kafka/consumer"
-	"github.com/nais/kafkarator/pkg/kafka/producer"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
-	"github.com/nais/kafkarator/pkg/secretsync"
-	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/liberator/pkg/conftools"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	// +kubebuilder:scaffold:imports
@@ -51,24 +40,14 @@ const (
 
 // Configuration options
 const (
-	AivenToken                   = "aiven-token"
-	Follower                     = "follower"
-	KafkaBrokers                 = "kafka-brokers"
-	KafkaCAPath                  = "kafka-ca-path"
-	KafkaCertificatePath         = "kafka-certificate-path"
-	KafkaGroupID                 = "kafka-group-id"
-	KafkaKeyPath                 = "kafka-key-path"
-	KafkaTopic                   = "kafka-topic"
-	KubernetesWriteRetryInterval = "kubernetes-write-retry-interval"
-	LogFormat                    = "log-format"
-	MetricsAddress               = "metrics-address"
-	PreSharedKey                 = "psk"
-	Primary                      = "primary"
-	Projects                     = "projects"
-	RequeueInterval              = "requeue-interval"
-	SecretWriteTimeout           = "secret-write-timeout"
-	SyncPeriod                   = "sync-period"
-	TopicReportInterval          = "topic-report-interval"
+	AivenToken          = "aiven-token"
+	LogFormat           = "log-format"
+	MetricsAddress      = "metrics-address"
+	Primary             = "primary"
+	Projects            = "projects"
+	RequeueInterval     = "requeue-interval"
+	SyncPeriod          = "sync-period"
+	TopicReportInterval = "topic-report-interval"
 )
 
 const (
@@ -85,26 +64,13 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 
 	flag.String(AivenToken, "", "Administrator credentials for Aiven")
-	flag.String(PreSharedKey, "", "Secret pre-shared key for encrypting and decrypting secrets sent over Kafka")
 	flag.String(MetricsAddress, "127.0.0.1:8080", "The address the metric endpoint binds to.")
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
-	flag.Duration(SecretWriteTimeout, time.Second*2, "How much time to allocate for writing one secret to the cluster")
-	flag.Duration(KubernetesWriteRetryInterval, time.Second*10, "Requeueing interval when Kubernetes writes fail")
 	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
 	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
-	flag.Bool(Follower, false, "If true, consume secrets from Kafka topic and persist them to Kubernetes")
 	flag.StringSlice(Projects, []string{"nav-integration-test"}, "List of projects allowed to operate on")
-
-	// Kafka configuration
-	hostname, _ := os.Hostname()
-	flag.StringSlice(KafkaBrokers, []string{"localhost:9092"}, "Broker addresses for Kafka support")
-	flag.String(KafkaTopic, "kafkarator-secrets", "Topic where Kafkarator cluster secrets are produced")
-	flag.String(KafkaGroupID, hostname, "Kafka group ID for storing consumed message positions")
-	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
-	flag.String(KafkaKeyPath, "kafka.key", "Path to Kafka client key")
-	flag.String(KafkaCAPath, "ca.crt", "Path to Kafka CA certificate")
 
 	flag.Parse()
 
@@ -143,16 +109,9 @@ func main() {
 
 	logger.SetFormatter(logfmt)
 
-	key, err := crypto.KeyFromHexString(viper.GetString(PreSharedKey))
-	if err != nil {
-		logger.Error(err)
-		os.Exit(ExitConfig)
-	}
-
 	log.Infof("--- Current configuration ---")
 	for _, cfg := range conftools.Format([]string{
 		AivenToken,
-		PreSharedKey,
 	}) {
 		log.Info(cfg)
 	}
@@ -170,18 +129,12 @@ func main() {
 		os.Exit(ExitController)
 	}
 
-	cryptManager := crypto.NewManager(key)
-
 	terminator := make(chan struct{}, 1)
 
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
-		go primary(quit, logger, mgr, cryptManager)
-	}
-
-	if viper.GetBool(Follower) {
-		go follower(quit, logger, mgr.GetClient(), cryptManager)
+		go primary(quit, logger, mgr)
 	}
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
@@ -207,7 +160,7 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptManager crypto.Manager) {
+func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
@@ -215,39 +168,15 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 		return
 	}
 
-	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka producer: %s", err)
-		return
-	}
-
 	reconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:         aivenClient.KafkaACLs,
-			CA:           aivenClient.CA,
-			ServiceUsers: aivenClient.ServiceUsers,
-			Service:      aivenClient.Services,
-			Topics:       aivenClient.KafkaTopics,
+			ACLs:   aivenClient.KafkaACLs,
+			Topics: aivenClient.KafkaTopics,
 		},
 		Client:          mgr.GetClient(),
-		CryptManager:    cryptManager,
 		Logger:          logger,
-		Producer:        prod,
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(RequeueInterval),
-		StoreGenerator:  certificate.NewExecGenerator(logger),
 	}
 
 	if err = reconciler.SetupWithManager(mgr); err != nil {
@@ -265,89 +194,6 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager, cryptMan
 	}
 
 	go collector.Run()
-}
-
-func follower(quit QuitChannel, logger *log.Logger, client client.Client, cryptManager crypto.Manager) {
-	logger.Info("Follower started")
-
-	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up TLS config: %s", err)
-		return
-	}
-
-	secretsyncer := &secretsync.Synchronizer{
-		Client:  client,
-		Timeout: viper.GetDuration(SecretWriteTimeout),
-	}
-
-	pools := make(map[string]bool)
-	for _, pool := range viper.GetStringSlice(Projects) {
-		pools[pool] = true
-	}
-
-	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
-		logger.Infof("Incoming message from Kafka")
-
-		plaintext, err := cryptManager.Decrypt(msg.Value)
-		if err != nil {
-			return false, fmt.Errorf("decryption error in received message: %s", err)
-		}
-
-		secret := &v1.Secret{}
-		err = secret.Unmarshal(plaintext)
-		if err != nil {
-			return false, fmt.Errorf("unmarshal error in received secret: %s", err)
-		}
-
-		pool := secret.GetAnnotations()[constants.PoolAnnotation]
-
-		logger = logger.WithFields(log.Fields{
-			"secret_namespace": secret.Namespace,
-			"secret_name":      secret.Name,
-			"secret_pool":      pool,
-		})
-
-		if !pools[pool] {
-			return false, fmt.Errorf("ignoring secret addressed for non-managed pool '%s'", pool)
-		}
-
-		retry, err := secretsyncer.Write(secret, logger)
-		if err != nil {
-			if retry {
-				return true, fmt.Errorf("retriable error in persisting secret: %w", err)
-			} else {
-				return false, fmt.Errorf("permanent error in persisting secret: %w", err)
-			}
-		}
-
-		logger.Infof("Successfully synchronized secret")
-
-		return false, nil
-	}
-
-	_, err = consumer.New(consumer.Config{
-		Brokers:           viper.GetStringSlice(KafkaBrokers),
-		GroupID:           viper.GetString(KafkaGroupID),
-		MaxProcessingTime: viper.GetDuration(SecretWriteTimeout),
-		RetryInterval:     viper.GetDuration(KubernetesWriteRetryInterval),
-		Topic:             viper.GetString(KafkaTopic),
-		Callback:          callback,
-		Logger:            logger,
-		TlsConfig:         tlsConfig,
-	})
-
-	if err != nil {
-		quit <- fmt.Errorf("unable to set up kafka consumer: %s", err)
-	}
-
-	return
 }
 
 func init() {

@@ -7,35 +7,17 @@ import (
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/certificate"
-	"github.com/nais/kafkarator/pkg/crypto"
-	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	KafkaBrokers           = "KAFKA_BROKERS"
-	KafkaSchemaRegistry    = "KAFKA_SCHEMA_REGISTRY"
-	KafkaSchemaUser        = "KAFKA_SCHEMA_REGISTRY_USER"
-	KafkaSchemaPassword    = "KAFKA_SCHEMA_REGISTRY_PASSWORD"
-	KafkaCertificate       = "KAFKA_CERTIFICATE"
-	KafkaPrivateKey        = "KAFKA_PRIVATE_KEY"
-	KafkaCA                = "KAFKA_CA"
-	KafkaCredStorePassword = "KAFKA_CREDSTORE_PASSWORD"
-	KafkaSecretUpdated     = "KAFKA_SECRET_UPDATED"
-	KafkaKeystore          = "client.keystore.p12"
-	KafkaTruststore        = "client.truststore.jks"
-
 	LogFieldSynchronizationState = "synchronization_state"
-
-	maxSecretNameLength = 63
 )
 
 type ReconcileResult struct {
@@ -43,19 +25,15 @@ type ReconcileResult struct {
 	Skipped         bool
 	Requeue         bool
 	Status          kafka_nais_io_v1.TopicStatus
-	Secrets         []v1.Secret
 	Error           error
 }
 
 type TopicReconciler struct {
 	client.Client
 	Aiven           kafkarator_aiven.Interfaces
-	CryptManager    crypto.Manager
 	Logger          *log.Logger
-	Producer        producer.Interface
 	Projects        []string
 	RequeueInterval time.Duration
-	StoreGenerator  certificate.Generator
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -67,7 +45,7 @@ func (r *TopicReconciler) projectWhitelisted(project string) bool {
 	return false
 }
 
-// Write changes to Aiven and return a topic processing status and a list of secrets to send to clusters
+// Process changes in Aiven and return a topic processing status
 func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entry) ReconcileResult {
 	var err error
 	var hash string
@@ -136,18 +114,9 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	}
 
 	synchronizer := NewSynchronizer(r.Aiven, topic, logger)
-	result, err := synchronizer.Synchronize(topic)
+	err = synchronizer.Synchronize()
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
-	}
-
-	secrets := make([]v1.Secret, len(result.users))
-	for i, user := range result.users {
-		secret, err := Secret(topic, r.StoreGenerator, *user, result.brokers, result.registry, result.ca)
-		if err != nil {
-			return fail(err, kafka_nais_io_v1.EventFailedPrepare, false)
-		}
-		secrets[i] = *secret
 	}
 
 	status.SynchronizationTime = time.Now().Format(time.RFC3339)
@@ -157,39 +126,8 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	status.Errors = nil
 
 	return ReconcileResult{
-		Status:  status,
-		Secrets: secrets,
+		Status: status,
 	}
-}
-
-func (r *TopicReconciler) produceSecret(logger *log.Entry, secret v1.Secret) error {
-	logger.Infof("Producing secrets")
-	logger = logger.WithFields(log.Fields{
-		// "username":         user.Username,
-		"secret_namespace": secret.Namespace,
-		"secret_name":      secret.Name,
-	})
-
-	plaintext, err := secret.Marshal()
-	if err != nil {
-		return fmt.Errorf("unable to marshal secret: %w", err)
-	}
-
-	ciphertext, err := r.CryptManager.Encrypt(plaintext)
-	if err != nil {
-		return fmt.Errorf("unable to encrypt secret: %w", err)
-	}
-
-	offset, err := r.Producer.Produce(ciphertext)
-	if err != nil {
-		return fmt.Errorf("unable to produce secret on Kafka: %w", err)
-	}
-
-	logger.WithFields(log.Fields{
-		"kafka_offset": offset,
-	}).Infof("Produced secret")
-
-	return nil
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
@@ -270,14 +208,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		topic.RemoveFinalizer()
 	} else if topic.RemoveDataWhenDeleted() {
 		topic.AppendFinalizer()
-	}
-
-	// Produce secrets; retry always
-	for _, secret := range result.Secrets {
-		err = r.produceSecret(logger, secret)
-		if err != nil {
-			return fail(err, true)
-		}
 	}
 
 	// Write topic status; retry always
