@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -81,14 +82,31 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	// Process or delete?
 	if topic.ObjectMeta.DeletionTimestamp != nil {
+		logger.Infof("Deleting ACls for topic")
+		strippedTopic := topic.DeepCopy()
+		strippedTopic.Spec.ACL = nil
+		aclManager := acl.Manager{
+			AivenACLs: r.Aiven.ACLs,
+			Project:   topic.Spec.Pool,
+			Service:   kafkarator_aiven.ServiceName(topic.Spec.Pool),
+			Topic:     *strippedTopic,
+			Logger:    logger,
+		}
+		err = aclManager.Synchronize()
+		if err != nil {
+			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+		}
+		status.Message = "Topic and ACLs deleted, data kept"
+
 		if topic.RemoveDataWhenDeleted() {
 			logger.Infof("Permanently deleting Aiven topic and its data")
 			err = r.Aiven.Topics.Delete(topic.Spec.Pool, kafkarator_aiven.ServiceName(topic.Spec.Pool), topic.FullName())
 			if err != nil {
 				return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
 			}
-			status.Message = "Topic and data permanently deleted"
+			status.Message = "Topic, ACLs and data permanently deleted"
 		}
+
 		status.SynchronizationTime = time.Now().Format(time.RFC3339)
 		status.Errors = nil
 		return ReconcileResult{
@@ -203,10 +221,10 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
-	// Otherwise, append Kafkarator to finalizers if data is to be removed when topic is deleted.
+	// Otherwise, append Kafkarator to finalizers to ensure proper cleanup when topic is deleted
 	if result.DeleteFinalized {
 		topic.RemoveFinalizer()
-	} else if topic.RemoveDataWhenDeleted() {
+	} else {
 		topic.AppendFinalizer()
 	}
 

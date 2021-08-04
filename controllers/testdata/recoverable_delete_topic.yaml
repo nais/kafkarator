@@ -1,5 +1,5 @@
 config:
-  description: topic is permanently deleted when annotation is set
+  description: topic is not actually deleted when annotation is not set, but ACLs are
   projects:
     - nav-integration-test
 
@@ -29,8 +29,6 @@ aiven:
   created: {}
   updated: {}
   deleted:
-    topics:
-      - myteam.mytopic
     acls:
       - acl-1
       - acl-2
@@ -42,8 +40,6 @@ topic:
   metadata:
     name: mytopic
     namespace: myteam
-    annotations:
-      kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
     deletionTimestamp: 1970-01-01T00:00:00Z
     labels:
       team: myteam
@@ -60,5 +56,5 @@ topic:
 output:
   deleteFinalized: true
   status:
-    message: Topic, ACLs and data permanently deleted
+    message: Topic and ACLs deleted, data kept
     fullyQualifiedName: myteam.mytopic
