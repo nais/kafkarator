@@ -128,7 +128,7 @@ func (t *Topic) Run() {
 // look up an Aiven topic's team from the kubernetes topic specs
 func topicTeam(aivenTopic *aiven.KafkaListTopic, clusterTopics []kafka_nais_io_v1.Topic) string {
 	for _, top := range clusterTopics {
-		if top.Name == aivenTopic.TopicName {
+		if top.FullName() == aivenTopic.TopicName {
 			return top.Namespace
 		}
 	}
