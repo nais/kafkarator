@@ -118,6 +118,7 @@ func (t *Topic) Run() {
 		}
 	}
 
+	time.Sleep(time.Second * 5) // Wait 5 seconds before running first report, to allow Manager to start K8s Client
 	report()
 	ticker := time.NewTicker(t.ReportInterval)
 	for range ticker.C {
