@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -77,7 +78,7 @@ func fileReader(file string) io.Reader {
 	return f
 }
 
-func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
+func aivenMockInterfaces(test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
 	aclMock := &acl.MockInterface{}
 	topicMock := &topic_package.MockInterface{}
 
@@ -85,20 +86,20 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 		svc := kafkarator_aiven.ServiceName(project)
 		aclMock.
 			On("List", project, svc).
+			Maybe().
 			Return(test.Aiven.Existing.Acls, nil)
-		topicMock.
-			On("List", project, svc).
-			Return(test.Aiven.Existing.Topics, nil)
 
 		for _, topic := range test.Aiven.Existing.Topics {
 			topicMock.
 				On("Get", project, svc, topic.TopicName).
+				Maybe().
 				Return(topic, nil)
 		}
 
 		for _, topic := range test.Aiven.Created.Topics {
 			topicMock.
 				On("Get", project, svc, topic.TopicName).
+				Maybe().
 				Return(nil, aiven.Error{
 					Status: http.StatusNotFound,
 				})
@@ -141,9 +142,20 @@ func aivenMockInterfaces(test testCase) kafkarator_aiven.Interfaces {
 	}
 
 	return kafkarator_aiven.Interfaces{
-		ACLs:   aclMock,
-		Topics: topicMock,
-	}
+			ACLs:   aclMock,
+			Topics: topicMock,
+		}, func(t mock.TestingT) bool {
+			result := false
+			if ok := aclMock.AssertExpectations(t); !ok {
+				t.Errorf("Expectations on ACLs failed")
+				result = result || ok
+			}
+			if ok := topicMock.AssertExpectations(t); !ok {
+				t.Errorf("Expectations on Topic failed")
+				result = result || ok
+			}
+			return result
+		}
 }
 
 func yamlSubTest(t *testing.T, path string) {
@@ -171,7 +183,7 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	aivenMocks := aivenMockInterfaces(test)
+	aivenMocks, assertMocks := aivenMockInterfaces(test)
 
 	reconciler := controllers.TopicReconciler{
 		Aiven:    aivenMocks,
@@ -191,6 +203,7 @@ func yamlSubTest(t *testing.T, path string) {
 
 	assert.DeepEqual(t, test.Output.Status, result.Status)
 	assert.Equal(t, test.Output.Requeue, result.Requeue)
+	assertMocks(t)
 }
 
 func TestGoldenFile(t *testing.T) {
