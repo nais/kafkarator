@@ -3,6 +3,7 @@ package clustercollector
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -132,6 +133,10 @@ func topicTeam(aivenTopic *aiven.KafkaListTopic, clusterTopics []kafka_nais_io_v
 		if top.FullName() == aivenTopic.TopicName {
 			return top.Namespace
 		}
+	}
+	// No matching topic, attempt to guess team from name
+	if strings.Contains(aivenTopic.TopicName, ".") {
+		return strings.SplitN(aivenTopic.TopicName, ".", 2)[0]
 	}
 	return ""
 }

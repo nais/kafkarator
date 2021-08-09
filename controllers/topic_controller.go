@@ -107,6 +107,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 			status.Message = "Topic, ACLs and data permanently deleted"
 		}
 
+		logger.Info(status.Message)
 		status.SynchronizationTime = time.Now().Format(time.RFC3339)
 		status.Errors = nil
 		return ReconcileResult{
