@@ -155,8 +155,13 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 func retentionMs(cfg *kafka_nais_io_v1.Config) *int64 {
 	var ret *int64
 	if cfg.RetentionHours != nil {
-		retentionDuration := time.Duration(*cfg.RetentionHours) * time.Hour
-		ms := retentionDuration.Milliseconds()
+		var ms int64
+		if *cfg.RetentionHours < 0 {
+			ms = -1
+		} else {
+			retentionDuration := time.Duration(*cfg.RetentionHours) * time.Hour
+			ms = retentionDuration.Milliseconds()
+		}
 		ret = &ms
 	}
 	return ret
