@@ -118,7 +118,7 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config == nil {
 		return false
 	}
-	if config.RetentionHours != nil && topic.RetentionHours != *config.RetentionHours {
+	if topic.RetentionHours != nil && config.RetentionHours != nil && *topic.RetentionHours != *config.RetentionHours {
 		return true
 	}
 	if config.RetentionBytes != nil && topic.RetentionBytes != *config.RetentionBytes {

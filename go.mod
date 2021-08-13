@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/Shopify/sarama v1.27.2
-	github.com/aiven/aiven-go-client v1.5.7
+	github.com/aiven/aiven-go-client v1.5.13
 	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/google/go-cmp v0.5.2

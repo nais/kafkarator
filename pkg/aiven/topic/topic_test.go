@@ -107,7 +107,7 @@ var tests = []topicTest{
 			Partitions:            []*aiven.Partition{{}, {}},
 			Replication:           3,
 			RetentionBytes:        1024,
-			RetentionHours:        36,
+			RetentionHours:        intp(36),
 		},
 	},
 
@@ -130,7 +130,38 @@ var tests = []topicTest{
 			Partitions:            []*aiven.Partition{{}, {}},
 			Replication:           3,
 			RetentionBytes:        1024,
-			RetentionHours:        36,
+			RetentionHours:        intp(36),
+		},
+	},
+
+	{
+		name: "Ignore unset fields in config",
+		topic: kafka_nais_io_v1.Topic{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mytopic",
+				Namespace: "myteam",
+			},
+			Spec: kafka_nais_io_v1.TopicSpec{
+				Pool: "mypool",
+				Config: &kafka_nais_io_v1.Config{
+					CleanupPolicy:         stringp("compact"),
+					MinimumInSyncReplicas: intp(3),
+					Partitions:            intp(2),
+					Replication:           intp(3),
+					RetentionBytes:        intp(1024),
+					RetentionHours:        nil,
+				},
+			},
+		},
+		project: "someproject",
+		service: "mypool-kafka",
+		existing: &aiven.KafkaTopic{
+			CleanupPolicy:         "compact",
+			MinimumInSyncReplicas: 3,
+			Partitions:            []*aiven.Partition{{}, {}},
+			Replication:           3,
+			RetentionBytes:        1024,
+			RetentionHours:        intp(34),
 		},
 	},
 

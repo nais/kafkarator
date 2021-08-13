@@ -19,7 +19,7 @@ const (
 	partitions        = 1
 	updatedPartitions = 2
 	replication       = 2
-	retentionHours    = 15
+	retentionHours    = 15 * time.Hour
 	timeout           = 120 * time.Second
 	retryInterval     = 5 * time.Second
 )
@@ -28,17 +28,28 @@ func intp(i int) *int {
 	return &i
 }
 
+func int64p(i int64) *int64 {
+	return &i
+}
+
 func TestCreateTopic(t *testing.T) {
-	client, err := aiven.NewTokenClient(os.Getenv("AIVEN_TOKEN"), "")
+	token, result := os.LookupEnv("AIVEN_TOKEN")
+	if !result {
+		panic("You must set the AIVEN_TOKEN environment variable")
+	}
+	client, err := aiven.NewTokenClient(token, "")
 	if err != nil {
 		panic(err)
 	}
 
 	req := aiven.CreateKafkaTopicRequest{
-		Partitions:     intp(partitions),
-		Replication:    intp(replication),
-		RetentionHours: intp(retentionHours),
-		TopicName:      topicName,
+		Partitions:  intp(partitions),
+		Replication: intp(replication),
+		TopicName:   topicName,
+		Config: aiven.KafkaTopicConfig{
+			RetentionMs: int64p(retentionHours.Milliseconds()),
+		},
+		Tags: nil,
 	}
 
 	t.Logf("Creating topic...")
@@ -87,7 +98,8 @@ func TestCreateTopic(t *testing.T) {
 	assert.Equal(t, topicName, topic.TopicName)
 	assert.Len(t, topic.Partitions, partitions)
 	assert.Equal(t, replication, topic.Replication)
-	assert.Equal(t, retentionHours, topic.RetentionHours)
+	assert.Equal(t, int(retentionHours.Hours()), *topic.RetentionHours)
+	assert.Equal(t, retentionHours, time.Millisecond*time.Duration(topic.Config.RetentionMs.Value))
 
 	updatereq := aiven.UpdateKafkaTopicRequest{
 		Partitions: intp(updatedPartitions),
