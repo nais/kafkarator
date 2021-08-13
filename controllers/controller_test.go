@@ -78,9 +78,11 @@ func fileReader(file string) io.Reader {
 	return f
 }
 
-func aivenMockInterfaces(test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
+func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
 	aclMock := &acl.MockInterface{}
+	aclMock.Test(t)
 	topicMock := &topic_package.MockInterface{}
+	topicMock.Test(t)
 
 	for _, project := range test.Config.Projects {
 		svc := kafkarator_aiven.ServiceName(project)
@@ -183,7 +185,7 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	aivenMocks, assertMocks := aivenMockInterfaces(test)
+	aivenMocks, assertMocks := aivenMockInterfaces(t, test)
 
 	reconciler := controllers.TopicReconciler{
 		Aiven:    aivenMocks,

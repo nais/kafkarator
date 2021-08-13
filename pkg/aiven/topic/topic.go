@@ -88,6 +88,9 @@ func (r *Manager) create() error {
 			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
 			RetentionMs:       retentionMs(cfg),
 		},
+		Tags: []aiven.KafkaTopicTag{
+			{Key: "created-by", Value: "Kafkarator"},
+		},
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
@@ -112,6 +115,9 @@ func (r *Manager) update() error {
 			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
 			RetentionMs:       retentionMs(cfg),
+		},
+		Tags: []aiven.KafkaTopicTag{
+			{Key: "created-by", Value: "Kafkarator"},
 		},
 	}
 

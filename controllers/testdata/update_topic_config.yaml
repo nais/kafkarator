@@ -17,8 +17,8 @@ aiven:
           retention_ms:
             value: 3240000000
   created:
-    topics: []
-    acls: []
+    topics: [ ]
+    acls: [ ]
   updated:
     topics:
       myteam.mytopic:
@@ -26,8 +26,11 @@ aiven:
         partitions: 2
         config:
           retention_ms: 43200000
+        tags:
+          - key: created-by
+            value: Kafkarator
   deleted:
-    acls: []
+    acls: [ ]
 
 topic:
   apiVersion: kafka.nais.io/v1

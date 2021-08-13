@@ -12,6 +12,9 @@ aiven:
       - topic_name: myteam.mytopic
         config:
           retention_ms: 3240000000
+        tags:
+          - key: created-by
+            value: Kafkarator
     acls:
       - username: myteam.myapplication*
         permission: read

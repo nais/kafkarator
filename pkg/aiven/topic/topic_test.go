@@ -58,6 +58,9 @@ var tests = []topicTest{
 			Partitions:  intp(2),
 			Replication: intp(3),
 			TopicName:   "myteam.mytopic",
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 	},
 
@@ -82,6 +85,9 @@ var tests = []topicTest{
 		},
 		update: &aiven.UpdateKafkaTopicRequest{
 			Replication: intp(3),
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 	},
 
@@ -123,6 +129,9 @@ var tests = []topicTest{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
 			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 	},
 
@@ -155,6 +164,9 @@ var tests = []topicTest{
 				RetentionMs: aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
+			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
 			},
 		},
 	},
@@ -197,6 +209,9 @@ var tests = []topicTest{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
 			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 	},
 
@@ -215,6 +230,9 @@ var tests = []topicTest{
 		service: "mypool-kafka",
 		create: &aiven.CreateKafkaTopicRequest{
 			TopicName: "myteam.mytopic",
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 		error: map[string]bool{
 			"get": true,
@@ -236,6 +254,9 @@ var tests = []topicTest{
 		service: "mypool-kafka",
 		create: &aiven.CreateKafkaTopicRequest{
 			TopicName: "myteam.mytopic",
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 		error: map[string]bool{
 			"create": true,
@@ -269,6 +290,9 @@ var tests = []topicTest{
 			Config: aiven.KafkaTopicConfig{
 				RetentionBytes: int64p(3),
 			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
 		},
 		error: map[string]bool{
 			"update": true,
@@ -290,6 +314,7 @@ func subTest(t *testing.T, test topicTest) {
 	}
 
 	m := &topic.MockInterface{}
+	m.Test(t)
 
 	if test.error["get"] {
 		m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
