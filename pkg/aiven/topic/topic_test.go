@@ -218,6 +218,43 @@ var tests = []topicTest{
 	},
 
 	{
+		name: "Negative retention is always -1",
+		topic: kafka_nais_io_v1.Topic{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mytopic",
+				Namespace: "myteam",
+			},
+			Spec: kafka_nais_io_v1.TopicSpec{
+				Pool: "mypool",
+				Config: &kafka_nais_io_v1.Config{
+					Replication:    intp(3),
+					RetentionHours: intp(-1),
+				},
+			},
+		},
+		project: "someproject",
+		service: "mypool-kafka",
+		existing: &aiven.KafkaTopic{
+			Replication: 2,
+			Config: aiven.KafkaTopicConfigResponse{
+				RetentionMs: aiven.KafkaTopicConfigResponseInt{
+					Source: "topic_config",
+					Value:  -1,
+				},
+			},
+		},
+		update: &aiven.UpdateKafkaTopicRequest{
+			Replication: intp(3),
+			Config: aiven.KafkaTopicConfig{
+				RetentionMs: int64p(-1),
+			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
+		},
+	},
+
+	{
 		name: "unexpected error when getting existing topic",
 		topic: kafka_nais_io_v1.Topic{
 			ObjectMeta: metav1.ObjectMeta{
