@@ -2,6 +2,7 @@ package topic
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/nais/kafkarator/pkg/metrics"
 
@@ -78,13 +79,15 @@ func (r *Manager) create() error {
 	}
 
 	req := aiven.CreateKafkaTopicRequest{
-		CleanupPolicy:         cfg.CleanupPolicy,
-		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
-		Partitions:            cfg.Partitions,
-		Replication:           cfg.Replication,
-		RetentionBytes:        cfg.RetentionBytes,
-		RetentionHours:        cfg.RetentionHours,
-		TopicName:             r.Topic.FullName(),
+		TopicName:   r.Topic.FullName(),
+		Partitions:  cfg.Partitions,
+		Replication: cfg.Replication,
+		Config: aiven.KafkaTopicConfig{
+			CleanupPolicy:     cleanupPolicy(cfg),
+			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
+			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
+			RetentionMs:       retentionMs(cfg),
+		},
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
@@ -102,11 +105,14 @@ func (r *Manager) update() error {
 	}
 
 	req := aiven.UpdateKafkaTopicRequest{
-		MinimumInSyncReplicas: cfg.MinimumInSyncReplicas,
-		Partitions:            cfg.Partitions,
-		Replication:           cfg.Replication,
-		RetentionBytes:        cfg.RetentionBytes,
-		RetentionHours:        cfg.RetentionHours,
+		Partitions:  cfg.Partitions,
+		Replication: cfg.Replication,
+		Config: aiven.KafkaTopicConfig{
+			CleanupPolicy:     cleanupPolicy(cfg),
+			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
+			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
+			RetentionMs:       retentionMs(cfg),
+		},
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
@@ -118,20 +124,48 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config == nil {
 		return false
 	}
-	if topic.RetentionHours != nil && config.RetentionHours != nil && *topic.RetentionHours != *config.RetentionHours {
-		return true
-	}
-	if config.RetentionBytes != nil && topic.RetentionBytes != *config.RetentionBytes {
-		return true
-	}
+
 	if config.Replication != nil && topic.Replication != *config.Replication {
 		return true
 	}
 	if config.Partitions != nil && len(topic.Partitions) != *config.Partitions {
 		return true
 	}
-	if config.MinimumInSyncReplicas != nil && topic.MinimumInSyncReplicas != *config.MinimumInSyncReplicas {
+
+	if config.RetentionHours != nil && topic.Config.RetentionMs.Value != *retentionMs(config) {
+		return true
+	}
+	if config.RetentionBytes != nil && topic.Config.RetentionBytes.Value != int64(*config.RetentionBytes) {
+		return true
+	}
+	if config.MinimumInSyncReplicas != nil && topic.Config.MinInsyncReplicas.Value != int64(*config.MinimumInSyncReplicas) {
 		return true
 	}
 	return false
+}
+
+func retentionMs(cfg *kafka_nais_io_v1.Config) *int64 {
+	var ret *int64
+	if cfg.RetentionHours != nil {
+		retentionDuration := time.Duration(*cfg.RetentionHours) * time.Hour
+		ms := retentionDuration.Milliseconds()
+		ret = &ms
+	}
+	return ret
+}
+
+func cleanupPolicy(cfg *kafka_nais_io_v1.Config) string {
+	ret := ""
+	if cfg.CleanupPolicy != nil {
+		ret = *cfg.CleanupPolicy
+	}
+	return ret
+}
+
+func intpToInt64p(i *int) *int64 {
+	if i == nil {
+		return nil
+	}
+	r := int64(*i)
+	return &r
 }

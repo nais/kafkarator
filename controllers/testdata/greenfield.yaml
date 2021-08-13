@@ -10,7 +10,8 @@ aiven:
   created:
     topics:
       - topic_name: myteam.mytopic
-        retention_hours: 900
+        config:
+          retention_ms: 3240000000
     acls:
       - username: myteam.myapplication*
         permission: read

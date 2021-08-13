@@ -12,8 +12,10 @@ aiven:
         topic: myteam.mytopic
     topics:
       - topic_name: myteam.mytopic
-        retention_hours: 900
         replication: 3
+        config:
+          retention_ms:
+            value: 3240000000
   created:
     topics: []
     acls: []
@@ -21,8 +23,9 @@ aiven:
     topics:
       myteam.mytopic:
         topic_name: myteam.mytopic
-        retention_hours: 12
         partitions: 2
+        config:
+          retention_ms: 43200000
   deleted:
     acls: []
 

@@ -24,8 +24,10 @@ aiven:
         topic: otherteam.othertopic
     topics:
       - topic_name: myteam.mytopic
-        retention_hours: 900
         replication: 3
+        config:
+          retention_ms:
+            value: 3240000000
   created: {}
   updated: {}
   deleted:
