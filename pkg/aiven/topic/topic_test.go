@@ -1,6 +1,8 @@
 package topic_test
 
 import (
+	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/stretchr/testify/mock"
 	"net/http"
 	"testing"
 	"time"
@@ -330,23 +332,23 @@ func subTest(t *testing.T, test topicTest) {
 
 	if test.create != nil && !test.error["get"] {
 		if test.error["create"] {
-			m.On("Create", test.project, test.service, *test.create).Return(aiven.Error{
+			m.On("Create", test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(aiven.Error{
 				Message: "failed create",
 				Status:  http.StatusInternalServerError,
 			})
 		} else {
-			m.On("Create", test.project, test.service, *test.create).Return(nil)
+			m.On("Create", test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(nil)
 		}
 	}
 
 	if test.update != nil && !test.error["get"] {
 		if test.error["update"] {
-			m.On("Update", test.project, test.service, test.topic.FullName(), *test.update).Return(aiven.Error{
+			m.On("Update", test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(aiven.Error{
 				Message: "failed create",
 				Status:  http.StatusInternalServerError,
 			})
 		} else {
-			m.On("Update", test.project, test.service, test.topic.FullName(), *test.update).Return(nil)
+			m.On("Update", test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(nil)
 		}
 	}
 

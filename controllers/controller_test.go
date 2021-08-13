@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"encoding/json"
+	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
@@ -106,7 +107,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 					Status: http.StatusNotFound,
 				})
 			topicMock.
-				On("Create", project, svc, topic).
+				On("Create", project, svc, mock.MatchedBy(utils.TopicCreateReqComp(topic))).
 				Return(nil)
 		}
 
@@ -126,13 +127,13 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 
 		for topicName, topic := range test.Aiven.Updated.Topics {
 			topicMock.
-				On("Update", project, svc, topicName, topic).
+				On("Update", project, svc, topicName, mock.MatchedBy(utils.TopicUpdateReqComp(topic))).
 				Return(nil)
 		}
 
-		for _, t := range test.Aiven.Deleted.Topics {
+		for _, topicName := range test.Aiven.Deleted.Topics {
 			topicMock.
-				On("Delete", project, svc, t).
+				On("Delete", project, svc, topicName).
 				Return(nil)
 		}
 

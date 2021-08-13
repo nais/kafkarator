@@ -90,6 +90,7 @@ func (r *Manager) create() error {
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
+			{Key: "touched-at", Value: time.Now().Format(time.RFC3339)},
 		},
 	}
 
@@ -118,6 +119,7 @@ func (r *Manager) update() error {
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
+			{Key: "touched-at", Value: time.Now().Format(time.RFC3339)},
 		},
 	}
 
