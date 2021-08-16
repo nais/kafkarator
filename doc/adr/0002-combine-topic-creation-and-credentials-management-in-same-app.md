@@ -4,9 +4,8 @@ Date: 2020-09-14
 
 ## Status
 
-Accepted
-
 Followup [3. Kafkarator API is focused around dedicated CRDs](0003-kafkarator-api-is-focused-around-dedicated-crds.md)
+Superceded by [5. Kafkarator credentials rotation and flow](0005-kafkarator-credentials-rotation-and-flow.md)
 
 ## Context
 

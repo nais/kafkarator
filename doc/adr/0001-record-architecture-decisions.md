@@ -4,7 +4,7 @@ Date: 2020-09-14
 
 ## Status
 
-Accepted
+Superceded by [6. Future ADRs in PIG repository](0006-future-adrs-in-pig-repository.md)
 
 ## Context
 

@@ -5,5 +5,7 @@
 * [3. Kafkarator API is focused around dedicated CRDs](0003-kafkarator-api-is-focused-around-dedicated-crds.md)
 * [4. Only for Aiven](0004-only-for-aiven.md)
 * [5. Kafkarator credentials rotation and flow](0005-kafkarator-credentials-rotation-and-flow.md)
+* [6. Future ADRs in PIG repository](0006-future-adrs-in-pig-repository.md)
+
 
 > Update this file using the command `adr generate toc -o $(git rev-parse --show-toplevel)/doc/adr/.outro.md > $(git rev-parse --show-toplevel)/doc/adr/README.md`
