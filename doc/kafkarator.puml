@@ -3,32 +3,15 @@
 title Kafkarator operation
 
 control kubernetes as "Kubernetes"
-control primary as "Primary"
+control kafkarator as "Kafkarator"
 boundary aiven as "Aiven"
-database kafka as "Aiven Kafka topic\nkafkarator-secrets"
-control follower as "Follower"
-
-legend top center
-Primaries run in GCP clusters, react to Topic updates, and speaks with Aiven.
-Followers run in all clusters, receive Kubernetes secrets, and writes them to the cluster.
-endlegend
 
 loop until success
-kubernetes -> primary : Topic resource created/updated
-primary -> aiven : Create or update topics
-primary -> aiven : Create and/or delete ACLs
-primary -> aiven : Create missing service users
-primary -> primary : Generate secrets
-note right: Each team/application combination\nresults in a single secret.
-primary -> kafka : Produce encrypted secrets
-primary -> kubernetes : Write back status and sync hash
+kubernetes -> kafkarator : Topic resource created/updated
+kafkarator -> aiven : Create or update topics
+kafkarator -> aiven : Create and/or delete ACLs
+kafkarator -> kubernetes : Write back status and sync hash
 note right: RolloutComplete
-end
-
-kafka --> follower : Consume secrets
-
-loop until success or permanent error
-    follower -> kubernetes : Create secrets
 end
 
 @enduml
