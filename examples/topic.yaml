@@ -19,3 +19,6 @@ spec:
     - access: write
       team: default
       application: otherapplication
+    - access: read
+      team: default
+      additionalUser: sam.wright

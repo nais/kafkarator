@@ -59,7 +59,7 @@ func (r *Manager) reportMetrics() {
 	type metric struct {
 		topic string
 		team  string
-		app   string
+		user   string
 		pool  string
 	}
 
@@ -68,7 +68,7 @@ func (r *Manager) reportMetrics() {
 		key := metric{
 			topic: r.Topic.FullName(),
 			team:  acl.Team,
-			app:   acl.Application,
+			user:   acl.Username(),
 			pool:  r.Topic.Spec.Pool,
 		}
 		uniq[key]++
@@ -78,7 +78,7 @@ func (r *Manager) reportMetrics() {
 		metrics.Acls.With(prometheus.Labels{
 			metrics.LabelTopic: key.topic,
 			metrics.LabelTeam:  key.team,
-			metrics.LabelApp:   key.app,
+			metrics.LabelUser:  key.user,
 			metrics.LabelPool:  key.pool,
 		}).Set(float64(count))
 	}

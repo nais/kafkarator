@@ -12,7 +12,7 @@ const (
 	Namespace = "kafkarator"
 
 	LabelAivenOperation = "operation"
-	LabelApp            = "app"
+	LabelUser           = "user"
 	LabelGroupID        = "group_id"
 	LabelNamespace      = "namespace"
 	LabelPool           = "pool"
@@ -44,7 +44,7 @@ var (
 		Name:      "acls",
 		Namespace: Namespace,
 		Help:      "number of acls",
-	}, []string{LabelTopic, LabelTeam, LabelApp, LabelPool})
+	}, []string{LabelTopic, LabelTeam, LabelUser, LabelPool})
 
 	AivenLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:      "aiven_latency",

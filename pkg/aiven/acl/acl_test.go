@@ -64,6 +64,11 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Team:        "user3",
 			Application: "app",
 		},
+		{ // Added because of new additionalUser
+			Access:         "read",
+			Team:           "user4",
+			AdditionalUser: "sam.right",
+		},
 	}
 
 	suite.shouldAdd = []kafka_nais_io_v1.TopicACL{
@@ -76,6 +81,11 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Access:      "readwrite",
 			Team:        "user3",
 			Application: "app",
+		},
+		{
+			Access:         "read",
+			Team:           "user4",
+			AdditionalUser: "sam.right",
 		},
 	}
 

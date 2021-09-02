@@ -15,8 +15,9 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.6.1
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.17.16
 	k8s.io/apimachinery v0.17.16
 	k8s.io/client-go v0.17.16
 	sigs.k8s.io/controller-runtime v0.5.0
 )
+
+replace github.com/nais/liberator => ../liberator
