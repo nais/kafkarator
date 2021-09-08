@@ -52,7 +52,6 @@ jobs:
         echo "version=${version}" >> $GITHUB_ENV
         echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
         echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
-        echo "NAIS_YAML=${GITHUB_WORKSPACE}/nais-yaml" >> $GITHUB_ENV
     - name: Bump version in nais-yaml
       run: |
         cd nais-yaml
