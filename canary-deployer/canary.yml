@@ -1,0 +1,30 @@
+kind: Application
+apiVersion: nais.io/v1alpha1
+metadata:
+  name: kafkarator-canary
+  namespace: aura
+  labels:
+    team: aura
+spec:
+  replicas:
+    min: 1
+    max: 1
+  image: "docker.pkg.github.com/nais/kafkarator/canary:{{ .version }}"
+  kafka:
+    pool: "{{ .pool }}"
+  prometheus:
+    enabled: true
+    path: /metrics
+  env:
+    - name: DEPLOY_START
+      value: "{{ .now }}"
+    - name: CANARY_MESSAGE_INTERVAL
+      value: 1s
+    - name: CANARY_KAFKA_TOPIC
+      value: "aura.kafkarator-canary-{{ .groupid }}"
+    - name: CANARY_KAFKA_GROUP_ID
+      value: "{{ .groupid }}"
+    - name: CANARY_LOG_FORMAT
+      value: json
+    - name: CANARY_METRICS_ADDRESS
+      value: 0.0.0.0:8080

@@ -5,6 +5,7 @@ on: [push]
 env:
   kafkarator_image: docker.pkg.github.com/${{ github.repository }}/kafkarator
   canary_image: docker.pkg.github.com/${{ github.repository }}/canary
+  canary_deployer_image: docker.pkg.github.com/${{ github.repository }}/canary-deployer
 
 jobs:
   build:
@@ -18,18 +19,23 @@ jobs:
           echo "version=${version}" >> $GITHUB_ENV
           echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
           echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
-      - name: Build kafkarator docker image
-        run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
-      - name: Build canary docker image
-        run: docker build -f Dockerfile.canary . --tag $CANARY_IMAGE --tag ${canary_image}:latest
+          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> $GITHUB_ENV
+          sed -i "s/VERSION=.*/VERSION=${version}/g" canary-deployer/deployer.sh
       - name: Login to Github package registry
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GITHUB_TOKEN" | docker login docker.pkg.github.com -u "$GITHUB_REPOSITORY" --password-stdin
+      - name: Build kafkarator docker image
+        run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
+      - name: Build canary docker image
+        run: docker build -f Dockerfile.canary . --tag $CANARY_IMAGE --tag ${canary_image}:latest
+      - name: Build canary deployer docker image
+        run: docker build -f canary-deployer/Dockerfile . --tag $CANARY_DEPLOYER_IMAGE --tag ${canary_deployer_image}:latest
       - name: Push docker images
         run: |
           docker push $KAFKARATOR_IMAGE
           docker push $CANARY_IMAGE
+          docker push $CANARY_DEPLOYER_IMAGE
   deploy:
     name: Deploy to Kubernetes
     if: github.ref == 'refs/heads/master'
@@ -52,6 +58,7 @@ jobs:
         echo "version=${version}" >> $GITHUB_ENV
         echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
         echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
+        echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> $GITHUB_ENV
     - name: Bump version in nais-yaml
       run: |
         cd nais-yaml
@@ -59,6 +66,7 @@ jobs:
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
         sed -E -i "s#kafkarator_image: docker.pkg.github.com/nais/kafkarator/kafkarator.+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/global.yaml
         sed -E -i "s#canary_image: docker.pkg.github.com/nais/kafkarator/canary.+#canary_image: ${CANARY_IMAGE}#" vars/global.yaml
+        sed -E -i "s#canary_deploy_image: docker.pkg.github.com/nais/kafkarator/canary-deployer.+#canary_deploy_image: ${CANARY_DEPLOYER_IMAGE}#" vars/global.yaml
         git add .
         git --no-pager diff --cached
         git commit --no-verify -a -m "Bump Kafkarator to version ${version}"
