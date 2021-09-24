@@ -9,7 +9,7 @@ for CLUSTER in $CLUSTERS; do
   fi
   export CLUSTER
   echo "---" > $VARS
-  echo "version: $VERSION"
+  echo "version: $VERSION" >> $VARS
   echo "now: $(date +%s)000000000" >> $VARS
   echo "groupid: $CLUSTER" >> $VARS
   echo "pool: $POOL" >> $VARS
