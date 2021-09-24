@@ -1,18 +1,23 @@
 #!/bin/sh
 
-export VARS=`mktemp`
+VARS=$(mktemp)
+export VARS
 
-POOL=nav-prod
 for CLUSTER in $CLUSTERS; do
-  if [[ "dev-gcp" == $CLUSTER ]]; then
-      POOL=nav-dev
+  if [ "dev-gcp" = "$CLUSTER" ]; then
+    POOL=nav-dev
+  else
+    POOL=nav-prod
   fi
   export CLUSTER
-  echo "---" > $VARS
-  echo "image: $IMAGE" >> $VARS
-  echo "now: $(date +%s)000000000" >> $VARS
-  echo "groupid: $CLUSTER" >> $VARS
-  echo "pool: $POOL" >> $VARS
+  {
+    echo "---"
+    echo "image: $IMAGE"
+    echo "now: $(date +%s)000000000"
+    echo "groupid: $CLUSTER"
+    echo "pool: $POOL"
+  } > "$VARS"
+  cat "$VARS"
   echo "Deploying to $CLUSTER..."
   /app/deploy --wait=false
 done
