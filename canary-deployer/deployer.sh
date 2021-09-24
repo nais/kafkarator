@@ -2,10 +2,9 @@
 
 export VARS=`mktemp`
 
-VERSION=1.2.3
 POOL=nav-prod
 for CLUSTER in $CLUSTERS; do
-  if [ "dev-gcp" == $CLUSTER ]; then
+  if [[ "dev-gcp" == $CLUSTER ]]; then
       POOL=nav-dev
   fi
   export CLUSTER
