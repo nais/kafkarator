@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -53,6 +54,32 @@ type Consume struct {
 }
 
 var (
+	deployStartTimestamp int64
+
+	LeadTime = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "lead_time",
+		Namespace: Namespace,
+		Help:      "seconds used in deployment pipeline, from making the request until the application is available",
+	})
+
+	TimeSinceDeploy = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "time_since_deploy",
+		Namespace: Namespace,
+		Help:      "seconds since the latest deploy of this application",
+	})
+
+	DeployTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "deploy_timestamp",
+		Namespace: Namespace,
+		Help:      "timestamp when the deploy of this application was triggered in the pipeline",
+	})
+
+	StartTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "start_timestamp",
+		Namespace: Namespace,
+		Help:      "start time of the application",
+	})
+
 	LastProducedTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "last_produced",
@@ -103,6 +130,7 @@ func init() {
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 
 	flag.Duration(MessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
+	flag.Int64Var(&deployStartTimestamp, "deploy-start-time", getEnvInt("DEPLOY_START", time.Now().UnixNano()), "unix timestamp with nanoseconds, specifies when NAIS deploy of testapp started")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -128,12 +156,16 @@ func init() {
 	}
 
 	prometheus.MustRegister(
-		LastProducedTimestamp,
+		ConsumeLatency,
+		DeployTimestamp,
+		LastConsumedOffset,
 		LastConsumedTimestamp,
 		LastProducedOffset,
-		LastConsumedOffset,
-		ConsumeLatency,
+		LastProducedTimestamp,
+		LeadTime,
 		ProduceLatency,
+		StartTimestamp,
+		TimeSinceDeploy,
 	)
 }
 
@@ -153,6 +185,20 @@ func formatter(logFormat string) (log.Formatter, error) {
 	return nil, fmt.Errorf("unsupported log format '%s'", logFormat)
 }
 
+func getEnvInt(key string, fallback int64) int64 {
+	if value, ok := os.LookupEnv(key); ok {
+		i, _ := strconv.ParseInt(value, 10, 64)
+		return i
+	}
+
+	return fallback
+}
+
+func timeSinceDeploy() float64 {
+	deployStartTime := time.Unix(0, deployStartTimestamp)
+	return time.Now().Sub(deployStartTime).Seconds()
+}
+
 func main() {
 	type QuitChannel chan error
 
@@ -170,6 +216,11 @@ func main() {
 	logger.SetFormatter(logfmt)
 
 	logger.Infof("kafkarator-canary starting up...")
+
+	StartTimestamp.SetToCurrentTime()
+	DeployTimestamp.Set(float64(deployStartTimestamp) / 10e8)
+	LeadTime.Set(timeSinceDeploy())
+	TimeSinceDeploy.Set(timeSinceDeploy())
 
 	go func() {
 		quit <- http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler())

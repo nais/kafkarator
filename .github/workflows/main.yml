@@ -3,9 +3,9 @@ name: Build and deploy Kafkarator
 on: [push]
 
 env:
-  kafkarator_image: docker.pkg.github.com/${{ github.repository }}/kafkarator
-  canary_image: docker.pkg.github.com/${{ github.repository }}/canary
-  canary_deployer_image: docker.pkg.github.com/${{ github.repository }}/canary-deployer
+  kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
+  canary_image: ghcr.io/${{ github.repository }}/canary
+  canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
 
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
       - name: Login to Github package registry
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$GITHUB_TOKEN" | docker login docker.pkg.github.com -u "$GITHUB_REPOSITORY" --password-stdin
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_REPOSITORY" --password-stdin
       - name: Build kafkarator docker image
         run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
       - name: Build canary docker image
@@ -34,7 +34,6 @@ jobs:
       - name: Push docker images
         run: |
           docker push $KAFKARATOR_IMAGE
-          docker push ${kafkarator_image}:latest
           docker push $CANARY_IMAGE
           docker push $CANARY_DEPLOYER_IMAGE
   deploy:

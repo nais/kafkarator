@@ -1,2 +1,2 @@
-FROM docker.pkg.github.com/nais/kafkarator/kafkarator:latest
+FROM ghcr.io/nais/kafkarator/kafkarator:latest
 CMD ["/canary"]
