@@ -64,9 +64,9 @@ jobs:
         cd nais-yaml
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-        sed -E -i "s#kafkarator_image: docker.pkg.github.com/nais/kafkarator/kafkarator.+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/global.yaml
-        sed -E -i "s#canary_image: docker.pkg.github.com/nais/kafkarator/canary.+#canary_image: ${CANARY_IMAGE}#" vars/global.yaml
-        sed -E -i "s#canary_deploy_image: docker.pkg.github.com/nais/kafkarator/canary-deployer.+#canary_deploy_image: ${CANARY_DEPLOYER_IMAGE}#" vars/global.yaml
+        sed -E -i "s#kafkarator_image: ghcr.io/nais/kafkarator/kafkarator.+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/global.yaml
+        sed -E -i "s#canary_image: ghcr.io/nais/kafkarator/canary.+#canary_image: ${CANARY_IMAGE}#" vars/global.yaml
+        sed -E -i "s#canary_deploy_image: ghcr.io/nais/kafkarator/canary-deployer.+#canary_deploy_image: ${CANARY_DEPLOYER_IMAGE}#" vars/global.yaml
         git add .
         git --no-pager diff --cached
         git commit --no-verify -a -m "Bump Kafkarator to version ${version}"
