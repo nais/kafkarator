@@ -4,7 +4,7 @@ VARS=$(mktemp)
 export VARS
 
 for CLUSTER in $CLUSTERS; do
-  if [[ "$CLUSTER" == "prod-"* ]]; then
+  if [ "$CLUSTER" = "prod-fss" -o "$CLUSTER" = "prod-gcp" -o "$CLUSTER" = "prod-sbs" ]; then
     POOL=nav-prod
   else
     POOL=nav-dev
