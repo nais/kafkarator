@@ -4,10 +4,10 @@ VARS=$(mktemp)
 export VARS
 
 for CLUSTER in $CLUSTERS; do
-  if [ "dev-gcp" = "$CLUSTER" -o "dev-fss" = "$CLUSTER" -o "dev-sbs" = "$CLUSTER" ]; then
-    POOL=nav-dev
-  else
+  if [[ "$CLUSTER" == "prod-"* ]]; then
     POOL=nav-prod
+  else
+    POOL=nav-dev
   fi
   export CLUSTER
   {
