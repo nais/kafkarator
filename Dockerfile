@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.15 as builder
+FROM golang:1.17 as builder
 
 ENV os "linux"
 ENV arch "amd64"
@@ -22,8 +22,8 @@ RUN go mod download
 # Run tests
 RUN make test
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -installsuffix cgo -o kafkarator cmd/kafkarator/main.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -installsuffix cgo -o canary cmd/canary/main.go
+RUN CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} GO111MODULE=on go build -a -installsuffix cgo -o kafkarator cmd/kafkarator/main.go
+RUN CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} GO111MODULE=on go build -a -installsuffix cgo -o canary cmd/canary/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -31,10 +31,5 @@ FROM alpine:3
 WORKDIR /
 COPY --from=builder /workspace/kafkarator /kafkarator
 COPY --from=builder /workspace/canary /canary
-
-# Add utilities for creating keystore and truststore
-RUN apk --no-cache add \
-    openssl \
-    openjdk11-jre-headless
 
 CMD ["/kafkarator"]
