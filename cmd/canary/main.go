@@ -253,6 +253,7 @@ func main() {
 		}
 		o := msg.Offset
 		c := Consume{o, t}
+		logger.Infof("Consumed message: %v", c)
 		cons <- c
 
 		return false, nil
@@ -279,9 +280,13 @@ func main() {
 
 	produce := func() {
 		timer := time.Now()
-		offset, err := prod.Produce(kafka.Message(time.Now().Format(time.RFC3339Nano)))
+		offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
+			logger.Infof("Produced message: %v", Consume{
+				offset:    offset,
+				timeStamp: timer,
+			})
 			LastProducedTimestamp.SetToCurrentTime()
 			LastProducedOffset.Set(float64(offset))
 		} else {
