@@ -152,7 +152,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics/status,verbs=get;update;patch
 
-func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var topic kafka_nais_io_v1.Topic
 
 	logger := log.NewEntry(r.Logger)
@@ -166,8 +166,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	defer func() {
 		logger.Infof("Finished processing request")
 	}()
-
-	ctx := context.Background()
 
 	fail := func(err error, requeue bool) (ctrl.Result, error) {
 		logger.Error(err)

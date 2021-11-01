@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -129,8 +130,7 @@ func main() {
 		os.Exit(ExitController)
 	}
 
-	terminator := make(chan struct{}, 1)
-
+	terminator, cancel := context.WithCancel(context.Background())
 	logger.Info("Kafkarator running")
 
 	if viper.GetBool(Primary) {
@@ -144,9 +144,11 @@ func main() {
 			select {
 			case err := <-quit:
 				logger.Errorf("terminating unexpectedly: %s", err)
+				cancel()
 				os.Exit(ExitRuntime)
 			case sig := <-signals:
 				logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
+				cancel()
 				os.Exit(ExitOK)
 			}
 		}
@@ -161,7 +163,6 @@ func main() {
 }
 
 func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
-
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up aiven client: %s", err)
