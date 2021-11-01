@@ -40,6 +40,12 @@ var (
 		Help:      "number of topics synchronized with aiven",
 	}, []string{LabelSyncState, LabelPool})
 
+	StreamsProcessed = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "streams_processed",
+		Namespace: Namespace,
+		Help:      "number of streams synchronized with aiven",
+	}, []string{LabelSyncState, LabelPool})
+
 	Acls = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name:      "acls",
 		Namespace: Namespace,
@@ -95,5 +101,6 @@ func Register(registry prometheus.Registerer) {
 		SecretQueueSize,
 		Topics,
 		TopicsProcessed,
+		StreamsProcessed,
 	)
 }

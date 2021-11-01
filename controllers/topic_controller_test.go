@@ -37,7 +37,7 @@ type testCase struct {
 	Error  *string
 	Aiven  aivenSpec
 	Topic  json.RawMessage
-	Output controllers.ReconcileResult
+	Output controllers.TopicReconcileResult
 }
 
 type aivenSpec struct {

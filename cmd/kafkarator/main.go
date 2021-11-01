@@ -169,7 +169,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		return
 	}
 
-	reconciler := &controllers.TopicReconciler{
+	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
 			ACLs:   aivenClient.KafkaACLs,
 			Topics: aivenClient.KafkaTopics,
@@ -179,9 +179,22 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(RequeueInterval),
 	}
+	if err = topicReconciler.SetupWithManager(mgr); err != nil {
+		quit <- fmt.Errorf("unable to set up topicReconciler: %s", err)
+		return
+	}
 
-	if err = reconciler.SetupWithManager(mgr); err != nil {
-		quit <- fmt.Errorf("unable to set up reconciler: %s", err)
+	streamReconciler := &controllers.StreamReconciler{
+		Client: mgr.GetClient(),
+		Aiven: kafkarator_aiven.Interfaces{
+			ACLs: aivenClient.KafkaACLs,
+		},
+		Logger:          logger,
+		Projects:        viper.GetStringSlice(Projects),
+		RequeueInterval: viper.GetDuration(RequeueInterval),
+	}
+	if err = streamReconciler.SetupWithManager(mgr); err != nil {
+		quit <- fmt.Errorf("unable to set up streamReconciler: %s", err)
 		return
 	}
 
