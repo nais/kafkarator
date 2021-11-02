@@ -7,7 +7,7 @@ require (
 	github.com/aiven/aiven-go-client v1.5.13
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.5.6
-	github.com/nais/liberator v0.0.0-20211101124314-4899f9331138
+	github.com/nais/liberator v0.0.0-20211102125811-32eff845875a
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -91,5 +91,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
-
-replace github.com/nais/liberator => ../liberator
