@@ -204,6 +204,7 @@ func (t TopicAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
 
 type StreamAdapter struct {
 	*kafka_nais_io_v1.Stream
+	Delete bool
 }
 
 func (s StreamAdapter) TopicName() string {
@@ -215,5 +216,9 @@ func (s StreamAdapter) Pool() string {
 }
 
 func (s StreamAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
-	return kafka_nais_io_v1.TopicACLs{s.ACL()}
+	if s.Delete {
+		return kafka_nais_io_v1.TopicACLs{}
+	} else {
+		return kafka_nais_io_v1.TopicACLs{s.ACL()}
+	}
 }

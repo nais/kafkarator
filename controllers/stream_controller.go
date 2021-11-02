@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 	"time"
 )
 
@@ -167,7 +168,7 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 
 	// Process or delete?
 	if stream.ObjectMeta.DeletionTimestamp != nil {
-		return r.handleDelete(logger, status)
+		return r.handleDelete(stream, logger, status, fail)
 	}
 
 	hash, err = stream.Hash()
@@ -209,10 +210,33 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 	}
 }
 
-func (r *StreamReconciler) handleDelete(logger log.FieldLogger, status kafka_nais_io_v1.StreamStatus) StreamReconcileResult {
+func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger log.FieldLogger, status kafka_nais_io_v1.StreamStatus, fail func(err error, state string, retry bool) StreamReconcileResult) StreamReconcileResult {
 	logger.Infof("Permanently deleting Aiven stream topics, ACLs and its data")
-	// TODO: Delete ACL
-	// TODO: Delete all stream topics
+	projectName := stream.Spec.Pool
+	serviceName := kafkarator_aiven.ServiceName(projectName)
+	aclManager := acl.Manager{
+		AivenACLs: r.Aiven.ACLs,
+		Project:   projectName,
+		Service:   serviceName,
+		Source:    acl.StreamAdapter{Stream: &stream, Delete: true},
+		Logger:    logger,
+	}
+	err := aclManager.Synchronize()
+	if err != nil {
+		return fail(fmt.Errorf("failed to delete ACL %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)
+	}
+	status.Message = "Deleted Stream ACL"
+
+	logger.Infof("Permanently deleting Aiven stream and its data")
+	topics, err := r.Aiven.Topics.List(projectName, serviceName)
+	for _, topic := range topics {
+		if strings.HasPrefix(topic.TopicName, stream.TopicPrefix()) {
+			err = r.Aiven.Topics.Delete(projectName, serviceName, topic.TopicName)
+			if err != nil {
+				return fail(fmt.Errorf("failed to delete topic '%s' on Aiven: %s", topic.TopicName, err), kafka_nais_io_v1.EventFailedSynchronization, true)
+			}
+		}
+	}
 	status.Message = "Stream, ACLs and data permanently deleted"
 
 	logger.Info(status.Message)
