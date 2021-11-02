@@ -90,7 +90,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 			AivenACLs: r.Aiven.ACLs,
 			Project:   topic.Spec.Pool,
 			Service:   kafkarator_aiven.ServiceName(topic.Spec.Pool),
-			Topic:     *strippedTopic,
+			Source:    acl.TopicAdapter{Topic: strippedTopic},
 			Logger:    logger,
 		}
 		err = aclManager.Synchronize()

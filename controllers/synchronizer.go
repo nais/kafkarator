@@ -35,7 +35,7 @@ func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, lo
 			AivenACLs: a.ACLs,
 			Project:   t.Spec.Pool,
 			Service:   kafkarator_aiven.ServiceName(t.Spec.Pool),
-			Topic:     t,
+			Source:    acl.TopicAdapter{Topic: &t},
 			Logger:    logger,
 		},
 	}

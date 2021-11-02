@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aiven/aiven-go-client"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/utils"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -185,7 +186,17 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", stream.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	// TODO: Sync stream ACL
+	aclManager := acl.Manager{
+		AivenACLs: r.Aiven.ACLs,
+		Project:   stream.Spec.Pool,
+		Service:   kafkarator_aiven.ServiceName(stream.Spec.Pool),
+		Source:    acl.StreamAdapter{Stream: &stream},
+		Logger:    logger,
+	}
+	err = aclManager.Synchronize()
+	if err != nil {
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
+	}
 
 	status.SynchronizationTime = time.Now().Format(time.RFC3339)
 	status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete

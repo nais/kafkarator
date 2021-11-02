@@ -14,16 +14,22 @@ type Interface interface {
 	Delete(project, service, aclID string) error
 }
 
+type Source interface {
+	TopicName() string
+	Pool() string
+	ACLs() kafka_nais_io_v1.TopicACLs
+}
+
 type Manager struct {
 	AivenACLs Interface
 	Project   string
 	Service   string
-	Topic     kafka_nais_io_v1.Topic
-	Logger    *log.Entry
+	Source    Source
+	Logger    log.FieldLogger
 }
 
-// Sync the ACL spec in the Topic resource with Aiven.
-// Missing ACL definitions are created, unneccessary definitions are deleted.
+// Synchronize Syncs the ACL spec in the Source resource with Aiven.
+// 			   Missing ACL definitions are created, unnecessary definitions are deleted.
 func (r *Manager) Synchronize() error {
 	var acls []*aiven.KafkaACL
 	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
@@ -35,10 +41,10 @@ func (r *Manager) Synchronize() error {
 		return err
 	}
 
-	acls = topicACLs(acls, r.Topic.FullName())
+	acls = topicACLs(acls, r.Source.TopicName())
 
-	toAdd := NewACLs(acls, r.Topic.Spec.ACL)
-	toDelete := DeleteACLs(acls, r.Topic.Spec.ACL)
+	toAdd := NewACLs(acls, r.Source.ACLs())
+	toDelete := DeleteACLs(acls, r.Source.ACLs())
 
 	err = r.add(toAdd)
 	if err != nil {
@@ -64,12 +70,12 @@ func (r *Manager) reportMetrics() {
 	}
 
 	uniq := make(map[metric]int)
-	for _, acl := range r.Topic.Spec.ACL {
+	for _, acl := range r.Source.ACLs() {
 		key := metric{
-			topic: r.Topic.FullName(),
+			topic: r.Source.TopicName(),
 			team:  acl.Team,
 			app:   acl.Application,
-			pool:  r.Topic.Spec.Pool,
+			pool:  r.Source.Pool(),
 		}
 		uniq[key]++
 	}
@@ -88,7 +94,7 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 	for _, topicAcl := range toAdd {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: topicAcl.Access,
-			Topic:      r.Topic.FullName(),
+			Topic:      r.Source.TopicName(),
 			Username:   topicAcl.ACLname(),
 		}
 
@@ -127,7 +133,7 @@ func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
 	return nil
 }
 
-// given a list of ACL specs, return a new list of ACL objects that does not already exist
+// NewACLs given a list of ACL specs, return a new list of ACL objects that does not already exist
 func NewACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []kafka_nais_io_v1.TopicACL {
 	candidates := make([]kafka_nais_io_v1.TopicACL, 0, len(aclSpecs))
 	for _, aclSpec := range aclSpecs {
@@ -138,7 +144,7 @@ func NewACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []kaf
 	return candidates
 }
 
-// given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
+// DeleteACLs given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
 func DeleteACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []*aiven.KafkaACL {
 	candidates := make([]*aiven.KafkaACL, 0, len(acls))
 	for _, acl := range acls {
@@ -178,4 +184,36 @@ func specsContainsACL(aclSpecs []kafka_nais_io_v1.TopicACL, acl *aiven.KafkaACL)
 		}
 	}
 	return false
+}
+
+type TopicAdapter struct {
+	*kafka_nais_io_v1.Topic
+}
+
+func (t TopicAdapter) TopicName() string {
+	return t.FullName()
+}
+
+func (t TopicAdapter) Pool() string {
+	return t.Spec.Pool
+}
+
+func (t TopicAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
+	return t.Spec.ACL
+}
+
+type StreamAdapter struct {
+	*kafka_nais_io_v1.Stream
+}
+
+func (s StreamAdapter) TopicName() string {
+	return s.TopicWildcard()
+}
+
+func (s StreamAdapter) Pool() string {
+	return s.Spec.Pool
+}
+
+func (s StreamAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
+	return kafka_nais_io_v1.TopicACLs{s.ACL()}
 }
