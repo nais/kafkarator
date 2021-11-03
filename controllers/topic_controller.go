@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -21,7 +22,7 @@ const (
 	LogFieldSynchronizationState = "synchronization_state"
 )
 
-type ReconcileResult struct {
+type TopicReconcileResult struct {
 	DeleteFinalized bool
 	Skipped         bool
 	Requeue         bool
@@ -47,7 +48,7 @@ func (r *TopicReconciler) projectWhitelisted(project string) bool {
 }
 
 // Process changes in Aiven and return a topic processing status
-func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entry) ReconcileResult {
+func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entry) TopicReconcileResult {
 	var err error
 	var hash string
 	var status kafka_nais_io_v1.TopicStatus
@@ -58,7 +59,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	status.FullyQualifiedName = topic.FullName()
 
-	fail := func(err error, state string, retry bool) ReconcileResult {
+	fail := func(err error, state string, retry bool) TopicReconcileResult {
 		aivenError, ok := err.(aiven.Error)
 		if !ok {
 			status.Message = err.Error()
@@ -73,7 +74,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		}
 		status.SynchronizationState = state
 
-		return ReconcileResult{
+		return TopicReconcileResult{
 			Requeue: retry,
 			Status:  status,
 			Error:   fmt.Errorf("%s: %s", state, err),
@@ -89,7 +90,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 			AivenACLs: r.Aiven.ACLs,
 			Project:   topic.Spec.Pool,
 			Service:   kafkarator_aiven.ServiceName(topic.Spec.Pool),
-			Topic:     *strippedTopic,
+			Source:    acl.TopicAdapter{Topic: strippedTopic},
 			Logger:    logger,
 		}
 		err = aclManager.Synchronize()
@@ -110,7 +111,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		logger.Info(status.Message)
 		status.SynchronizationTime = time.Now().Format(time.RFC3339)
 		status.Errors = nil
-		return ReconcileResult{
+		return TopicReconcileResult{
 			DeleteFinalized: true,
 			Status:          status,
 		}
@@ -123,7 +124,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	if !topic.NeedsSynchronization(hash) {
 		logger.Infof("Synchronization already complete")
-		return ReconcileResult{
+		return TopicReconcileResult{
 			Skipped: true,
 		}
 	}
@@ -144,7 +145,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	status.Message = "Topic configuration synchronized to Kafka pool"
 	status.Errors = nil
 
-	return ReconcileResult{
+	return TopicReconcileResult{
 		Status: status,
 	}
 }
@@ -152,7 +153,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=topics/status,verbs=get;update;patch
 
-func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var topic kafka_nais_io_v1.Topic
 
 	logger := log.NewEntry(r.Logger)
@@ -166,8 +167,6 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	defer func() {
 		logger.Infof("Finished processing request")
 	}()
-
-	ctx := context.Background()
 
 	fail := func(err error, requeue bool) (ctrl.Result, error) {
 		logger.Error(err)
@@ -224,9 +223,9 @@ func (r *TopicReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
 	// Otherwise, append Kafkarator to finalizers to ensure proper cleanup when topic is deleted
 	if result.DeleteFinalized {
-		topic.RemoveFinalizer()
+		controllerutil.RemoveFinalizer(&topic, Finalizer)
 	} else {
-		topic.AppendFinalizer()
+		controllerutil.AddFinalizer(&topic, Finalizer)
 	}
 
 	// Write topic status; retry always
