@@ -187,7 +187,8 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 	streamReconciler := &controllers.StreamReconciler{
 		Client: mgr.GetClient(),
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs: aivenClient.KafkaACLs,
+			ACLs:   aivenClient.KafkaACLs,
+			Topics: aivenClient.KafkaTopics,
 		},
 		Logger:          logger,
 		Projects:        viper.GetStringSlice(Projects),
