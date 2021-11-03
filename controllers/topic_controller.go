@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
@@ -223,9 +223,9 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
 	// Otherwise, append Kafkarator to finalizers to ensure proper cleanup when topic is deleted
 	if result.DeleteFinalized {
-		utils.RemoveFinalizer(&topic)
+		controllerutil.RemoveFinalizer(&topic, Finalizer)
 	} else {
-		utils.AppendFinalizer(&topic)
+		controllerutil.AddFinalizer(&topic, Finalizer)
 	}
 
 	// Write topic status; retry always

@@ -7,13 +7,13 @@ import (
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
-	"github.com/nais/kafkarator/pkg/utils"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 	"time"
 )
@@ -112,9 +112,9 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
 	// Otherwise, append Kafkarator to finalizers to ensure proper cleanup when stream is deleted
 	if result.DeleteFinalized {
-		utils.RemoveFinalizer(&stream)
+		controllerutil.RemoveFinalizer(&stream, Finalizer)
 	} else {
-		utils.AppendFinalizer(&stream)
+		controllerutil.AddFinalizer(&stream, Finalizer)
 	}
 
 	// Write stream status; retry always
