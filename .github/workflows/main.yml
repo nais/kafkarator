@@ -20,7 +20,7 @@ jobs:
           echo "::set-output name=VERSION::${version}"
           echo "::set-output name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}"
           echo "::set-output name=CANARY_IMAGE::${canary_image}:${version}"
-          echo "::set-output name=CANARY_DEPLOYER_IMAGE:${canary_deployer_image}:${version}"
+          echo "::set-output name=CANARY_DEPLOYER_IMAGE::${canary_deployer_image}:${version}"
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
       KAFKARATOR_IMAGE: "${{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
