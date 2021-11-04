@@ -1,6 +1,6 @@
 name: Build and deploy Kafkarator
 
-on: [push]
+on: [ push ]
 
 env:
   kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
@@ -8,72 +8,103 @@ env:
   canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
 
 jobs:
-  build:
+  setup:
     name: Checkout code and setup node
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Generate image environment variable
+      - name: "Set image version"
+        id: constants
         run: |
-          version=$(./version.sh)
-          echo "version=${version}" >> $GITHUB_ENV
-          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
-          echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
-          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> $GITHUB_ENV
-          sed -i "s/VERSION=.*/VERSION=${version}/g" canary-deployer/deployer.sh
-      - name: Login to Github package registry
+          export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
+          echo "::set-output name=VERSION::${version}"
+          echo "::set-output name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}"
+          echo "::set-output name=CANARY_IMAGE::${canary_image}:${version}"
+          echo "::set-output name=CANARY_DEPLOYER_IMAGE:${canary_deployer_image}:${version}"
+    outputs:
+      VERSION: "{{ steps.constants.outputs.VERSION }}"
+      KAFKARATOR_IMAGE: "{{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
+      CANARY_IMAGE: "{{ steps.constants.outputs.CANARY_IMAGE }}"
+      CANARY_DEPLOYER_IMAGE: "{{ steps.constants.outputs.CANARY_DEPLOYER_IMAGE }}"
+  build:
+    name: Checkout code and setup node
+    runs-on: ubuntu-latest
+    needs: setup
+    env:
+      VERSION: "{{ needs.setup.outputs.VERSION }}"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06 # Use commit-sha1 instead of tag for security concerns
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and possibly push kafkarator and canary
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_REPOSITORY" --password-stdin
-      - name: Build kafkarator docker image
-        run: docker build . --tag $KAFKARATOR_IMAGE --tag ${kafkarator_image}:latest
-      - name: Build canary docker image
-        run: docker build -f Dockerfile.canary . --tag $CANARY_IMAGE --tag ${canary_image}:latest
+          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
+        run: |
+          ./earthlyw config global.local_registry_host 'tcp://127.0.0.1:8371'
+          ./earthlyw --ci --build-arg kafkarator_image --build-arg canary_image --build-arg VERSION +docker
+  canary-deployer:
+    name: Build and push canary deployer
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+    env:
+      VERSION: "{{ needs.setup.outputs.VERSION }}"
+      CANARY_DEPLOYER_IMAGE: "{{ needs.setup.outputs.CANARY_DEPLOYER_IMAGE }}"
+    steps:
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06 # Use commit-sha1 instead of tag for security concerns
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build canary deployer docker image
-        run: docker build -f canary-deployer/Dockerfile ./canary-deployer --tag $CANARY_DEPLOYER_IMAGE --tag ${canary_deployer_image}:latest
+        run: |
+          sed -i "s/VERSION=.*/VERSION=${VERSION}/g" canary-deployer/deployer.sh
+          docker build -f canary-deployer/Dockerfile ./canary-deployer --tag $CANARY_DEPLOYER_IMAGE --tag ${canary_deployer_image}:latest
       - name: Push docker images
         run: |
-          docker push $KAFKARATOR_IMAGE
-          docker push $CANARY_IMAGE
           docker push $CANARY_DEPLOYER_IMAGE
   deploy:
     name: Deploy to Kubernetes
     if: github.ref == 'refs/heads/master'
-    needs: build
     runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build
+    env:
+      VERSION: "{{ needs.setup.outputs.VERSION }}"
+      KAFKARATOR_IMAGE: "{{ needs.setup.outputs.KAFKARATOR_IMAGE }}"
+      CANARY_IMAGE: "{{ needs.setup.outputs.CANARY_IMAGE }}"
+      CANARY_DEPLOYER_IMAGE: "{{ needs.setup.outputs.CANARY_DEPLOYER_IMAGE }}"
     steps:
-    - uses: actions/checkout@v2
-      with:
-        path: kafkarator
-    - uses: navikt/github-app-token-generator@v1
-      id: get-token
-      with:
-        private-key: ${{ secrets.NAIS_APP_PRIVATE_KEY }}
-        app-id: ${{ secrets.NAIS_APP_ID }}
-        repo: navikt/nais-yaml
-    - name: Checkout nais-yaml
-      uses: actions/checkout@v2
-      with:
-        repository: navikt/nais-yaml
-        token: ${{ steps.get-token.outputs.token }}
-        path: nais-yaml
-    - name: Generate image environment variable
-      run: |
-        cd kafkarator
-        version=$(./version.sh)
-        echo "version=${version}" >> $GITHUB_ENV
-        echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> $GITHUB_ENV
-        echo "CANARY_IMAGE=${canary_image}:${version}" >> $GITHUB_ENV
-        echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> $GITHUB_ENV
-    - name: Bump version in nais-yaml
-      run: |
-        cd nais-yaml
-        git config user.name "$GITHUB_ACTOR"
-        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-        sed -E -i "s#kafkarator_image: ghcr.io/nais/kafkarator/kafkarator.+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/global.yaml
-        sed -E -i "s#canary_image: ghcr.io/nais/kafkarator/canary.+#canary_image: ${CANARY_IMAGE}#" vars/global.yaml
-        sed -E -i "s#canary_deploy_image: ghcr.io/nais/kafkarator/canary-deployer.+#canary_deploy_image: ${CANARY_DEPLOYER_IMAGE}#" vars/global.yaml
-        git add .
-        git --no-pager diff --cached
-        git commit --no-verify -a -m "Bump Kafkarator to version ${version}"
-        git push
+      - uses: actions/checkout@v2
+        with:
+          path: kafkarator
+      - uses: navikt/github-app-token-generator@v1
+        id: get-token
+        with:
+          private-key: ${{ secrets.NAIS_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.NAIS_APP_ID }}
+          repo: navikt/nais-yaml
+      - name: Checkout nais-yaml
+        uses: actions/checkout@v2
+        with:
+          repository: navikt/nais-yaml
+          token: ${{ steps.get-token.outputs.token }}
+          path: nais-yaml
+      - name: Bump version in nais-yaml
+        run: |
+          cd nais-yaml
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          sed -E -i "s#kafkarator_image: ghcr.io/nais/kafkarator/kafkarator.+#kafkarator_image: ${KAFKARATOR_IMAGE}#" vars/global.yaml
+          sed -E -i "s#canary_image: ghcr.io/nais/kafkarator/canary.+#canary_image: ${CANARY_IMAGE}#" vars/global.yaml
+          sed -E -i "s#canary_deploy_image: ghcr.io/nais/kafkarator/canary-deployer.+#canary_deploy_image: ${CANARY_DEPLOYER_IMAGE}#" vars/global.yaml
+          git add .
+          git --no-pager diff --cached
+          git commit --no-verify -a -m "Bump Kafkarator to version ${VERSION}"
+          git push

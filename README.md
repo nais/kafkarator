@@ -1,5 +1,7 @@
 # Kafkarator
 
+!!! Needs updating: This section is outdated
+
 Kafkarator is a Kubernetes operator on the [NAIS platform](https://doc.nais.io), providing
 self-service functionality for Aiven hosted Kafka through Kubernetes resources.
 
@@ -14,3 +16,9 @@ Kafkarator _follower_ consumes the secrets and writes them into the Kubernetes c
 ## User documentation
 
 * https://doc.nais.io/addons/kafka
+
+## Developer documentation
+
+Kafkarator uses [earthly](https://earthly.dev) via [earthlyw](https://github.com/mortenlj/earthlyw) for building.
+
+Use `./earthlyw +docker` to build docker images for kafkarator and canary.
