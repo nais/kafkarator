@@ -6,6 +6,7 @@ env:
   kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
   canary_image: ghcr.io/${{ github.repository }}/canary
   canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
+  cache_image: ghcr.io/${{ github.repository }}/cache
 
 jobs:
   setup:
@@ -45,7 +46,7 @@ jobs:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
           ./earthlyw config global.local_registry_host 'tcp://127.0.0.1:8371'
-          ./earthlyw --ci --build-arg kafkarator_image --build-arg canary_image --build-arg VERSION +docker
+          ./earthlyw --ci --build-arg kafkarator_image --build-arg canary_image --build-arg cache_image --build-arg VERSION +docker
   canary-deployer:
     name: Build and push canary deployer
     runs-on: ubuntu-latest
