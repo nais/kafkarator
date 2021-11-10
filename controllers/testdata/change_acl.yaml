@@ -23,7 +23,7 @@ aiven:
   created:
     topics: []
     acls:
-      - username: too-long-team.too-long-applicat*
+      - username: very-much-too-long-team-name.very-much-too-long-applica*
         permission: read
         topic: myteam.mytopic
       - username: myteam.myapplication*
@@ -57,8 +57,8 @@ topic:
         team: myteam
         application: myapplication
       - access: read
-        team: too-long-team
-        application: too-long-application
+        team: very-much-too-long-team-name
+        application: very-much-too-long-application-name
       - access: readwrite
         team: myteam
         application: no-wildcard
