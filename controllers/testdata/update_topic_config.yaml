@@ -10,6 +10,10 @@ aiven:
         username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
+      - acl_id: new-well-known-id
+        username: myteam_myapplication_1c62faf5_*
+        permission: read
+        topic: myteam.mytopic
     topics:
       - topic_name: myteam.mytopic
         replication: 3
