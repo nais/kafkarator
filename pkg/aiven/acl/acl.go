@@ -87,7 +87,7 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 		wantedAcls = append(wantedAcls, oldNameAcl)
 
 		newNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
-			return kafka_nais_io_v1.AclName(topicAcl, "*")
+			return topicAcl.ServiceUserNameWithSuffix("*")
 		})
 		if err != nil {
 			return nil, err
