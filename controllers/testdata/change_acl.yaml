@@ -10,8 +10,16 @@ aiven:
         username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
+      - id: acl-1-new
+        username: myteam_myapplication_1c62faf5_*
+        permission: read
+        topic: myteam.mytopic
       - id: acl-2
         username: otherteam.otherapplication*
+        permission: write
+        topic: myteam.mytopic
+      - id: acl-2-new
+        username: otherteam_otherapplication_21a2c9c6_*
         permission: write
         topic: myteam.mytopic
       - id: acl-3
@@ -26,17 +34,33 @@ aiven:
       - username: very-much-too-long-team-name.very-much-too-long-applica*
         permission: read
         topic: myteam.mytopic
+      - username: very-much-too-long-t_very-much-too-long-application_ca5cb3d9_*
+        permission: read
+        topic: myteam.mytopic
       - username: myteam.myapplication*
+        permission: readwrite
+        topic: myteam.mytopic
+      - username: myteam_myapplication_1c62faf5_*
         permission: readwrite
         topic: myteam.mytopic
       - username: myteam.no-wildcard*
         permission: readwrite
+        topic: myteam.mytopic
+      - username: myteam_no-wildcard_86f0c73b_*
+        permission: readwrite
+        topic: myteam.mytopic
+      - username: team-redundant-team.team-redundant-team-application*
+        permission: read
+        topic: myteam.mytopic
+      - username: redundant-team_application_18515795_*
+        permission: read
         topic: myteam.mytopic
   updated:
     topics: {}
   deleted:
     acls:
       - acl-1
+      - acl-1-new
       - acl-3
 
 topic:
@@ -62,6 +86,9 @@ topic:
       - access: readwrite
         team: myteam
         application: no-wildcard
+      - access: read
+        team: team-redundant-team
+        application: team-redundant-team-application
 
 output:
   status:

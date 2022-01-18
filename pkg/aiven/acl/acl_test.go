@@ -1,6 +1,7 @@
 package acl_test
 
 import (
+	"github.com/aiven/aiven-go-client"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	log "github.com/sirupsen/logrus"
@@ -10,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
-	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 )
@@ -26,14 +26,17 @@ const (
 type ACLFilterTestSuite struct {
 	suite.Suite
 
-	existingACLs []*aiven.KafkaACL
-	aclSpecs     []kafka_nais_io_v1.TopicACL
-	shouldAdd    []kafka_nais_io_v1.TopicACL
-	shouldRemove []*aiven.KafkaACL
+	existingAcls []acl.Acl
+	wantedAcls   []acl.Acl
+	shouldAdd    []acl.Acl
+	shouldRemove []acl.Acl
+
+	kafkaAcls []*aiven.KafkaACL
+	topicAcls []kafka_nais_io_v1.TopicACL
 }
 
 func (suite *ACLFilterTestSuite) SetupSuite() {
-	suite.existingACLs = []*aiven.KafkaACL{
+	suite.existingAcls = []acl.Acl{
 		{ // Delete because of username
 			ID:         "abc",
 			Permission: "read",
@@ -58,40 +61,71 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
+		{ // Keep, same as above with new name
+			ID:         "abcdef-new",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2_app_eb343e9a_*",
+		},
 	}
 
-	suite.aclSpecs = []kafka_nais_io_v1.TopicACL{
+	suite.wantedAcls = []acl.Acl{
 		{ // Added because existing uses wrong username
-			Access:      "read",
-			Team:        "user",
-			Application: "app",
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app*",
+		},
+		{ // Added because existing uses wrong username, alternate name
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user_app_0841666a_*",
 		},
 		{ // Already exists
-			Access:      "write",
-			Team:        "user2",
-			Application: "app",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2.app*",
+		},
+		{ // Already exists, new name
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2_app_eb343e9a_*",
 		},
 		{ // Added because of new user
-			Access:      "readwrite",
-			Team:        "user3",
-			Application: "app",
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user3.app*",
+		},
+		{ // Added because of new user, alternate name
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user3_app_538859ff_*",
 		},
 	}
 
-	suite.shouldAdd = []kafka_nais_io_v1.TopicACL{
+	suite.shouldAdd = []acl.Acl{
 		{
-			Access:      "read",
-			Team:        "user",
-			Application: "app",
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app*",
 		},
 		{
-			Access:      "readwrite",
-			Team:        "user3",
-			Application: "app",
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user_app_0841666a_*",
+		},
+		{
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user3.app*",
+		},
+		{
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user3_app_538859ff_*",
 		},
 	}
 
-	suite.shouldRemove = []*aiven.KafkaACL{
+	suite.shouldRemove = []acl.Acl{
 		{
 			ID:         "abc",
 			Permission: "read",
@@ -111,20 +145,71 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Username:   "user2.app-4ca551f9",
 		},
 	}
+
+	suite.kafkaAcls = []*aiven.KafkaACL{
+		{ // Delete because of username
+			ID:         "abc",
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app-f1fbd6bd",
+		},
+		{ // Delete because of wrong permission
+			ID:         "abcde",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user.app*",
+		},
+		{ // Delete because of username and permission
+			ID:         "123",
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user2.app-4ca551f9",
+		},
+		{ // Keep
+			ID:         "abcdef",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2.app*",
+		},
+		{ // Keep, same as above with new name
+			ID:         "abcdef-new",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2_app_eb343e9a_*",
+		},
+	}
+
+	suite.topicAcls = []kafka_nais_io_v1.TopicACL{
+		{ // Added because existing uses wrong username
+			Access:      "read",
+			Team:        "user",
+			Application: "app",
+		},
+		{ // Already exists
+			Access:      "write",
+			Team:        "user2",
+			Application: "app",
+		},
+		{ // Added because of new user
+			Access:      "readwrite",
+			Team:        "user3",
+			Application: "app",
+		},
+	}
 }
 
 func (suite *ACLFilterTestSuite) TestNewACLs() {
-	added := acl.NewACLs(suite.existingACLs, suite.aclSpecs)
+	added := acl.NewACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldAdd, added, cmpopts.SortSlices(func(a, b kafka_nais_io_v1.TopicACL) bool {
-		return a.Application < b.Application
+	assert.DeepEqual(suite.T(), suite.shouldAdd, added, cmpopts.SortSlices(func(a, b acl.Acl) bool {
+		return a.Username < b.Username
 	}))
 }
 
 func (suite *ACLFilterTestSuite) TestDeleteACLs() {
-	removed := acl.DeleteACLs(suite.existingACLs, suite.aclSpecs)
+	removed := acl.DeleteACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *aiven.KafkaACL) bool {
+	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *acl.Acl) bool {
 		return a.ID < b.ID
 	}))
 }
@@ -137,16 +222,16 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 		},
 		Spec: kafka_nais_io_v1.TopicSpec{
 			Pool: TestPool,
-			ACL:  suite.aclSpecs,
+			ACL:  suite.topicAcls,
 		},
 	}
 
 	m := &acl.MockInterface{}
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.existingACLs, nil)
+		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
-		Times(2).
+		Times(4).
 		Return(nil, nil)
 	m.On("Delete", TestPool, TestService, mock.Anything).
 		Times(3).
@@ -180,9 +265,9 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	m := &acl.MockInterface{}
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.existingACLs, nil)
+		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
-		Times(1).
+		Times(2).
 		Return(nil, nil)
 
 	aclManager := acl.Manager{

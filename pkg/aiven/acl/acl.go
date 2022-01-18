@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"fmt"
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -31,20 +32,18 @@ type Manager struct {
 // Synchronize Syncs the ACL spec in the Source resource with Aiven.
 // 			   Missing ACL definitions are created, unnecessary definitions are deleted.
 func (r *Manager) Synchronize() error {
-	var acls []*aiven.KafkaACL
-	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
-		var err error
-		acls, err = r.AivenACLs.List(r.Project, r.Service)
-		return err
-	})
+	existingAcls, err := r.getExistingAcls()
 	if err != nil {
 		return err
 	}
 
-	acls = topicACLs(acls, r.Source.TopicName())
+	wantedAcls, err := r.getWantedAcls(r.Source.TopicName(), r.Source.ACLs())
+	if err != nil {
+		return err
+	}
 
-	toAdd := NewACLs(acls, r.Source.ACLs())
-	toDelete := DeleteACLs(acls, r.Source.ACLs())
+	toAdd := NewACLs(existingAcls, wantedAcls)
+	toDelete := DeleteACLs(existingAcls, wantedAcls)
 
 	err = r.add(toAdd)
 	if err != nil {
@@ -59,6 +58,43 @@ func (r *Manager) Synchronize() error {
 	r.reportMetrics()
 
 	return nil
+}
+
+func (r *Manager) getExistingAcls() ([]Acl, error) {
+	var kafkaAcls []*aiven.KafkaACL
+	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
+		var err error
+		kafkaAcls, err = r.AivenACLs.List(r.Project, r.Service)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	acls := topicACLs(kafkaAcls, r.Source.TopicName())
+	return acls, nil
+}
+
+func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.TopicACL) ([]Acl, error) {
+	wantedAcls := make([]Acl, 0, len(topicAcls))
+	for _, aclSpec := range topicAcls {
+		oldNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
+			return topicAcl.ACLname(), nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		wantedAcls = append(wantedAcls, oldNameAcl)
+
+		newNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
+			return topicAcl.ServiceUserNameWithSuffix("*")
+		})
+		if err != nil {
+			return nil, err
+		}
+		wantedAcls = append(wantedAcls, newNameAcl)
+	}
+	return wantedAcls, nil
 }
 
 func (r *Manager) reportMetrics() {
@@ -90,12 +126,12 @@ func (r *Manager) reportMetrics() {
 	}
 }
 
-func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
-	for _, topicAcl := range toAdd {
+func (r *Manager) add(toAdd []Acl) error {
+	for _, acl := range toAdd {
 		req := aiven.CreateKafkaACLRequest{
-			Permission: topicAcl.Access,
-			Topic:      r.Source.TopicName(),
-			Username:   topicAcl.ACLname(),
+			Permission: acl.Permission,
+			Topic:      acl.Topic,
+			Username:   acl.Username,
 		}
 
 		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
@@ -115,75 +151,58 @@ func (r *Manager) add(toAdd []kafka_nais_io_v1.TopicACL) error {
 	return nil
 }
 
-func (r *Manager) delete(toDelete []*aiven.KafkaACL) error {
-	for _, kafkaAcl := range toDelete {
+func (r *Manager) delete(toDelete []Acl) error {
+	for _, acl := range toDelete {
+		if len(acl.ID) == 0 {
+			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
+		}
 		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
-			return r.AivenACLs.Delete(r.Project, r.Service, kafkaAcl.ID)
+			return r.AivenACLs.Delete(r.Project, r.Service, acl.ID)
 		})
 		if err != nil {
 			return err
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_id":         kafkaAcl.ID,
-			"acl_username":   kafkaAcl.Username,
-			"acl_permission": kafkaAcl.Permission,
+			"acl_id":         acl.ID,
+			"acl_username":   acl.Username,
+			"acl_permission": acl.Permission,
 		}).Infof("Deleted ACL entry")
 	}
 	return nil
 }
 
 // NewACLs given a list of ACL specs, return a new list of ACL objects that does not already exist
-func NewACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []kafka_nais_io_v1.TopicACL {
-	candidates := make([]kafka_nais_io_v1.TopicACL, 0, len(aclSpecs))
-	for _, aclSpec := range aclSpecs {
-		if !aclsContainsSpec(acls, aclSpec) {
-			candidates = append(candidates, aclSpec)
+func NewACLs(existingAcls, wantedAcls Acls) []Acl {
+	candidates := make([]Acl, 0, len(wantedAcls))
+	for _, wantedAcl := range wantedAcls {
+		if !existingAcls.Contains(wantedAcl) {
+			candidates = append(candidates, wantedAcl)
 		}
 	}
 	return candidates
 }
 
 // DeleteACLs given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
-func DeleteACLs(acls []*aiven.KafkaACL, aclSpecs []kafka_nais_io_v1.TopicACL) []*aiven.KafkaACL {
-	candidates := make([]*aiven.KafkaACL, 0, len(acls))
-	for _, acl := range acls {
-		if !specsContainsACL(aclSpecs, acl) {
-			candidates = append(candidates, acl)
+func DeleteACLs(existingAcls, wantedAcls Acls) []Acl {
+	candidates := make([]Acl, 0, len(existingAcls))
+	for _, existingAcl := range existingAcls {
+		if !wantedAcls.Contains(existingAcl) {
+			candidates = append(candidates, existingAcl)
 		}
 	}
 	return candidates
 }
 
 // filter out ACLs not matching the topic name
-func topicACLs(acls []*aiven.KafkaACL, topic string) []*aiven.KafkaACL {
-	result := make([]*aiven.KafkaACL, 0, len(acls))
+func topicACLs(acls []*aiven.KafkaACL, topic string) []Acl {
+	result := make([]Acl, 0, len(acls))
 	for _, acl := range acls {
 		if acl.Topic == topic {
-			result = append(result, acl)
+			result = append(result, FromKafkaACL(acl))
 		}
 	}
 	return result
-}
-
-// returns true if the list of existing ACLs contains an ACL spec from the cluster
-func aclsContainsSpec(acls []*aiven.KafkaACL, aclSpec kafka_nais_io_v1.TopicACL) bool {
-	for _, acl := range acls {
-		if aclSpec.ACLname() == acl.Username && aclSpec.Access == acl.Permission {
-			return true
-		}
-	}
-	return false
-}
-
-// returns true if the list of cluster ACL specs contains an existing ACL
-func specsContainsACL(aclSpecs []kafka_nais_io_v1.TopicACL, acl *aiven.KafkaACL) bool {
-	for _, aclSpec := range aclSpecs {
-		if aclSpec.ACLname() == acl.Username && aclSpec.Access == acl.Permission {
-			return true
-		}
-	}
-	return false
 }
 
 type TopicAdapter struct {
