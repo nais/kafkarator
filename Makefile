@@ -12,4 +12,4 @@ test:
 
 integration_test:
 	echo "*** Make sure to set the environment AIVEN_TOKEN to a valid token ***"
-	go test ./pkg/aiven/... ./pkg/certificate/... -tags=integration -v -count=1
+	go test ./pkg/aiven/... -tags=integration -v -count=1
