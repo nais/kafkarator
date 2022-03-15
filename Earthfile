@@ -52,8 +52,7 @@ docker-kafkarator:
     WORKDIR /
     COPY +build/kafkarator /
     CMD ["/kafkarator"]
-    SAVE IMAGE --push ${kafkarator_image}:${VERSION}
-    SAVE IMAGE --push ${kafkarator_image}:latest
+    SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
 docker-canary:
     FROM alpine:3
