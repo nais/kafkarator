@@ -228,20 +228,20 @@ func main() {
 
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
-		logger.Errorf("unable to set up TLS config: %s", err)
-		return
+		logger.Errorf("unable to read TLS config: %s", err)
+		os.Exit(ExitConfig)
 	}
 
 	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
 	if err != nil {
-		logger.Errorf("unable to set up TLS config: %s", err)
-		return
+		logger.Errorf("unable to set up Kafka TLS config: %s", err)
+		os.Exit(ExitConfig)
 	}
 
 	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
 	if err != nil {
 		logger.Errorf("unable to set up kafka producer: %s", err)
-		return
+		os.Exit(ExitConfig)
 	}
 
 	logger.Infof("Started message producer.")
@@ -271,7 +271,7 @@ func main() {
 	})
 	if err != nil {
 		logger.Errorf("unable to set up kafka consumer: %s", err)
-		return
+		os.Exit(ExitConfig)
 	}
 
 	logger.Infof("Started message consumer.")
