@@ -1,66 +1,69 @@
+VERSION 0.6
+
 FROM busybox
-
-# builtins must be declared
-ARG EARTHLY_GIT_PROJECT_NAME
-ARG EARTHLY_GIT_SHORT_HASH
-
-# Override from command-line on CI
-ARG cache_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/cache
-ARG kafkarator_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/kafkarator
-ARG canary_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary
-ARG VERSION=$EARTHLY_GIT_SHORT_HASH
-
-# Constants
-ARG os="linux"
-ARG arch="amd64"
-ARG kubebuilder_version="2.3.1"
-
-# Go settings
-ARG CGO_ENABLED=0
-ARG GOOS=${os}
-ARG GOARCH=${arch}
-ARG GO111MODULE=on
 
 kubebuilder:
     FROM curlimages/curl:latest
-    RUN echo ${os}
-    RUN echo ${arch}
+    # Constants
+    ARG os="linux"
+    ARG arch="amd64"
+    ARG kubebuilder_version="2.3.1"
+
     RUN curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kubebuilder_version}/kubebuilder_${kubebuilder_version}_${os}_${arch}.tar.gz | tar -xz -C /tmp/
     SAVE ARTIFACT /tmp/kubebuilder_${kubebuilder_version}_${os}_${arch}/*
-    SAVE IMAGE --push ${cache_image}:kubebuilder
+    SAVE IMAGE --cache-hint
 
 dependencies:
     FROM golang:1.17
+    # Go settings, needs to be ENV to be inherited into build
+    ENV CGO_ENABLED=0
+    ENV GOOS="linux"
+    ENV GOARCH="amd64"
+    ENV GO111MODULE=on
+
     COPY go.mod go.sum /workspace
     WORKDIR /workspace
     RUN go mod download
-    SAVE IMAGE --push ${cache_image}:dependencies
+    SAVE IMAGE --cache-hint
 
 build:
     FROM +dependencies
     COPY --dir +kubebuilder/ /usr/local/kubebuilder/
     COPY . /workspace
-    RUN make test
+    RUN echo ${GOARCH} && make test
     RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/main.go
     RUN go build -installsuffix cgo -o canary cmd/canary/main.go
     SAVE ARTIFACT kafkarator
     SAVE ARTIFACT canary
-    SAVE IMAGE --push ${cache_image}:build
+    SAVE IMAGE --cache-hint
 
 docker-kafkarator:
     FROM alpine:3
     WORKDIR /
     COPY +build/kafkarator /
     CMD ["/kafkarator"]
-    SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
+
+    # builtins must be declared
+    ARG EARTHLY_GIT_PROJECT_NAME
+    ARG EARTHLY_GIT_SHORT_HASH
+
+    ARG kafkarator_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/kafkarator
+    ARG VERSION=$EARTHLY_GIT_SHORT_HASH
+    SAVE IMAGE --push ${kafkarator_image}:${VERSION}
 
 docker-canary:
     FROM alpine:3
     WORKDIR /
     COPY +build/canary /
     CMD ["/canary"]
+
+    # builtins must be declared
+    ARG EARTHLY_GIT_PROJECT_NAME
+    ARG EARTHLY_GIT_SHORT_HASH
+
+    ARG canary_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary
+    ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_image}:${VERSION}
-    SAVE IMAGE --push ${canary_image}:latest
 
 docker:
     BUILD +docker-kafkarator
