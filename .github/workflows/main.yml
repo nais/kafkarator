@@ -45,7 +45,7 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          ./earthlyw --ci --kafkarator_image=${kafkarator_image} --canary_image=${canary_image} --VERSION=${VERSION} --remote-cache=${cache_image} +docker
+          ./earthlyw --ci --remote-cache=${cache_image} +docker --kafkarator_image=${kafkarator_image} --canary_image=${canary_image} --VERSION=${VERSION}
   canary-deployer:
     name: Build and push canary deployer
     runs-on: ubuntu-latest
