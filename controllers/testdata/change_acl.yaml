@@ -28,6 +28,17 @@ aiven:
         topic: myteam.mytopic
     topics:
       - topic_name: myteam.mytopic
+        cleanup_policy: "delete"
+        partitions:
+          - partition: 1
+        replication: 3
+        config:
+          min_insync_replicas:
+            value: 2
+          retention_bytes:
+            value: -1
+          retention_ms:
+            value: 604800000
   created:
     topics: []
     acls:

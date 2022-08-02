@@ -16,10 +16,21 @@ aiven:
         topic: myteam.mytopic
     topics:
       - topic_name: myteam.mytopic
+        partitions:
+          - partition: 1
         replication: 3
         config:
+          cleanup_policy:
+            value: delete
+          min_insync_replicas:
+            value: 2
+          retention_bytes:
+            value: -1
           retention_ms:
             value: 3240000000
+        tags:
+          - key: created-by
+            value: Kafkarator
   created:
     topics: [ ]
     acls: [ ]
@@ -27,8 +38,12 @@ aiven:
     topics:
       myteam.mytopic:
         topic_name: myteam.mytopic
+        replication: 3
         partitions: 2
         config:
+          cleanup_policy: delete
+          min_insync_replicas: 2
+          retention_bytes: -1
           retention_ms: 43200000
         tags:
           - key: created-by

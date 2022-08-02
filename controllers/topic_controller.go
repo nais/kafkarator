@@ -117,6 +117,11 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		}
 	}
 
+	if topic.Spec.Config == nil {
+		topic.Spec.Config = &kafka_nais_io_v1.Config{}
+	}
+	topic.Spec.Config.ApplyDefaults()
+
 	hash, err = topic.Hash()
 	if err != nil {
 		return fail(fmt.Errorf("unable to calculate synchronization hash"), kafka_nais_io_v1.EventFailedPrepare, false)

@@ -16,7 +16,9 @@ func toMap(tags []aiven.KafkaTopicTag) map[string]string {
 func topicReqComp(expected, actual interface{}, expectedTags, actualTags map[string]string) bool {
 	delete(expectedTags, "touched-at")
 	delete(actualTags, "touched-at")
-	return reflect.DeepEqual(expectedTags, actualTags) && reflect.DeepEqual(expected, actual)
+	tagsEqual := reflect.DeepEqual(expectedTags, actualTags)
+	requestEqual := reflect.DeepEqual(expected, actual)
+	return tagsEqual && requestEqual
 }
 
 func TopicCreateReqComp(expected aiven.CreateKafkaTopicRequest) func(actual aiven.CreateKafkaTopicRequest) bool {

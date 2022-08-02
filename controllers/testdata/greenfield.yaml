@@ -10,8 +10,13 @@ aiven:
   created:
     topics:
       - topic_name: myteam.mytopic
+        partitions: 1
+        replication: 3
         config:
+          cleanup_policy: delete
           retention_ms: 3240000000
+          min_insync_replicas: 2
+          retention_bytes: -1
         tags:
           - key: created-by
             value: Kafkarator
