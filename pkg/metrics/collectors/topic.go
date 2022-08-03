@@ -1,4 +1,4 @@
-package clustercollector
+package collectors
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 type Topic struct {
 	client.Client
 	Aiven          *aiven.Client
-	Logger         *log.Logger
+	Logger         *log.Entry
 	ReportInterval time.Duration
 }
 

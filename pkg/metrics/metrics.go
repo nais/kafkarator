@@ -23,6 +23,10 @@ const (
 	LabelTeam           = "team"
 	LabelTopic          = "topic"
 
+	// Metadata labels
+	LabelVersion = "version"
+	LabelPlan    = "plan"
+
 	SourceCluster = "cluster"
 	SourceAiven   = "aiven"
 )
@@ -70,6 +74,18 @@ var (
 		Namespace: Namespace,
 		Help:      "number of kubernetes resources written to the cluster",
 	}, []string{LabelNamespace, LabelResourceType})
+
+	PoolNodes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name:      "kafka_pool_nodes_count",
+		Namespace: Namespace,
+		Help:      "number of nodes in the kafka pool",
+	}, []string{LabelPool})
+
+	PoolInfo = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name:      "kafka_pool_info",
+		Namespace: Namespace,
+		Help:      "metadata about kafka pool",
+	}, []string{LabelPool, LabelVersion, LabelPlan})
 )
 
 func ObserveAivenLatency(operation, pool string, fun func() error) error {

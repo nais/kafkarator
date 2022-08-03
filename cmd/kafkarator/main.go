@@ -13,7 +13,7 @@ import (
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
-	"github.com/nais/kafkarator/pkg/metrics/clustercollector"
+	"github.com/nais/kafkarator/pkg/metrics/collectors"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/liberator/pkg/conftools"
 	log "github.com/sirupsen/logrus"
@@ -201,14 +201,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 
 	logger.Info("Primary started")
 
-	collector := &clustercollector.Topic{
-		Client:         mgr.GetClient(),
-		Aiven:          aivenClient,
-		Logger:         logger,
-		ReportInterval: viper.GetDuration(TopicReportInterval),
-	}
-
-	go collector.Run()
+	collectors.Start(mgr.GetClient(), aivenClient, logger, viper.GetDuration(TopicReportInterval), viper.GetStringSlice(Projects))
 }
 
 func init() {
