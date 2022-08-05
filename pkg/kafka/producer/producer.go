@@ -23,6 +23,7 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
+	config.Version = sarama.V3_1_0_0
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
