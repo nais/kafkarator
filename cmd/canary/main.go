@@ -259,7 +259,7 @@ func main() {
 		return false, nil
 	}
 
-	_, err = consumer.New(consumer.Config{
+	err = consumer.New(quit, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
 		GroupID:           viper.GetString(KafkaGroupID),
 		MaxProcessingTime: time.Second * 1,

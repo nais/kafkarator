@@ -3,6 +3,8 @@ package consumer
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"github.com/nais/kafkarator/pkg/kafka"
 	"os"
 	"time"
 
@@ -16,9 +18,7 @@ type Callback func(message *sarama.ConsumerMessage, logger *log.Entry) (retry bo
 
 type Consumer struct {
 	callback      Callback
-	cancel        context.CancelFunc
 	consumer      sarama.ConsumerGroup
-	ctx           context.Context
 	groupID       string
 	logger        *log.Logger
 	retryInterval time.Duration
@@ -79,7 +79,7 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	return nil
 }
 
-func New(cfg Config) (*Consumer, error) {
+func New(quit chan<- error, cfg Config) error {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = cfg.TlsConfig
@@ -91,7 +91,7 @@ func New(cfg Config) (*Consumer, error) {
 
 	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	c := &Consumer{
@@ -103,29 +103,31 @@ func New(cfg Config) (*Consumer, error) {
 		topic:         cfg.Topic,
 	}
 
-	c.ctx, c.cancel = context.WithCancel(context.Background())
-
 	go func() {
 		for err := range c.consumer.Errors() {
 			c.logger.Errorf("Consumer encountered error: %s", err)
+			if kafka.IsErrUnauthorized(err) {
+				quit <- fmt.Errorf("credentials rotated or invalidated")
+			}
 		}
 	}()
 
+	ctx := context.Background()
 	go func() {
 		for {
 			c.logger.Infof("(re-)starting consumer on topic %s", cfg.Topic)
-			err := c.consumer.Consume(c.ctx, []string{cfg.Topic}, c)
+			err := c.consumer.Consume(ctx, []string{cfg.Topic}, c)
 			if err != nil {
 				c.logger.Errorf("Error setting up consumer: %s", err)
 			}
 			// check if context was cancelled, signaling that the consumer should stop
-			if c.ctx.Err() != nil {
-				c.logger.Errorf("Consumer context error: %s", c.ctx.Err())
-				c.ctx, c.cancel = context.WithCancel(context.Background())
+			if ctx.Err() != nil {
+				c.logger.Errorf("Consumer context error: %s", ctx.Err())
+				ctx = context.Background()
 			}
 			time.Sleep(10 * time.Second)
 		}
 	}()
 
-	return c, nil
+	return nil
 }
