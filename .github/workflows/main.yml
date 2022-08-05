@@ -17,7 +17,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: "Set image version"
         id: constants
         run: |
@@ -38,7 +38,7 @@ jobs:
     env:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06 # Use commit-sha1 instead of tag for security concerns
         with:
@@ -59,7 +59,7 @@ jobs:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
       CANARY_DEPLOYER_IMAGE: "${{ needs.setup.outputs.CANARY_DEPLOYER_IMAGE }}"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06
         with:
@@ -87,7 +87,7 @@ jobs:
       CANARY_IMAGE: "${{ needs.setup.outputs.CANARY_IMAGE }}"
       CANARY_DEPLOYER_IMAGE: "${{ needs.setup.outputs.CANARY_DEPLOYER_IMAGE }}"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: kafkarator
       - uses: navikt/github-app-token-generator@v1
@@ -97,7 +97,7 @@ jobs:
           app-id: ${{ secrets.NAIS_APP_ID }}
           repo: navikt/nais-yaml
       - name: Checkout nais-yaml
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: navikt/nais-yaml
           token: ${{ steps.get-token.outputs.token }}
