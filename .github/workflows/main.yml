@@ -1,5 +1,9 @@
 name: Build and deploy Kafkarator
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on: [ push ]
 
 env:
@@ -57,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Login to GitHub Packages Docker Registry
-        uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06 # Use commit-sha1 instead of tag for security concerns
+        uses: docker/login-action@ab80d026d4753220c4243394c07c7d80f9638d06
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -67,6 +71,7 @@ jobs:
           sed -i "s/VERSION=.*/VERSION=${VERSION}/g" canary-deployer/deployer.sh
           docker build -f canary-deployer/Dockerfile ./canary-deployer --tag $CANARY_DEPLOYER_IMAGE --tag ${canary_deployer_image}:latest
       - name: Push docker images
+        if: github.ref == 'refs/heads/master'
         run: |
           docker push $CANARY_DEPLOYER_IMAGE
   deploy:
