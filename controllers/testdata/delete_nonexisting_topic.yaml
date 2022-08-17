@@ -1,0 +1,44 @@
+config:
+  description: topic is permanently deleted when annotation is set
+  projects:
+    - nav-integration-test
+
+aiven:
+  existing:
+    acls:
+    topics:
+  created: {}
+  updated: {}
+  deleted:
+    topics:
+    acls:
+  missing:
+    topics:
+      - myteam.mytopic
+
+topic:
+  apiVersion: kafka.nais.io/v1
+  kind: Topic
+  metadata:
+    name: mytopic
+    namespace: myteam
+    annotations:
+      kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
+    deletionTimestamp: 1970-01-01T00:00:00Z
+    labels:
+      team: myteam
+  spec:
+    pool: nav-integration-test
+    config:
+      retentionHours: 12
+      partitions: 2
+    acl:
+      - access: read
+        team: myteam
+        application: myapplication
+
+output:
+  deleteFinalized: true
+  status:
+    message: Topic, ACLs and data permanently deleted
+    fullyQualifiedName: myteam.mytopic

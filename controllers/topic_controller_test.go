@@ -45,6 +45,7 @@ type aivenSpec struct {
 	Deleted  aivenDeleted
 	Existing aivenData
 	Updated  aivenUpdated
+	Missing  aivenMissing
 }
 
 type aivenCreated struct {
@@ -59,6 +60,10 @@ type aivenUpdated struct {
 type aivenDeleted struct {
 	Topics []string
 	Acls   []string
+}
+
+type aivenMissing struct {
+	Topics []string
 }
 
 type aivenData struct {
@@ -80,6 +85,12 @@ func fileReader(file string) io.Reader {
 }
 
 func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
+	notFoundError := aiven.Error{
+		Message:  "Not Found",
+		MoreInfo: "",
+		Status:   404,
+	}
+
 	aclMock := &acl.MockInterface{}
 	aclMock.Test(t)
 	topicMock := &topic_package.MockInterface{}
@@ -91,6 +102,17 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 			On("List", project, svc).
 			Maybe().
 			Return(test.Aiven.Existing.Acls, nil)
+
+		for _, topic := range test.Aiven.Missing.Topics {
+			topicMock.
+				On("Get", project, svc, topic).
+				Maybe().
+				Return(nil, notFoundError)
+			topicMock.
+				On("Delete", project, svc, topic).
+				Maybe().
+				Return(notFoundError)
+		}
 
 		for _, topic := range test.Aiven.Existing.Topics {
 			topicMock.

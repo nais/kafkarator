@@ -83,7 +83,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	// Process or delete?
 	if topic.ObjectMeta.DeletionTimestamp != nil {
-		logger.Infof("Deleting ACls for topic")
+		logger.Info("Deleting ACls for topic")
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil
 		aclManager := acl.Manager{
@@ -100,10 +100,14 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		status.Message = "Topic and ACLs deleted, data kept"
 
 		if topic.RemoveDataWhenDeleted() {
-			logger.Infof("Permanently deleting Aiven topic and its data")
+			logger.Info("Permanently deleting Aiven topic and its data")
 			err = r.Aiven.Topics.Delete(topic.Spec.Pool, kafkarator_aiven.ServiceName(topic.Spec.Pool), topic.FullName())
 			if err != nil {
-				return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+				if aiven.IsNotFound(err) {
+					logger.Info("Topic already removed from Aiven")
+				} else {
+					return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+				}
 			}
 			status.Message = "Topic, ACLs and data permanently deleted"
 		}
@@ -128,7 +132,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	}
 
 	if !topic.NeedsSynchronization(hash) {
-		logger.Infof("Synchronization already complete")
+		logger.Info("Synchronization already complete")
 		return TopicReconcileResult{
 			Skipped: true,
 		}
