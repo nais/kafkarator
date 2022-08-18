@@ -39,12 +39,10 @@ const (
 	ExitRuntime
 )
 
-// Configuration options
 const (
 	AivenToken          = "aiven-token"
 	LogFormat           = "log-format"
 	MetricsAddress      = "metrics-address"
-	Primary             = "primary"
 	Projects            = "projects"
 	RequeueInterval     = "requeue-interval"
 	SyncPeriod          = "sync-period"
@@ -70,7 +68,6 @@ func init() {
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
 	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
-	flag.Bool(Primary, false, "If true, monitor kafka.nais.io/Topic resources and propagate them to Aiven and produce secrets")
 	flag.StringSlice(Projects, []string{"nav-integration-test"}, "List of projects allowed to operate on")
 
 	flag.Parse()
@@ -133,9 +130,7 @@ func main() {
 	terminator, cancel := context.WithCancel(context.Background())
 	logger.Info("Kafkarator running")
 
-	if viper.GetBool(Primary) {
-		go primary(quit, logger, mgr)
-	}
+	go startReconcilers(quit, logger, mgr)
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
@@ -162,7 +157,7 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
+func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up aiven client: %s", err)
@@ -199,7 +194,7 @@ func primary(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
 		return
 	}
 
-	logger.Info("Primary started")
+	logger.Info("Reconcilers started")
 
 	collectors.Start(mgr.GetClient(), aivenClient, logger, viper.GetDuration(TopicReportInterval), viper.GetStringSlice(Projects))
 }
