@@ -4,7 +4,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-on: [ push ]
+on:
+  push:
+    paths-ignore:
+      - charts
+      - doc
+      - examples
+      - scripts
 
 env:
   kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
