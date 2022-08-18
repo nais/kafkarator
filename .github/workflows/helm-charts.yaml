@@ -10,6 +10,7 @@ on:
       - master
     paths:
       - charts
+      - .github
 
 jobs:
   build:
