@@ -7,10 +7,10 @@ concurrency:
 on:
   push:
     paths-ignore:
-      - charts
-      - doc
-      - examples
-      - scripts
+      - charts/**
+      - doc/**
+      - examples/**
+      - scripts/**
 
 env:
   kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
