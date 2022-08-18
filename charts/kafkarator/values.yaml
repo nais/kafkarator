@@ -1,0 +1,20 @@
+# Default values for kafkarator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ghcr.io/nais/kafkarator/kafkarator
+  pullPolicy: Always
+  tag: main
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+aiven:
+  projects: # Space separated list of Aiven projects with Kafka clusters available for this kafkarator instance
+  token: "" # API token for Aiven with access to above mentioned projects
