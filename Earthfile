@@ -49,7 +49,7 @@ docker-kafkarator:
 
     ARG kafkarator_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/kafkarator
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
-    SAVE IMAGE --push ${kafkarator_image}:${VERSION}
+    SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
 docker-canary:
     FROM alpine:3
@@ -63,7 +63,7 @@ docker-canary:
 
     ARG canary_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
-    SAVE IMAGE --push ${canary_image}:${VERSION}
+    SAVE IMAGE --push ${canary_image}:${VERSION} ${canary_image}:latest
 
 docker:
     BUILD +docker-kafkarator
