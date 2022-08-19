@@ -21,24 +21,30 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) *Synchronizer {
+func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
+	projectName := t.Spec.Pool
+	serviceName, err := a.NameResolver.ResolveKafkaServiceName(projectName)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Synchronizer{
 		Logger: logger,
 		Topics: topic.Manager{
 			AivenTopics: a.Topics,
-			Project:     t.Spec.Pool,
-			Service:     kafkarator_aiven.ServiceName(t.Spec.Pool),
+			Project:     projectName,
+			Service:     serviceName,
 			Topic:       t,
 			Logger:      logger,
 		},
 		ACLs: acl.Manager{
 			AivenACLs: a.ACLs,
-			Project:   t.Spec.Pool,
-			Service:   kafkarator_aiven.ServiceName(t.Spec.Pool),
+			Project:   projectName,
+			Service:   serviceName,
 			Source:    acl.TopicAdapter{Topic: &t},
 			Logger:    logger,
 		},
-	}
+	}, nil
 }
 
 func (c *Synchronizer) Synchronize() error {

@@ -183,14 +183,19 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 		}
 	}
 
-	if !r.projectWhitelisted(stream.Spec.Pool) {
-		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", stream.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
+	projectName := stream.Spec.Pool
+	if !r.projectWhitelisted(projectName) {
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	if err != nil {
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
+	}
 	aclManager := acl.Manager{
 		AivenACLs: r.Aiven.ACLs,
-		Project:   stream.Spec.Pool,
-		Service:   kafkarator_aiven.ServiceName(stream.Spec.Pool),
+		Project:   projectName,
+		Service:   serviceName,
 		Source:    acl.StreamAdapter{Stream: &stream},
 		Logger:    logger,
 	}
@@ -212,8 +217,17 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 
 func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger log.FieldLogger, status kafka_nais_io_v1.StreamStatus, fail func(err error, state string, retry bool) StreamReconcileResult) StreamReconcileResult {
 	logger.Infof("Permanently deleting Aiven stream topics, ACLs and its data")
+
 	projectName := stream.Spec.Pool
-	serviceName := kafkarator_aiven.ServiceName(projectName)
+	if !r.projectWhitelisted(projectName) {
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
+	}
+
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	if err != nil {
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
+	}
+
 	aclManager := acl.Manager{
 		AivenACLs: r.Aiven.ACLs,
 		Project:   projectName,
@@ -221,7 +235,7 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 		Source:    acl.StreamAdapter{Stream: &stream, Delete: true},
 		Logger:    logger,
 	}
-	err := aclManager.Synchronize()
+	err = aclManager.Synchronize()
 	if err != nil {
 		return fail(fmt.Errorf("failed to delete ACL %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)
 	}

@@ -483,6 +483,8 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRW
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
 github.com/nais/liberator v0.0.0-20220801124227-065448517427 h1:q8RbCvNnkvezMQBew/+8MsQXHezuU5Lw49Q1NME17Ls=
 github.com/nais/liberator v0.0.0-20220801124227-065448517427/go.mod h1:AjfPx+WVWt8qKe1IFOSAAH5Im4qD5pMnxzw+SDn3rP8=
+github.com/nais/liberator v0.0.0-20220819123006-123b0f7e2e5b h1:CxpW7nX3QGrsPQStAxMkBv65zkrDioVNF8tG7zLTvQ8=
+github.com/nais/liberator v0.0.0-20220819123006-123b0f7e2e5b/go.mod h1:+Vpc7pdoL51zGVLzYP5Wm/6U+WtBR7ea1Zo5yKadAys=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=

@@ -3,11 +3,11 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"strings"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -21,11 +21,10 @@ type Topic struct {
 	Aiven          *aiven.Client
 	Logger         *log.Entry
 	ReportInterval time.Duration
+	NameResolver   service.NameResolver
 }
 
 func (t *Topic) existingTopics(ctx context.Context, topics []kafka_nais_io_v1.Topic) (map[string][]*aiven.KafkaListTopic, error) {
-	var err error
-
 	existing := make(map[string][]*aiven.KafkaListTopic)
 
 	// make list of known pools
@@ -35,10 +34,14 @@ func (t *Topic) existingTopics(ctx context.Context, topics []kafka_nais_io_v1.To
 
 	// fetch existing topics
 	for pool := range existing {
+		serviceName, err := t.NameResolver.ResolveKafkaServiceName(pool)
+		if err != nil {
+			return nil, err
+		}
 		topicManager := topic.Manager{
 			AivenTopics: t.Aiven.KafkaTopics,
 			Project:     pool,
-			Service:     kafkarator_aiven.ServiceName(pool),
+			Service:     serviceName,
 			Logger:      t.Logger.WithContext(ctx),
 		}
 		existing[pool], err = topicManager.List()

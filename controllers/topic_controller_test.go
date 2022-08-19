@@ -3,6 +3,7 @@ package controllers_test
 import (
 	"encoding/json"
 	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
@@ -91,13 +92,16 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 		Status:   404,
 	}
 
+	mockNameResolver := service.NewMockNameResolver(t)
+	mockNameResolver.On("ResolveKafkaServiceName", mock.Anything).Return("kafka", nil)
+
 	aclMock := &acl.MockInterface{}
 	aclMock.Test(t)
 	topicMock := &topic_package.MockInterface{}
 	topicMock.Test(t)
 
 	for _, project := range test.Config.Projects {
-		svc := kafkarator_aiven.ServiceName(project)
+		svc, _ := mockNameResolver.ResolveKafkaServiceName(project)
 		aclMock.
 			On("List", project, svc).
 			Maybe().
@@ -167,8 +171,9 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 	}
 
 	return kafkarator_aiven.Interfaces{
-			ACLs:   aclMock,
-			Topics: topicMock,
+			ACLs:         aclMock,
+			Topics:       topicMock,
+			NameResolver: mockNameResolver,
 		}, func(t mock.TestingT) bool {
 			result := false
 			if ok := aclMock.AssertExpectations(t); !ok {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/aiven/aiven-go-client"
-	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -16,6 +16,7 @@ type Metadata struct {
 	Aiven          *aiven.Client
 	Logger         log.FieldLogger
 	ReportInterval time.Duration
+	NameResolver   service.NameResolver
 }
 
 func formatError(err error) string {
@@ -29,10 +30,14 @@ func formatError(err error) string {
 
 func (m *Metadata) report(ctx context.Context) error {
 	for _, project := range m.Projects {
+		serviceName, err := m.NameResolver.ResolveKafkaServiceName(project)
+		if err != nil {
+			m.Logger.Errorf(formatError(err))
+		}
 		var svc *aiven.Service
-		err := metrics.ObserveAivenLatency("Service_Get", project, func() error {
+		err = metrics.ObserveAivenLatency("Service_Get", project, func() error {
 			var err error
-			svc, err = m.Aiven.Services.Get(project, kafkarator_aiven.ServiceName(project))
+			svc, err = m.Aiven.Services.Get(project, serviceName)
 			return err
 		})
 		if err != nil {

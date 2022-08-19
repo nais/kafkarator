@@ -3,7 +3,6 @@ package acl_test
 import (
 	"github.com/aiven/aiven-go-client"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -240,7 +239,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 	aclManager := acl.Manager{
 		AivenACLs: m,
 		Project:   TestPool,
-		Service:   kafkarator_aiven.ServiceName(TestPool),
+		Service:   TestService,
 		Source:    acl.TopicAdapter{Topic: &source},
 		Logger:    log.New(),
 	}
@@ -273,7 +272,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	aclManager := acl.Manager{
 		AivenACLs: m,
 		Project:   TestPool,
-		Service:   kafkarator_aiven.ServiceName(TestPool),
+		Service:   TestService,
 		Source:    acl.StreamAdapter{Stream: &source},
 		Logger:    log.New(),
 	}

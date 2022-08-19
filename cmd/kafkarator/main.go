@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"os"
 	"os/signal"
 	"strings"
@@ -164,10 +165,13 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 		return
 	}
 
+	nameResolver := service.NewCachedNameResolver(aivenClient.Services)
+
 	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:   aivenClient.KafkaACLs,
-			Topics: aivenClient.KafkaTopics,
+			ACLs:         aivenClient.KafkaACLs,
+			Topics:       aivenClient.KafkaTopics,
+			NameResolver: nameResolver,
 		},
 		Client:          mgr.GetClient(),
 		Logger:          logger,
@@ -182,8 +186,9 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 	streamReconciler := &controllers.StreamReconciler{
 		Client: mgr.GetClient(),
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:   aivenClient.KafkaACLs,
-			Topics: aivenClient.KafkaTopics,
+			ACLs:         aivenClient.KafkaACLs,
+			Topics:       aivenClient.KafkaTopics,
+			NameResolver: nameResolver,
 		},
 		Logger:          logger,
 		Projects:        viper.GetStringSlice(Projects),
@@ -196,7 +201,14 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 
 	logger.Info("Reconcilers started")
 
-	collectors.Start(mgr.GetClient(), aivenClient, logger, viper.GetDuration(TopicReportInterval), viper.GetStringSlice(Projects))
+	collectors.Start(&collectors.Opts{
+		Client:         mgr.GetClient(),
+		AivenClient:    aivenClient,
+		ReportInterval: viper.GetDuration(TopicReportInterval),
+		Projects:       viper.GetStringSlice(Projects),
+		NameResolver:   nameResolver,
+		Logger:         logger,
+	})
 }
 
 func init() {

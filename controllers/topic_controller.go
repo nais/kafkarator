@@ -82,14 +82,20 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	}
 
 	// Process or delete?
+	projectName := topic.Spec.Pool
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	if err != nil {
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
+	}
+
 	if topic.ObjectMeta.DeletionTimestamp != nil {
 		logger.Info("Deleting ACls for topic")
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil
 		aclManager := acl.Manager{
 			AivenACLs: r.Aiven.ACLs,
-			Project:   topic.Spec.Pool,
-			Service:   kafkarator_aiven.ServiceName(topic.Spec.Pool),
+			Project:   projectName,
+			Service:   serviceName,
 			Source:    acl.TopicAdapter{Topic: strippedTopic},
 			Logger:    logger,
 		}
@@ -101,7 +107,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 		if topic.RemoveDataWhenDeleted() {
 			logger.Info("Permanently deleting Aiven topic and its data")
-			err = r.Aiven.Topics.Delete(topic.Spec.Pool, kafkarator_aiven.ServiceName(topic.Spec.Pool), topic.FullName())
+			err = r.Aiven.Topics.Delete(projectName, serviceName, topic.FullName())
 			if err != nil {
 				if aiven.IsNotFound(err) {
 					logger.Info("Topic already removed from Aiven")
@@ -138,11 +144,11 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		}
 	}
 
-	if !r.projectWhitelisted(topic.Spec.Pool) {
-		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", topic.Spec.Pool), kafka_nais_io_v1.EventFailedPrepare, false)
+	if !r.projectWhitelisted(projectName) {
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer := NewSynchronizer(r.Aiven, topic, logger)
+	synchronizer, _ := NewSynchronizer(r.Aiven, topic, logger)
 	err = synchronizer.Synchronize()
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
