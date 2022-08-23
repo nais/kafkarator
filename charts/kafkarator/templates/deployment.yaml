@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         {{- include "kafkarator.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: {{ .Chart.Name }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ include "kafkarator.serviceAccountName" . }}
       containers:
