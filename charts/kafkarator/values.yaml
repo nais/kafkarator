@@ -15,6 +15,19 @@ resources:
     cpu: 200m
     memory: 256Mi
 
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 1069
+  runAsNonRoot: true
+  runAsUser: 1069
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+
 aiven:
   projects: # Space separated list of Aiven projects with Kafka clusters available for this kafkarator instance
   token: "" # API token for Aiven with access to above mentioned projects
