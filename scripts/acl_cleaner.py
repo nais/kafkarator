@@ -18,7 +18,7 @@ class AivenAuth(requests.auth.AuthBase):
         return r
 
 
-@dataclass
+@dataclass(frozen=True)
 class Acl:
     id: str
     permission: str
@@ -28,7 +28,7 @@ class Acl:
 
 @dataclass
 class Service:
-    acls: list[Acl]
+    acls: set[Acl]
     topics: set[str]
     users: set[str]
 
@@ -56,7 +56,7 @@ class AivenKafka(object):
         resp = self.session.get(self.base_url)
         resp.raise_for_status()
         data = resp.json()
-        acls = [Acl(**a) for a in data["service"]["acl"]]
+        acls = {Acl(**a) for a in data["service"]["acl"]}
         topics = {t["topic_name"] for t in data["service"]["topics"]}
         users = {u["username"] for u in data["service"]["users"]}
         return Service(acls, topics, users)
@@ -65,7 +65,7 @@ class AivenKafka(object):
         resp = self.session.get(f"{self.base_url}/acl")
         resp.raise_for_status()
         data = resp.json()
-        return [Acl(**a) for a in data["acl"]]
+        return {Acl(**a) for a in data["acl"]}
 
     def delete_acls(self, acls_to_delete):
         for acl in acls_to_delete:
@@ -109,12 +109,14 @@ def main(project, dry_run):
 
     service = aiven.get_service()
 
-    acls_to_delete = list(find_unused_acls(service.topics, service.acls))
+    acls_to_delete = set(find_unused_acls(service.topics, service.acls))
     print(f"Found {len(acls_to_delete)} ACLs referencing non-existing topics")
     aiven.delete_acls(acls_to_delete)
 
     acls = aiven.get_acls()
-    users_to_delete = list(find_unused_users(acls, service.users))
+    if dry_run:
+        acls.difference_update(acls_to_delete)
+    users_to_delete = set(find_unused_users(acls, service.users))
     print(f"Found {len(users_to_delete)} users with no associated ACLs")
     aiven.delete_users(users_to_delete)
 
