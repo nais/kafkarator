@@ -41,6 +41,10 @@ spec:
             value: 0.0.0.0:8080
           - name: KAFKARATOR_PROJECTS
             value: "{{ .Values.aiven.projects }}"
+          {{- range $key, $value := .Values.extraEnv }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
           envFrom:
             - secretRef:
                 name: {{ include "kafkarator.fullname" . }}
@@ -58,3 +62,15 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+{{- if .Values.caBundle }}
+          volumeMounts:
+            - mountPath: /etc/ssl/certs/ca-certificates.crt
+              name: ca-bundle-pem
+              readOnly: true
+              subPath: ca-bundle.pem
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: ca-bundle-pem
+          name: ca-bundle-pem
+{{- end}}
