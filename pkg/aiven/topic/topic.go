@@ -84,9 +84,11 @@ func (r *Manager) create() error {
 		Replication: cfg.Replication,
 		Config: aiven.KafkaTopicConfig{
 			CleanupPolicy:     cleanupPolicy(cfg),
+			MaxMessageBytes:   intpToInt64p(cfg.MaxMessageBytes),
 			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
 			RetentionMs:       retentionMs(cfg),
+			SegmentMs:         segmentMs(cfg),
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
@@ -113,9 +115,11 @@ func (r *Manager) update() error {
 		Replication: cfg.Replication,
 		Config: aiven.KafkaTopicConfig{
 			CleanupPolicy:     cleanupPolicy(cfg),
+			MaxMessageBytes:   intpToInt64p(cfg.MaxMessageBytes),
 			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
 			RetentionMs:       retentionMs(cfg),
+			SegmentMs:         segmentMs(cfg),
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
@@ -149,6 +153,12 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config.MinimumInSyncReplicas != nil && topic.Config.MinInsyncReplicas.Value != int64(*config.MinimumInSyncReplicas) {
 		return true
 	}
+	if config.SegmentHours != nil && topic.Config.SegmentMs.Value != *segmentMs(config) {
+		return true
+	}
+	if config.MaxMessageBytes != nil && topic.Config.MaxMessageBytes.Value != int64(*config.MaxMessageBytes) {
+		return true
+	}
 	return false
 }
 
@@ -165,6 +175,22 @@ func retentionMs(cfg *kafka_nais_io_v1.Config) *int64 {
 		ret = &ms
 	}
 	return ret
+}
+
+func segmentMs(cfg *kafka_nais_io_v1.Config) *int64 {
+	if cfg.SegmentHours == nil {
+		return nil
+	}
+
+	var segmentDuration time.Duration
+	if *cfg.SegmentHours < 1 {
+		segmentDuration = time.Duration(1) * time.Hour
+	} else {
+		segmentDuration = time.Duration(*cfg.SegmentHours) * time.Hour
+	}
+
+	ms := segmentDuration.Milliseconds()
+	return &ms
 }
 
 func cleanupPolicy(cfg *kafka_nais_io_v1.Config) string {
