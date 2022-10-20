@@ -14,9 +14,11 @@ aiven:
         replication: 3
         config:
           cleanup_policy: delete
-          retention_ms: 3240000000
+          max_message_bytes: 1048588
           min_insync_replicas: 2
           retention_bytes: -1
+          retention_ms: 3240000000
+          segment_ms: 604800000
         tags:
           - key: created-by
             value: Kafkarator

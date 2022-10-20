@@ -1,18 +1,19 @@
 package topic_test
 
 import (
-	"github.com/nais/kafkarator/pkg/utils"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/aiven/aiven-go-client"
-	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nais/kafkarator/pkg/aiven/topic"
+	"github.com/nais/kafkarator/pkg/utils"
 )
 
 func intp(i int) *int {
@@ -104,11 +105,13 @@ var tests = []topicTest{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
 					CleanupPolicy:         stringp("compact"),
+					MaxMessageBytes:       intp(2048),
 					MinimumInSyncReplicas: intp(3),
 					Partitions:            intp(2),
 					Replication:           intp(3),
 					RetentionBytes:        intp(1024),
 					RetentionHours:        intp(36),
+					SegmentHours:          intp(24),
 				},
 			},
 		},
@@ -121,6 +124,9 @@ var tests = []topicTest{
 				CleanupPolicy: aiven.KafkaTopicConfigResponseString{
 					Value: "compact",
 				},
+				MaxMessageBytes: aiven.KafkaTopicConfigResponseInt{
+					Value: 2048,
+				},
 				MinInsyncReplicas: aiven.KafkaTopicConfigResponseInt{
 					Value: 3,
 				},
@@ -129,6 +135,9 @@ var tests = []topicTest{
 				},
 				RetentionMs: aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
+				},
+				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+					Value: (time.Duration(24) * time.Hour).Milliseconds(),
 				},
 			},
 			Tags: []aiven.KafkaTopicTag{
@@ -157,6 +166,9 @@ var tests = []topicTest{
 				CleanupPolicy: aiven.KafkaTopicConfigResponseString{
 					Value: "compact",
 				},
+				MaxMessageBytes: aiven.KafkaTopicConfigResponseInt{
+					Value: 2048,
+				},
 				MinInsyncReplicas: aiven.KafkaTopicConfigResponseInt{
 					Value: 3,
 				},
@@ -165,6 +177,9 @@ var tests = []topicTest{
 				},
 				RetentionMs: aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
+				},
+				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+					Value: (time.Duration(24) * time.Hour).Milliseconds(),
 				},
 			},
 			Tags: []aiven.KafkaTopicTag{
@@ -184,11 +199,13 @@ var tests = []topicTest{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
 					CleanupPolicy:         stringp("compact"),
+					MaxMessageBytes:       nil,
 					MinimumInSyncReplicas: intp(3),
 					Partitions:            intp(2),
 					Replication:           intp(3),
 					RetentionBytes:        intp(1024),
 					RetentionHours:        nil,
+					SegmentHours:          nil,
 				},
 			},
 		},
@@ -247,6 +264,40 @@ var tests = []topicTest{
 			Replication: intp(3),
 			Config: aiven.KafkaTopicConfig{
 				RetentionMs: int64p(-1),
+			},
+			Tags: []aiven.KafkaTopicTag{
+				{Key: "created-by", Value: "Kafkarator"},
+			},
+		},
+	},
+
+	{
+		name: "SegmentHours below minimum value is always 1 hour",
+		topic: kafka_nais_io_v1.Topic{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mytopic",
+				Namespace: "myteam",
+			},
+			Spec: kafka_nais_io_v1.TopicSpec{
+				Pool: "mypool",
+				Config: &kafka_nais_io_v1.Config{
+					SegmentHours: intp(0),
+				},
+			},
+		},
+		project: "someproject",
+		service: "mypool-kafka",
+		existing: &aiven.KafkaTopic{
+			Config: aiven.KafkaTopicConfigResponse{
+				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+					Source: "topic_config",
+					Value:  (time.Duration(168) * time.Hour).Milliseconds(),
+				},
+			},
+		},
+		update: &aiven.UpdateKafkaTopicRequest{
+			Config: aiven.KafkaTopicConfig{
+				SegmentMs: int64p((time.Duration(1) * time.Hour).Milliseconds()),
 			},
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},

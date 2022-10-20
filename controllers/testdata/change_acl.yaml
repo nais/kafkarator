@@ -33,11 +33,15 @@ aiven:
           - partition: 1
         replication: 3
         config:
+          max_message_bytes:
+            value: 1048588
           min_insync_replicas:
             value: 2
           retention_bytes:
             value: -1
           retention_ms:
+            value: 604800000
+          segment_ms:
             value: 604800000
   created:
     topics: []

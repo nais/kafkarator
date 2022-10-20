@@ -22,12 +22,16 @@ aiven:
         config:
           cleanup_policy:
             value: delete
+          max_message_bytes:
+            value: 1048588
           min_insync_replicas:
             value: 2
           retention_bytes:
             value: -1
           retention_ms:
             value: 3240000000
+          segment_ms:
+            value: 604800000
         tags:
           - key: created-by
             value: Kafkarator
@@ -42,9 +46,11 @@ aiven:
         partitions: 2
         config:
           cleanup_policy: delete
+          max_message_bytes: 2048
           min_insync_replicas: 2
           retention_bytes: -1
           retention_ms: 43200000
+          segment_ms: 86400000
         tags:
           - key: created-by
             value: Kafkarator
@@ -62,8 +68,10 @@ topic:
   spec:
     pool: nav-integration-test
     config:
+      maxMessageBytes: 2048
       retentionHours: 12
       partitions: 2
+      segmentHours: 24
     acl:
       - access: read
         team: myteam
