@@ -125,6 +125,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: fasit-deploy
     permissions:
+      contents: read
       id-token: write
     needs:
       - setup
