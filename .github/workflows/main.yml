@@ -28,10 +28,10 @@ jobs:
         id: constants
         run: |
           export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
-          echo "::set-output name=VERSION::${version}"
-          echo "::set-output name=KAFKARATOR_IMAGE::${kafkarator_image}:${version}"
-          echo "::set-output name=CANARY_IMAGE::${canary_image}:${version}"
-          echo "::set-output name=CANARY_DEPLOYER_IMAGE::${canary_deployer_image}:${version}"
+          echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
+          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> ${GITHUB_OUTPUT}
+          echo "CANARY_IMAGE=${canary_image}:${version}" >> ${GITHUB_OUTPUT}
+          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> ${GITHUB_OUTPUT}
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
       KAFKARATOR_IMAGE: "${{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
