@@ -133,5 +133,5 @@ jobs:
     steps:
       - uses: nais/fasit-deploy@main
         with:
-          json: '{"image": {"pullPolicy": "IfNotPresent","tag": "${{ needs.setup.outputs.VERSION }}"}}'
+          json: '{"image": {"tag": "${{ needs.setup.outputs.VERSION }}"}}'
           feature_name: kafkarator
