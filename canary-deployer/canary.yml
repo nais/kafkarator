@@ -2,9 +2,9 @@ kind: Application
 apiVersion: nais.io/v1alpha1
 metadata:
   name: kafkarator-canary
-  namespace: aura
+  namespace: "{{ team }}"
   labels:
-    team: aura
+    team: "{{ team }}"
 spec:
   replicas:
     min: 1
@@ -21,7 +21,7 @@ spec:
     - name: CANARY_MESSAGE_INTERVAL
       value: 1s
     - name: CANARY_KAFKA_TOPIC
-      value: "aura.kafkarator-canary-{{ groupid }}"
+      value: "{{ canary_kafka_topic }}"
     - name: CANARY_KAFKA_GROUP_ID
       value: "{{ groupid }}"
     - name: CANARY_LOG_FORMAT
