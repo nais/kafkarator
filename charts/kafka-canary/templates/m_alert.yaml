@@ -1,0 +1,2 @@
+{{ if eq .Values.cluster.kind "management" }}
+{{ end }}

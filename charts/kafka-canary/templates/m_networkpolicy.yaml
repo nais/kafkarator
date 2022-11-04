@@ -1,0 +1,23 @@
+{{ if eq .Values.cluster.kind "management" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kafka-canary-deployer.fullname" . }}
+  labels:
+    {{- include "kafka-canary.labels" . | nindent 4 }}
+spec:
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hookd
+    - to:
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+  podSelector:
+    matchLabels:
+      {{ include "kafka-canary.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+{{ end }}
