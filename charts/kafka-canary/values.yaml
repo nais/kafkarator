@@ -6,6 +6,7 @@
 cluster:
   name: "" # Mapped in fasit
   kind: "" # Mapped in fasit
+tenant: "" # Mapped in fasit
 
 # Used in management cluster
 aiven_project: "" # Mapped in fasit
