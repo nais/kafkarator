@@ -8,8 +8,6 @@ for CLUSTER in ${CLUSTERS}; do
     POOL=nav-prod
   elif [ "${CLUSTER}" = "dev-fss" ] || [ "${CLUSTER}" = "dev-gcp" ]; then
     POOL=nav-dev
-  else
-    POOL="${TENANT:-nav}-${CLUSTER}"
   fi
 
   export CLUSTER
@@ -19,8 +17,8 @@ for CLUSTER in ${CLUSTERS}; do
     echo "image: ${IMAGE}"
     echo "groupid: ${CLUSTER}"
     echo "pool: ${POOL}"
-    echo "team: ${TEAM:-aura}"
-    echo "canary_kafka_topic: ${TOPIC:-aura.kafkarator-canary-${CLUSTER}}"
+    echo "team: ${TEAM:=aura}"
+    echo "canary_kafka_topic: ${TEAM}.${TOPIC_BASE:-kafkarator-canary}-${CLUSTER}"
   } > "${VARS}"
   cat "${VARS}"
   echo "Deploying to ${CLUSTER}..."
