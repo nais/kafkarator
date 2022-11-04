@@ -65,6 +65,22 @@ docker-canary:
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_image}:${VERSION} ${canary_image}:latest
 
+docker-canary-deployer:
+    FROM ghcr.io/nais/deploy/deploy:latest
+    COPY --dir canary-deployer /canary
+    ENV RESOURCE=/canary/resource.yml
+    CMD ["/canary/deployer.sh"]
+
+    # builtins must be declared
+    ARG EARTHLY_GIT_PROJECT_NAME
+    ARG EARTHLY_GIT_SHORT_HASH
+
+    ARG canary_deployer_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary-deployer
+    ARG VERSION=$EARTHLY_GIT_SHORT_HASH
+    SAVE IMAGE --push ${canary_deployer_image}:${VERSION} ${canary_deployer_image}:latest
+
+
 docker:
     BUILD +docker-kafkarator
     BUILD +docker-canary
+    BUILD +docker-canary-deployer
