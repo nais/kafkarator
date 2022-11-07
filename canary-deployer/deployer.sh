@@ -8,6 +8,8 @@ for CLUSTER in ${CLUSTERS}; do
     POOL=nav-prod
   elif [ "${CLUSTER}" = "dev-fss" ] || [ "${CLUSTER}" = "dev-gcp" ]; then
     POOL=nav-dev
+  elif [ -n "${TENANT}" ]; then
+    POOL="${TENANT}-${CLUSTER}"
   fi
 
   export CLUSTER

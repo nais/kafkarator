@@ -32,8 +32,8 @@ spec:
                   value: "{{ .Values.clusters }}"
                 - name: IMAGE
                   value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
-                - name: POOL
-                  value: "{{ .Values.aiven_project }}"
+                - name: TENANT
+                  value: "{{ .Values.tenant }}"
                 - name: TEAM
                   value: "nais-verification"
                 - name: TOPIC_BASE

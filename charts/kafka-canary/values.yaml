@@ -9,12 +9,14 @@ alert_enabled: false
 cluster:
   name: "" # Mapped in fasit
   kind: "" # Mapped in fasit
-tenant: "" # Mapped in fasit
+aiven_project: "" # Mapped in fasit
 
 # Used in management cluster
-aiven_project: "" # Mapped in fasit
 clusters: "" # Mapped in fasit
 api_key: "" # Mapped in fasit
+
+# Used in both
+tenant: "" # Mapped in fasit
 
 canary:
   image:
