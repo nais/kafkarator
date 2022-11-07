@@ -19,10 +19,10 @@ api_key: "" # Mapped in fasit
 canary:
   image:
     repository: ghcr.io/nais/kafkarator/canary
-    tag: latest # Mapped in fasit
+    tag: latest # Overridden in fasit
 
 deployer:
   image:
     repository: ghcr.io/nais/kafkarator/canary-deployer
     pullPolicy: IfNotPresent
-    tag: latest # Mapped in fasit
+    tag: latest # Overridden in fasit
