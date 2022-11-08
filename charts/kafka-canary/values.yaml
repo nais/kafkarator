@@ -2,8 +2,5 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-cluster:
-  name: "" # Mapped in fasit
-  kind: "" # Mapped in fasit
 aiven_project: "" # Mapped in fasit
 tenant: "" # Mapped in fasit

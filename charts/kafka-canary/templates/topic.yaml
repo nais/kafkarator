@@ -1,4 +1,3 @@
-{{ if eq .Values.cluster.kind "tenant" }}
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
@@ -16,4 +15,3 @@ spec:
     - access: read
       team: "*"
       application: "*"
-{{ end }}
