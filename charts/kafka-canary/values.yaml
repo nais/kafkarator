@@ -4,3 +4,4 @@
 
 aiven_project: "" # Mapped in fasit
 tenant: "" # Mapped in fasit
+cluster_name: "" # Mapped in fasit

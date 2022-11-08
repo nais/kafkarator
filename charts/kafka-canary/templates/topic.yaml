@@ -1,7 +1,7 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster.name }}
+  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster_name }}
   labels:
     {{- include "kafka-canary.labels" . | nindent 4 }}
 spec:
