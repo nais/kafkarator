@@ -25,7 +25,7 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "kafka-canary.labels" -}}
-helm.sh/chart: {{ include "kafkarator.chart" . }}
+helm.sh/chart: {{ include "kafka-canary.chart" . }}
 {{ include "kafka-canary.selectorLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
