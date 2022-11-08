@@ -2,9 +2,10 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-clusters: "" # Mapped in fasit
+# cluster_pools contains a list of cluster=pool mappings
+cluster_pools: "" # Mapped in fasit
+# api_key is an api key used for deploying the canary
 api_key: "" # Mapped in fasit
-tenant: "" # Mapped in fasit
 
 canary:
   image:

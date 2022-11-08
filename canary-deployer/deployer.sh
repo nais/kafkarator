@@ -3,14 +3,19 @@
 VARS=$(mktemp)
 export VARS
 
-for CLUSTER in ${CLUSTERS}; do
-  if [ "${CLUSTER}" = "prod-fss" ] || [ "${CLUSTER}" = "prod-gcp" ]; then
-    POOL=nav-prod
-  elif [ "${CLUSTER}" = "dev-fss" ] || [ "${CLUSTER}" = "dev-gcp" ]; then
-    POOL=nav-dev
-  elif [ -n "${TENANT}" ]; then
-    POOL="${TENANT}-${CLUSTER}"
-  fi
+if [ -z "${CLUSTER_POOLS}" ] && [ -n "${CLUSTERS}" ]; then
+  for CLUSTER in ${CLUSTERS}; do
+    if [ "${CLUSTER}" = "prod-fss" ] || [ "${CLUSTER}" = "prod-gcp" ]; then
+      CLUSTER_POOLS="${CLUSTER_POOLS} ${CLUSTER}=nav-prod"
+    elif [ "${CLUSTER}" = "dev-fss" ] || [ "${CLUSTER}" = "dev-gcp" ]; then
+      CLUSTER_POOLS="${CLUSTER_POOLS} ${CLUSTER}=nav-dev"
+    fi
+  done
+fi
+
+for CLUSTER_POOL in ${CLUSTER_POOLS}; do
+  CLUSTER=${CLUSTER_POOL%%=*}
+  POOL=${CLUSTER_POOL##*=}
 
   export CLUSTER
   {
@@ -26,3 +31,5 @@ for CLUSTER in ${CLUSTERS}; do
   echo "Deploying to ${CLUSTER}..."
   /app/deploy --wait=false
 done
+
+rm "${VARS}"

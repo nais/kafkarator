@@ -4,7 +4,7 @@ kind: CronJob
 metadata:
   name: {{ include "kafka-canary-deployer.fullname" . }}
   labels:
-    {{- include "kafka-canary.labels" . | nindent 4 }}
+    {{- include "kafka-canary-deployer.labels" . | nindent 4 }}
 spec:
   schedule: "*/30 * * * *"
   startingDeadlineSeconds: 600
@@ -17,7 +17,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "kafka-canary.selectorLabels" . | nindent 8 }}
+            {{- include "kafka-canary-deployer.selectorLabels" . | nindent 8 }}
         spec:
           restartPolicy: Never
           containers:
@@ -28,14 +28,12 @@ spec:
                 - secretRef:
                     name: {{ include "kafka-canary-deployer.fullname" . }}
               env:
-                - name: CLUSTERS
-                  value: "{{ .Values.clusters }}"
                 - name: IMAGE
                   value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
-                - name: TENANT
-                  value: "{{ .Values.tenant }}"
                 - name: TEAM
                   value: "nais-verification"
                 - name: TOPIC_BASE
-                  value: "{{ include "kafka-canary.fullname" . }}"
+                  value: "kafka-canary"
+                - name: CLUSTER_POOLS
+                  value: "{{ .Values.cluster_pools }}"
 {{ end }}
