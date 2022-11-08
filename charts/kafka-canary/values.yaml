@@ -2,29 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# Temporary
-alert_enabled: false
-
-# Used in tenant clusters
 cluster:
   name: "" # Mapped in fasit
   kind: "" # Mapped in fasit
 aiven_project: "" # Mapped in fasit
-
-# Used in management cluster
-clusters: "" # Mapped in fasit
-api_key: "" # Mapped in fasit
-
-# Used in both
 tenant: "" # Mapped in fasit
-
-canary:
-  image:
-    repository: ghcr.io/nais/kafkarator/canary
-    tag: latest # Overridden in fasit
-
-deployer:
-  image:
-    repository: ghcr.io/nais/kafkarator/canary-deployer
-    pullPolicy: IfNotPresent
-    tag: latest # Overridden in fasit

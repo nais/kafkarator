@@ -1,5 +1,4 @@
 {{ if eq .Values.cluster.kind "tenant" }}
-{{ if .Values.alert_enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -18,9 +17,8 @@ spec:
             consequence: '{{ "Kafka is unavailable, probably for all applications in {{ $labels.tenant_cluster }}" }}'
             action: |
               * Check that canary has valid Kafka credentials
-              * Check that Aiven Kafka in {{ .Values.tenant }}-{{ .Values.cluster.name }} is up and running
+              * Check that Aiven Kafka in {{ .Values.aiven_project }} is up and running
               * Check canary logs: `kubectl logs -n nais-verification deploy/kafkarator-canary kafkarator-canary`
 
               Instrumentation: <https://grafana.{{ .Values.tenant }}.cloud.nais.io/TODO>
-{{ end }}
 {{ end }}

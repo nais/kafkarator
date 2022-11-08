@@ -1,0 +1,18 @@
+# Default values for kafka-canary.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+clusters: "" # Mapped in fasit
+api_key: "" # Mapped in fasit
+tenant: "" # Mapped in fasit
+
+canary:
+  image:
+    repository: ghcr.io/nais/kafkarator/canary
+    tag: latest # Overridden in fasit
+
+deployer:
+  image:
+    repository: ghcr.io/nais/kafkarator/canary-deployer
+    pullPolicy: IfNotPresent
+    tag: latest # Overridden in fasit
