@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "kafka-canary-deployer.name" -}}
+{{- define "kafka-canary.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "kafka-canary-deployer.fullname" -}}
+{{- define "kafka-canary.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "kafka-canary-deployer.chart" -}}
+{{- define "kafka-canary.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "kafka-canary-deployer.labels" -}}
-helm.sh/chart: {{ include "kafka-canary-deployer.chart" . }}
-{{ include "kafka-canary-deployer.selectorLabels" . }}
+{{- define "kafka-canary.labels" -}}
+helm.sh/chart: {{ include "kafka-canary.chart" . }}
+{{ include "kafka-canary.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "kafka-canary-deployer.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kafka-canary-deployer.name" . }}
+{{- define "kafka-canary.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kafka-canary.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "kafka-canary-deployer.serviceAccountName" -}}
+{{- define "kafka-canary.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "kafka-canary-deployer.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "kafka-canary.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

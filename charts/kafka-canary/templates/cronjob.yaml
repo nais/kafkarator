@@ -1,10 +1,9 @@
-{{ if eq .Values.cluster.kind "management" }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "kafka-canary-deployer.fullname" . }}
+  name: {{ include "kafka-canary.fullname" . }}
   labels:
-    {{- include "kafka-canary-deployer.labels" . | nindent 4 }}
+    {{- include "kafka-canary.labels" . | nindent 4 }}
 spec:
   schedule: "*/30 * * * *"
   startingDeadlineSeconds: 600
@@ -17,16 +16,16 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "kafka-canary-deployer.selectorLabels" . | nindent 8 }}
+            {{- include "kafka-canary.selectorLabels" . | nindent 8 }}
         spec:
           restartPolicy: Never
           containers:
-            - name: {{ include "kafka-canary-deployer.fullname" . }}
+            - name: {{ include "kafka-canary.fullname" . }}
               image: "{{ .Values.deployer.image.repository }}:{{ .Values.deployer.image.tag }}"
               imagePullPolicy: {{ .Values.deployer.image.pullPolicy }}
               envFrom:
                 - secretRef:
-                    name: {{ include "kafka-canary-deployer.fullname" . }}
+                    name: {{ include "kafka-canary.fullname" . }}
               env:
                 - name: IMAGE
                   value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
@@ -38,4 +37,3 @@ spec:
                   value: "{{ .Values.cluster_pools }}"
                 - name: TENANT
                   value: "{{ .Values.tenant }}"
-{{ end }}
