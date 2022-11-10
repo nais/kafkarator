@@ -1,3 +1,4 @@
+{{ if .Values.alert_enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -20,3 +21,4 @@ spec:
               * Check canary logs: `kubectl logs -n nais-verification deploy/kafkarator-canary kafkarator-canary`
 
               Instrumentation: <https://grafana.{{ .Values.tenant }}.cloud.nais.io/TODO>
+{{ end }}
