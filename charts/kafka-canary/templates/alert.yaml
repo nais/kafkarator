@@ -1,7 +1,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster.name }}
+  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster_name }}
 spec:
   groups:
     - name: {{ include "kafka-canary.fullname" . }}
