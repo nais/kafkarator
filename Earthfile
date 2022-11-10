@@ -68,7 +68,6 @@ docker-canary:
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
     COPY --dir canary-deployer /canary
-    ENV RESOURCE=/canary/resource.yml
     CMD ["/canary/deployer.sh"]
 
     # builtins must be declared

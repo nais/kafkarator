@@ -6,6 +6,8 @@
 cluster_pools: "" # Mapped in fasit
 # api_key is an api key used for deploying the canary
 api_key: "" # Mapped in fasit
+# tenant is the name of the tenant this installation is for
+tenant: "" # Mapped in fasit
 
 canary:
   image:

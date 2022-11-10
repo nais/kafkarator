@@ -26,8 +26,12 @@ for CLUSTER_POOL in ${CLUSTER_POOLS}; do
     echo "pool: ${POOL}"
     echo "team: ${TEAM:=aura}"
     echo "canary_kafka_topic: ${TEAM}.${TOPIC_BASE:-kafkarator-canary}-${CLUSTER}"
+    echo "cluster_name: ${CLUSTER}"
+    echo "tenant: ${TENANT:-nav}"
   } > "${VARS}"
   cat "${VARS}"
+  cat /canary/*.yaml > resource.yaml
+  export RESOURCE=./resource.yaml
   echo "Deploying to ${CLUSTER}..."
   /app/deploy --wait=false
 done

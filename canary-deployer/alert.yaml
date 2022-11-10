@@ -1,11 +1,14 @@
-{{ if .Values.alert_enabled }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster_name }}
+  name: kafka-canary-{{ cluster_name }}
+  namespace: "{{ team }}"
+  labels:
+    team: "{{ team }}"
 spec:
   groups:
-    - name: {{ include "kafka-canary.fullname" . }}
+    - name: kafka-canary
       rules:
         - alert: Aiven Kafka is unavailable
           expr: '(time()-min(kafkarator_canary_last_consumed) > 120) or absent(kafkarator_canary_last_consumed)'
@@ -17,8 +20,7 @@ spec:
             consequence: '{{ "Kafka is unavailable, probably for all applications in {{ $labels.tenant_cluster }}" }}'
             action: |
               * Check that canary has valid Kafka credentials
-              * Check that Aiven Kafka in {{ .Values.aiven_project }} is up and running
-              * Check canary logs: `kubectl logs -n nais-verification deploy/kafkarator-canary kafkarator-canary`
+              * Check that Aiven Kafka in {{ pool }} is up and running
+              * Check canary logs: `kubectl logs -n nais-verification deploy/kafka-canary kafka-canary`
 
-              Instrumentation: <https://grafana.{{ .Values.tenant }}.cloud.nais.io/TODO>
-{{ end }}
+              Instrumentation: <https://grafana.{{ tenant }}.cloud.nais.io/TODO>

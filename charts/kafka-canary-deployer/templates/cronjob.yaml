@@ -36,4 +36,6 @@ spec:
                   value: "kafka-canary"
                 - name: CLUSTER_POOLS
                   value: "{{ .Values.cluster_pools }}"
+                - name: TENANT
+                  value: "{{ .Values.tenant }}"
 {{ end }}
