@@ -35,5 +35,3 @@ for CLUSTER_POOL in ${CLUSTER_POOLS}; do
   echo "Deploying to ${CLUSTER}..."
   /app/deploy --wait=false
 done
-
-rm "${VARS}"
