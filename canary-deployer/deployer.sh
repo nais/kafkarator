@@ -28,6 +28,7 @@ for CLUSTER_POOL in ${CLUSTER_POOLS}; do
     echo "canary_kafka_topic: ${TEAM}.${TOPIC_BASE:-kafkarator-canary}-${CLUSTER}"
     echo "cluster_name: ${CLUSTER}"
     echo "tenant: ${TENANT:-nav}"
+    echo "alert_enabled: ${ALERT_ENABLED:-false}"
   } > "${VARS}"
   cat "${VARS}"
   cat /canary/*.yaml > resource.yaml
