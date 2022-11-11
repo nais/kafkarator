@@ -37,3 +37,5 @@ spec:
                   value: "{{ .Values.cluster_pools }}"
                 - name: TENANT
                   value: "{{ .Values.tenant }}"
+                - name: ALERT_ENABLED
+                  value: "{{ .Values.alert_enabled }}"

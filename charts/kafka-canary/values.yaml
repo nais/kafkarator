@@ -8,6 +8,8 @@ cluster_pools: "" # Mapped in fasit
 api_key: "" # Mapped in fasit
 # tenant is the name of the tenant this installation is for
 tenant: "" # Mapped in fasit
+# alert_enabled indicates if the alert should be installed when installing the canary
+alert_enabled: false
 
 canary:
   image:
