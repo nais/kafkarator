@@ -45,5 +45,5 @@ spec:
   volumes:
     - name: tmp
       emptyDir:
-        medium: memory
+        medium: Memory
 {{- end }}
