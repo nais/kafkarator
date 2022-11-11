@@ -16,7 +16,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "kafka-canary.selectorLabels" . | nindent 8 }}
+            {{- include "kafka-canary.selectorLabels" . | nindent 12 }}
         spec:
           restartPolicy: Never
           containers:
