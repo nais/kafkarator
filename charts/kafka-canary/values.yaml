@@ -10,8 +10,6 @@ api_key: "" # Mapped in fasit
 tenant: "" # Mapped in fasit
 # alert_enabled indicates if the alert should be installed when installing the canary
 alert_enabled: false
-# deploy_server is the endpoint that hookd listens on
-deploy_server: "" # Mapped in fasit
 
 canary:
   image:
