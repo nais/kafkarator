@@ -1,8 +1,8 @@
 #!/bin/sh
 
-VARS=$(mktemp vars.XXXXXX)
+VARS=$(mktemp -t vars.XXXXXX)
 export VARS
-RESOURCE=$(mktemp resources.XXXXXX)
+RESOURCE=$(mktemp -t resources.XXXXXX)
 export RESOURCE
 
 if [ -z "${CLUSTER_POOLS}" ] && [ -n "${CLUSTERS}" ]; then
