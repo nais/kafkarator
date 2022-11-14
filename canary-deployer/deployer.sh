@@ -1,7 +1,9 @@
 #!/bin/sh
 
-VARS=$(mktemp)
+VARS=$(mktemp vars.XXXXXX)
 export VARS
+RESOURCE=$(mktemp resources.XXXXXX)
+export RESOURCE
 
 if [ -z "${CLUSTER_POOLS}" ] && [ -n "${CLUSTERS}" ]; then
   for CLUSTER in ${CLUSTERS}; do
@@ -31,8 +33,7 @@ for CLUSTER_POOL in ${CLUSTER_POOLS}; do
     echo "alert_enabled: ${ALERT_ENABLED:-false}"
   } > "${VARS}"
   cat "${VARS}"
-  cat /canary/*.yaml > resource.yaml
-  export RESOURCE=./resource.yaml
+  cat /canary/*.yaml > "${RESOURCE}"
   echo "Deploying to ${CLUSTER}..."
   /app/deploy --wait=false
 done
