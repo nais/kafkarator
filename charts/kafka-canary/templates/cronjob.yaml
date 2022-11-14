@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "kafka-canary.fullname" . }}
+  labels:
+    {{- include "kafka-canary.labels" . | nindent 4 }}
+spec:
+  schedule: "*/30 * * * *"
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  suspend: false
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        {{- include "kafka-canary.job-template" . | nindent 8 }}

@@ -1,11 +1,13 @@
+---
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: {{ include "kafka-canary.fullname" . }}-{{ .Values.cluster_name }}
+  name: kafka-canary-{{ cluster_name }}
+  namespace: "{{ team }}"
   labels:
-    {{- include "kafka-canary.labels" . | nindent 4 }}
+    team: "{{ team }}"
 spec:
-  pool: "{{ .Values.aiven_project }}"
+  pool: "{{ pool }}"
   config:
     retentionHours: 24
   acl:

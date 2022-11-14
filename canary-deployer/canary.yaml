@@ -1,7 +1,8 @@
+---
 kind: Application
 apiVersion: nais.io/v1alpha1
 metadata:
-  name: kafkarator-canary
+  name: kafka-canary
   namespace: "{{ team }}"
   labels:
     team: "{{ team }}"

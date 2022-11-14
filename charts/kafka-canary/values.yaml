@@ -2,6 +2,22 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-aiven_project: "" # Mapped in fasit
+# cluster_pools contains a list of cluster=pool mappings
+cluster_pools: "" # Mapped in fasit
+# api_key is an api key used for deploying the canary
+api_key: "" # Mapped in fasit
+# tenant is the name of the tenant this installation is for
 tenant: "" # Mapped in fasit
-cluster_name: "" # Mapped in fasit
+# alert_enabled indicates if the alert should be installed when installing the canary
+alert_enabled: false
+
+canary:
+  image:
+    repository: ghcr.io/nais/kafkarator/canary
+    tag: latest # Overridden in fasit
+
+deployer:
+  image:
+    repository: ghcr.io/nais/kafkarator/canary-deployer
+    pullPolicy: IfNotPresent
+    tag: latest # Overridden in fasit
