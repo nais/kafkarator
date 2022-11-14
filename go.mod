@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	gotest.tools v2.2.0+incompatible
-	k8s.io/apimachinery v0.22.15
+	k8s.io/apimachinery v0.22.16
 	k8s.io/client-go v0.22.15
 	sigs.k8s.io/controller-runtime v0.10.3
 )
