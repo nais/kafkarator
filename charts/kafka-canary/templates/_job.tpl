@@ -28,7 +28,7 @@ spec:
         - name: ALERT_ENABLED
           value: "{{ .Values.alert_enabled }}"
         - name: DEPLOY_SERVER
-          value: "{{ .Values.deploy_server }}"
+          value: "hookd-grpc:80"
       securityContext:
         capabilities:
           drop:
