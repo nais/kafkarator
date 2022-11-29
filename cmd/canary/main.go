@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
@@ -232,6 +233,23 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
+	lastCert := cert
+	diffSecret := func() {
+		cert, _, _, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
+		if err != nil {
+			logger.Errorf("unable to read TLS config for diffing: %s", err)
+			return
+		}
+
+		if bytes.Compare(lastCert, cert) == 0 {
+			logger.Debug("certificate on disk matches last read certificate")
+			return
+		}
+
+		lastCert = cert
+		logger.Warnf("certificate changed on disk since last time it was read")
+	}
+
 	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
 	if err != nil {
 		logger.Errorf("unable to set up Kafka TLS config: %s", err)
@@ -304,6 +322,7 @@ func main() {
 	for {
 		select {
 		case <-produceTicker.C:
+			diffSecret()
 			produce()
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
