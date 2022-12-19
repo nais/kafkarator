@@ -122,7 +122,7 @@ def find_unused_users(secrets: set[Secret], users: set[User]) -> set[str]:
 
 def main(env, dry_run, team):
     project = f"nav-{env}"
-    contexts = {f"{env}-{kind}" for kind in ("fss", "gcp", "sbs")}
+    contexts = {f"{env}-{kind}" for kind in ("fss", "gcp")}
 
     aiven = AivenKafka(project, dry_run=dry_run)
 
