@@ -3,7 +3,7 @@ module github.com/nais/kafkarator
 go 1.19
 
 require (
-	github.com/Shopify/sarama v1.37.2
+	github.com/Shopify/sarama v1.38.0
 	github.com/aiven/aiven-go-client v1.7.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.5.9
@@ -76,7 +76,7 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
+	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.3.0 // indirect
