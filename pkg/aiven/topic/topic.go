@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -76,6 +77,10 @@ func (r *Manager) create() error {
 	cfg := r.Topic.Spec.Config
 	if cfg == nil {
 		cfg = &kafka_nais_io_v1.Config{}
+	}
+	if intpBiggerThan(cfg.MinimumInSyncReplicas, cfg.Replication) {
+		return fmt.Errorf("MinimumInSyncReplicas (%d) shouldn't be bigger than Replication (%d)",
+			*cfg.MinimumInSyncReplicas, *cfg.Replication)
 	}
 
 	req := aiven.CreateKafkaTopicRequest{
@@ -207,4 +212,8 @@ func intpToInt64p(i *int) *int64 {
 	}
 	r := int64(*i)
 	return &r
+}
+
+func intpBiggerThan(first, second *int) bool {
+	return first != nil && second != nil && *first > *second
 }
