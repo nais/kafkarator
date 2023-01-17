@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import argparse
+import itertools
 import os
 import tempfile
 import typing
@@ -17,8 +19,6 @@ REQUIREMENTS = (
 TOPICS = (
     "quiz-rapid",
     "quiz-rapid-kurs-test",
-    "quiz-rapid-test1",
-    "quiz-rapid-test2",
     "leesah-quiz-online",
 )
 
@@ -98,8 +98,6 @@ class AivenKafka(object):
         url = f"{self.base_url}/acl"
         resp = self.session.post(url, json=body)
         resp.raise_for_status()
-        data = resp.json()
-        return Acl.parse_obj(data["acl"])
 
     def create_user(self, service, user_name):
         try:
@@ -179,22 +177,23 @@ class Packet(BaseModel):
     user: User
     ca: str
     broker: str
-    topics: typing.Sequence[str]
+    topics: typing.Collection[str]
 
 
-def main():
+def main(topics):
     import logging
     logging.basicConfig(level=logging.DEBUG)
     kafka = AivenKafka("nav-integration-test")
     service = kafka.get_service()
-    for topic_name in TOPICS:
+    actual_topics = set(itertools.chain(topics, TOPICS))
+    for topic_name in actual_topics:
         kafka.create_topic(service, topic_name)
         kafka.create_acl(service, topic_name, USER_NAME, ACCESS_LEVEL)
     packet = Packet(
         user=kafka.create_user(service, USER_NAME),
         ca=kafka.get_ca(),
         broker=service.get_broker(),
-        topics=TOPICS,
+        topics=actual_topics,
     )
     with tempfile.NamedTemporaryFile(prefix="leesah-quiz-master", suffix=".yaml", delete=False) as fobj:
         pyaml.dump(packet.dict(), fobj)
@@ -203,7 +202,10 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("topics", nargs="*", help="Additional topics to create")
+        options = parser.parse_args()
+        main(options.topics)
     except requests.exceptions.RequestException as re:
         from requests_toolbelt.utils import dump
 
