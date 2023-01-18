@@ -6,6 +6,8 @@ metadata:
   namespace: "{{ team }}"
   labels:
     team: "{{ team }}"
+  annotations:
+    kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
 spec:
   pool: "{{ pool }}"
   config:
