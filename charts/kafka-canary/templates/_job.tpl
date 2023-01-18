@@ -11,9 +11,6 @@ spec:
     - name: {{ include "kafka-canary.fullname" . }}
       image: "{{ .Values.deployer.image.repository }}:{{ .Values.deployer.image.tag }}"
       imagePullPolicy: {{ .Values.deployer.image.pullPolicy }}
-      envFrom:
-        - secretRef:
-            name: {{ include "kafka-canary.fullname" . }}
       env:
         - name: IMAGE
           value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
@@ -29,6 +26,11 @@ spec:
           value: "{{ .Values.alert_enabled }}"
         - name: DEPLOY_SERVER
           value: "{{ .Values.deploy_server }}:443"
+        - name: APIKEY
+          valueFrom:
+            secretKeyRef:
+              key: DEPLOY_API_KEY
+              name: {{ .Values.deploy_key_secret_name }}
       securityContext:
         capabilities:
           drop:
