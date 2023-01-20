@@ -25,7 +25,7 @@ spec:
         - name: ALERT_ENABLED
           value: "{{ .Values.alert_enabled }}"
         - name: DEPLOY_SERVER
-          value: "{{ .Values.deploy_server }}:443"
+          value: "{{ .Values.deploy_server }}"
         - name: APIKEY
           valueFrom:
             secretKeyRef:

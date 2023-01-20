@@ -8,7 +8,7 @@ cluster_pools: "" # Mapped in fasit
 tenant: "" # Mapped in fasit
 # alert_enabled indicates if the alert should be installed when installing the canary
 alert_enabled: false
-# deploy_server is the endpoint that hookd listens on
+# deploy_server is the endpoint that hookd listens on (including port if needed)
 deploy_server: "" # Mapped in fasit
 # deploy_key_secret_name is the name of a secret that contains a DEPLOY_API_KEY (created by nais-verification feature)
 deploy_key_secret_name: "nais-verification-deploy-key"
