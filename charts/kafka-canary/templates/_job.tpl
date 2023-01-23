@@ -22,8 +22,6 @@ spec:
           value: "{{ .Values.cluster_pools }}"
         - name: TENANT
           value: "{{ .Values.tenant }}"
-        - name: ALERT_ENABLED
-          value: "{{ .Values.alert_enabled }}"
         - name: DEPLOY_SERVER
           value: "{{ .Values.deploy_server }}"
         - name: APIKEY
