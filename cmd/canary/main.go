@@ -52,6 +52,7 @@ const (
 type Consume struct {
 	offset    int64
 	timeStamp time.Time
+	partition int32
 }
 
 var (
@@ -269,8 +270,11 @@ func main() {
 		if err != nil {
 			return false, fmt.Errorf("converting string to timestamp: %s", err)
 		}
-		o := msg.Offset
-		c := Consume{o, t}
+		c := Consume{
+			offset:    msg.Offset,
+			timeStamp: t,
+			partition: msg.Partition,
+		}
 		logger.Infof("Consumed message: %v", c)
 		cons <- c
 
@@ -298,12 +302,13 @@ func main() {
 
 	produce := func() {
 		timer := time.Now()
-		offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
+		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
 			logger.Infof("Produced message: %v", Consume{
 				offset:    offset,
 				timeStamp: timer,
+				partition: partition,
 			})
 			LastProducedTimestamp.SetToCurrentTime()
 			LastProducedOffset.Set(float64(offset))

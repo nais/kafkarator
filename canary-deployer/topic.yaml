@@ -11,6 +11,7 @@ metadata:
 spec:
   pool: "{{ pool }}"
   config:
+    partitions: 2
     retentionHours: 24
   acl:
     - access: readwrite

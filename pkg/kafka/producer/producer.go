@@ -16,7 +16,7 @@ type Producer struct {
 }
 
 type Interface interface {
-	Produce(msg kafka.Message) (int64, error)
+	Produce(msg kafka.Message) (partition int32, offset int64, err error)
 }
 
 func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
@@ -41,12 +41,11 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	}, nil
 }
 
-func (p *Producer) Produce(msg kafka.Message) (offset int64, err error) {
+func (p *Producer) Produce(msg kafka.Message) (int32, int64, error) {
 	producerMessage := &sarama.ProducerMessage{
 		Topic:     p.topic,
 		Value:     sarama.ByteEncoder(msg),
 		Timestamp: time.Now(),
 	}
-	_, offset, err = p.producer.SendMessage(producerMessage)
-	return
+	return p.producer.SendMessage(producerMessage)
 }
