@@ -8,6 +8,8 @@ cluster_pools: "" # Mapped in fasit
 tenant: "" # Mapped in fasit
 # deploy_server is the endpoint that hookd listens on (including port if needed)
 deploy_server: "" # Mapped in fasit
+# deploy_use_tls selects if the hookd connection should use TLS
+deploy_use_tls: "true"
 # deploy_key_secret_name is the name of a secret that contains a DEPLOY_API_KEY (created by nais-verification feature)
 deploy_key_secret_name: "nais-verification-deploy-key"
 

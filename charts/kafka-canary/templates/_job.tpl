@@ -24,6 +24,8 @@ spec:
           value: "{{ .Values.tenant }}"
         - name: DEPLOY_SERVER
           value: "{{ .Values.deploy_server }}"
+        - name: GRPC_USE_TLS
+          value: "{{ .Values.deploy_use_tls }}"
         - name: APIKEY
           valueFrom:
             secretKeyRef:
