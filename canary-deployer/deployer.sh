@@ -35,5 +35,5 @@ for CLUSTER_POOL in ${CLUSTER_POOLS}; do
   cat "${VARS}"
   cat /canary/*.yaml > "${RESOURCE}"
   echo "Deploying to ${CLUSTER}..."
-  /app/deploy --wait=false
+  /app/deploy --wait=false || exit 1
 done
