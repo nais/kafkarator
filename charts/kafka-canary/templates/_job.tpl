@@ -11,6 +11,8 @@ spec:
     - name: {{ include "kafka-canary.fullname" . }}
       image: "{{ .Values.deployer.image.repository }}:{{ .Values.deployer.image.tag }}"
       imagePullPolicy: {{ .Values.deployer.image.pullPolicy }}
+      args:
+        - "/canary/deployer.sh"
       env:
         - name: IMAGE
           value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
