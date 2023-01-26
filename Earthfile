@@ -67,8 +67,11 @@ docker-canary:
 
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
+    RUN apk add python3 && \
+        python3 -m ensurepip && \
+        pip3 install pyaml trio pydantic
     COPY --dir canary-deployer /canary
-    CMD ["/canary/deployer.sh"]
+    CMD ["python3", "/canary/deployer.py"]
 
     # builtins must be declared
     ARG EARTHLY_GIT_PROJECT_NAME

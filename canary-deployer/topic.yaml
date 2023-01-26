@@ -2,7 +2,7 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: kafka-canary-{{ cluster_name }}
+  name: {{ topic_name }}
   namespace: "{{ team }}"
   labels:
     team: "{{ team }}"
