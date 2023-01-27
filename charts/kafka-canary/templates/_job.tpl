@@ -4,7 +4,7 @@ Expand the name of the chart.
 {{- define "kafka-canary.job-template" -}}
 metadata:
   labels:
-    {{- include "kafka-canary.selectorLabels" . | nindent 12 }}
+    {{- include "kafka-canary.selectorLabels" . | nindent 4 }}
 spec:
   restartPolicy: Never
   containers:
@@ -17,7 +17,8 @@ spec:
         - name: TEAM
           value: "nais-verification"
         - name: DEPLOY_CONFIGS
-          value: {{ .Values.deploy_configs | squote }}
+          value: |
+            {{- .Values.deploy_configs | nindent 12 }}
 
         # Passed directly to deploy-cli
         - name: DEPLOY_SERVER
