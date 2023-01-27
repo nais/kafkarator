@@ -5,8 +5,8 @@ import sys
 import tempfile
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from subprocess import CalledProcessError
-from typing import List, Optional
 
 import trio
 from pydantic import BaseSettings, BaseModel
@@ -15,7 +15,7 @@ from pydantic import BaseSettings, BaseModel
 class DeployConfig(BaseModel):
     pool: str
     canary_cluster: str
-    topic_cluster: Optional[str] = None
+    topic_cluster: str
 
 
 LogLevel = Enum("LogLevel", {k: k for k in logging._nameToLevel.keys()})  # NOQA
@@ -24,15 +24,17 @@ LogLevel = Enum("LogLevel", {k: k for k in logging._nameToLevel.keys()})  # NOQA
 class Settings(BaseSettings):
     image: str
     team: str = "nais-verification"
-    deploy_configs: List[DeployConfig]
+    deploy_configs_path: Path
     log_level: LogLevel = LogLevel[logging.getLevelName(logging.INFO)]
     dry_run: bool = False
 
 
-async def count_to_ten():
+async def pretend_run_process(cmd, logger):
+    logger.info("Would have executed command: %s", " ".join(cmd))
     for i in range(10):
         await trio.sleep(1)
-        print(f"Pretending to wait for deploy to complete ... step {i}")
+        print(f"Pretending to wait for command to complete ... step {i}")
+    await trio.sleep(1)
 
 
 async def _execute_deploy(cluster, resource_name, vars_file_name, settings, logger):
@@ -46,8 +48,7 @@ async def _execute_deploy(cluster, resource_name, vars_file_name, settings, logg
         "--repository", "nais/kafkarator",
     ]
     if settings.dry_run:
-        logger.info("Would have executed command: %s", " ".join(cmd))
-        await count_to_ten()
+        await pretend_run_process(cmd, logger)
     else:
         await trio.run_process(cmd)
 
@@ -94,11 +95,11 @@ async def deploy_topic(config: DeployConfig, settings: Settings):
     logger.info("Completed deploying topic %s to %s", topic_name, config.topic_cluster)
 
 
-def _set_topic_cluster(deploy_config: DeployConfig):
-    deploy_config.topic_cluster = deploy_config.canary_cluster
-    if deploy_config.canary_cluster.endswith("-fss"):
-        # Special NAV case
-        deploy_config.topic_cluster = deploy_config.canary_cluster.replace("-fss", "-gcp")
+def load_deploy_configs(path: Path):
+    with open(path) as fobj:
+        data = json.load(fobj)
+        for entry in data:
+            yield DeployConfig.parse_obj(entry)
 
 
 async def main(settings: Settings):
@@ -106,8 +107,8 @@ async def main(settings: Settings):
     logging.info("Starting deploy")
     try:
         async with trio.open_nursery() as nursery:
-            for deploy_config in settings.deploy_configs:
-                _set_topic_cluster(deploy_config)
+            deploy_configs = load_deploy_configs(settings.deploy_configs_path)
+            for deploy_config in deploy_configs:
                 nursery.start_soon(deploy_topic, deploy_config, settings)
                 nursery.start_soon(deploy_canary, deploy_config, settings)
     except Exception as e:

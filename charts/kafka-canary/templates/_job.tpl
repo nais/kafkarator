@@ -16,9 +16,8 @@ spec:
           value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
         - name: TEAM
           value: "nais-verification"
-        - name: DEPLOY_CONFIGS
-          value: |
-            {{- .Values.deploy_configs | nindent 12 }}
+        - name: DEPLOY_CONFIGS_PATH
+          value: /config/deploy_configs.json
 
         # Passed directly to deploy-cli
         - name: DEPLOY_SERVER
@@ -45,8 +44,13 @@ spec:
       volumeMounts:
         - mountPath: /tmp
           name: tmp
+        - mountPath: /config
+          name: config
   volumes:
     - name: tmp
       emptyDir:
         medium: Memory
+    - name: config
+      configMap:
+        name: {{ include "kafka-canary.fullname" . }}
 {{- end }}
