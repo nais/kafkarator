@@ -17,7 +17,7 @@ spec:
         - name: TEAM
           value: "nais-verification"
         - name: DEPLOY_CONFIGS
-          value: "{{ .Values.deploy_configs }}
+          value: {{ .Values.deploy_configs | toJson | squote }}
 
         # Passed directly to deploy-cli
         - name: DEPLOY_SERVER
