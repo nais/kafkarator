@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
+import json
 import logging
 import sys
 import tempfile
 from datetime import datetime
 from enum import Enum
 from subprocess import CalledProcessError
-from typing import List
+from typing import List, Optional
 
-import pyaml
 import trio
 from pydantic import BaseSettings, BaseModel
 
 
 class DeployConfig(BaseModel):
-    canary_cluster: str
-    topic_cluster: str
     pool: str
+    canary_cluster: str
+    topic_cluster: Optional[str] = None
 
 
 LogLevel = Enum("LogLevel", {k: k for k in logging._nameToLevel.keys()})  # NOQA
@@ -23,18 +23,22 @@ LogLevel = Enum("LogLevel", {k: k for k in logging._nameToLevel.keys()})  # NOQA
 
 class Settings(BaseSettings):
     image: str
-    deploy_server: str
     team: str = "nais-verification"
     deploy_configs: List[DeployConfig]
     log_level: LogLevel = LogLevel[logging.getLevelName(logging.INFO)]
     dry_run: bool = False
 
 
+async def count_to_ten():
+    for i in range(10):
+        await trio.sleep(1)
+        print(f"Pretending to wait for deploy to complete ... step {i}")
+
+
 async def _execute_deploy(cluster, resource_name, vars_file_name, settings, logger):
     cmd = [
         "/app/deploy",
         "--cluster", cluster,
-        "--deploy-server", settings.deploy_server,
         "--resource", resource_name,
         "--vars", vars_file_name,
         "--team", settings.team,
@@ -43,6 +47,7 @@ async def _execute_deploy(cluster, resource_name, vars_file_name, settings, logg
     ]
     if settings.dry_run:
         logger.info("Would have executed command: %s", " ".join(cmd))
+        await count_to_ten()
     else:
         await trio.run_process(cmd)
 
@@ -59,9 +64,9 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
             "canary_kafka_topic": f"{settings.team}.kafka-canary-{config.canary_cluster}",
             "groupid": config.canary_cluster,
         }
-        pyaml.dump(data, vars_file)
+        json.dump(data, vars_file)
         vars_file.flush()
-        logger.debug(pyaml.dump(data, dst=str, explicit_start=True))
+        logger.debug(json.dumps(data, indent=2))
         try:
             await _execute_deploy(config.canary_cluster, "/canary/canary.yaml", vars_file.name, settings, logger)
         except CalledProcessError:
@@ -79,14 +84,21 @@ async def deploy_topic(config: DeployConfig, settings: Settings):
             "pool": config.pool,
             "topic_name": topic_name,
         }
-        pyaml.dump(data, vars_file)
+        json.dump(data, vars_file)
         vars_file.flush()
-        logger.debug(pyaml.dump(data, dst=str, explicit_start=True))
+        logger.debug(json.dumps(data, indent=2))
         try:
             await _execute_deploy(config.topic_cluster, "/canary/topic.yaml", vars_file.name, settings, logger)
         except CalledProcessError:
             raise RuntimeError(f"Error when deploying topic {topic_name} to {config.topic_cluster}") from None
     logger.info("Completed deploying topic %s to %s", topic_name, config.topic_cluster)
+
+
+def _set_topic_cluster(deploy_config: DeployConfig):
+    deploy_config.topic_cluster = deploy_config.canary_cluster
+    if deploy_config.canary_cluster.endswith("-fss"):
+        # Special NAV case
+        deploy_config.topic_cluster = deploy_config.canary_cluster.replace("-fss", "-gcp")
 
 
 async def main(settings: Settings):
@@ -95,6 +107,7 @@ async def main(settings: Settings):
     try:
         async with trio.open_nursery() as nursery:
             for deploy_config in settings.deploy_configs:
+                _set_topic_cluster(deploy_config)
                 nursery.start_soon(deploy_topic, deploy_config, settings)
                 nursery.start_soon(deploy_canary, deploy_config, settings)
     except Exception as e:

@@ -16,12 +16,10 @@ spec:
           value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
         - name: TEAM
           value: "nais-verification"
-        - name: TOPIC_BASE
-          value: "kafka-canary"
-        - name: CLUSTER_POOLS
-          value: "{{ .Values.cluster_pools }}"
-        - name: TENANT
-          value: "{{ .Values.tenant }}"
+        - name: DEPLOY_CONFIGS
+          value: "{{ .Values.deploy_configs }}
+
+        # Passed directly to deploy-cli
         - name: DEPLOY_SERVER
           value: "{{ .Values.deploy_server }}"
         - name: GRPC_USE_TLS

@@ -2,10 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# cluster_pools contains a list of cluster=pool mappings
-cluster_pools: "" # Mapped in fasit
-# tenant is the name of the tenant this installation is for
-tenant: "" # Mapped in fasit
+# deploy_configs contains a json structure describing deploy configurations
+deploy_configs: "" # Mapped in fasit
 # deploy_server is the endpoint that hookd listens on (including port if needed)
 deploy_server: "" # Mapped in fasit
 # deploy_use_tls selects if the hookd connection should use TLS
