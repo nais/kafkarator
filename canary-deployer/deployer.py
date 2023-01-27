@@ -95,11 +95,27 @@ async def deploy_topic(config: DeployConfig, settings: Settings):
     logger.info("Completed deploying topic %s to %s", topic_name, config.topic_cluster)
 
 
+def generate_topic_cluster_lookup_for_nav(data):
+    result = {}
+    for entry in data:
+        if entry["kind"] == "legacy" and entry.get("aiven_project"):
+            result[entry["aiven_project"]] = entry["cluster_name"]
+    return result
+
+
 def load_deploy_configs(path: Path):
     with open(path) as fobj:
         data = json.load(fobj)
+        if not data:
+            return
+        if data[0]["tenant"] == "nav":
+            lookup = generate_topic_cluster_lookup_for_nav(data)
+        else:
+            lookup = {entry["aiven_project"]: entry["cluster_name"] for entry in data if entry.get("aiven_project")}
         for entry in data:
-            yield DeployConfig.parse_obj(entry)
+            pool = entry.get("aiven_project")
+            if pool and lookup.get(pool):
+                yield DeployConfig(pool=pool, canary_cluster=entry["cluster_name"], topic_cluster=lookup[pool])
 
 
 async def main(settings: Settings):
