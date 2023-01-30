@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,7 +19,6 @@ import (
 	"github.com/nais/kafkarator/pkg/kafka/producer"
 	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -224,11 +224,6 @@ func main() {
 	LeadTime.Set(timeSinceDeploy())
 	TimeSinceDeploy.Set(timeSinceDeploy())
 
-	go func() {
-		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
-		cancel()
-	}()
-
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
 		logger.Errorf("unable to read TLS config: %s", err)
@@ -326,6 +321,10 @@ func main() {
 	}
 
 	logger.Infof("Ready.")
+	go func() {
+		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
+		cancel()
+	}()
 
 	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
 
