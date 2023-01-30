@@ -16,12 +16,6 @@ spec:
   prometheus:
     enabled: true
     path: /metrics
-  liveness:
-    path: /metrics
-    initialDelay: 10
-  readiness:
-    path: /metrics
-    initialDelay: 10
   env:
     - name: DEPLOY_START
       value: "{{ now }}"
