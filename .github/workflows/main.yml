@@ -57,11 +57,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        uses: earthly/actions-setup@v1
       - name: Build and possibly push kafkarator and canary
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          ./earthlyw --ci --remote-cache=${cache_image} +docker-${{ matrix.target }} --VERSION=${VERSION}
+          earthly --ci --remote-cache=${cache_image} +docker-${{ matrix.target }} --VERSION=${VERSION}
   deploy-fasit:
     name: Deploy to Fasit
     if: github.ref == 'refs/heads/master'
