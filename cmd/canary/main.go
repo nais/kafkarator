@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -202,9 +203,8 @@ func timeSinceDeploy() float64 {
 }
 
 func main() {
-	type QuitChannel chan error
+	ctx, cancel := context.WithCancel(context.Background())
 
-	quit := make(QuitChannel, 1)
 	signals := make(chan os.Signal, 1)
 	cons := make(chan Consume, 32)
 
@@ -225,7 +225,8 @@ func main() {
 	TimeSinceDeploy.Set(timeSinceDeploy())
 
 	go func() {
-		quit <- http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler())
+		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
+		cancel()
 	}()
 
 	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
@@ -281,7 +282,7 @@ func main() {
 		return false, nil
 	}
 
-	err = consumer.New(quit, consumer.Config{
+	err = consumer.New(ctx, cancel, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
 		GroupID:           viper.GetString(KafkaGroupID),
 		MaxProcessingTime: time.Second * 1,
@@ -293,6 +294,7 @@ func main() {
 	})
 	if err != nil {
 		logger.Errorf("unable to set up kafka consumer: %s", err)
+		cancel()
 		os.Exit(ExitConfig)
 	}
 
@@ -300,7 +302,10 @@ func main() {
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
-	produce := func() {
+	produce := func(ctx context.Context) {
+		if ctx.Err() != nil {
+			return
+		}
 		timer := time.Now()
 		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
@@ -315,7 +320,7 @@ func main() {
 		} else {
 			logger.Errorf("unable to produce canary message on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
-				quit <- fmt.Errorf("credentials rotated or invalidated")
+				cancel()
 			}
 		}
 	}
@@ -324,21 +329,23 @@ func main() {
 
 	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
 
-	for {
+	for ctx.Err() == nil {
 		select {
 		case <-produceTicker.C:
 			diffSecret()
-			produce()
+			produce(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
 			LastConsumedOffset.Set(float64(msg.offset))
-		case err := <-quit:
-			logger.Errorf("quit: %s", err)
-			os.Exit(ExitRuntime)
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
+			cancel()
 			os.Exit(ExitOK)
 		}
 	}
+
+	cancel()
+	logger.Errorf("quit: %s", ctx.Err())
+	os.Exit(ExitRuntime)
 }

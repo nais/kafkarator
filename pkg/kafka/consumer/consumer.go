@@ -3,7 +3,6 @@ package consumer
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"os"
 	"time"
@@ -79,7 +78,7 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	return nil
 }
 
-func New(quit chan<- error, cfg Config) error {
+func New(ctx context.Context, cancel context.CancelFunc, cfg Config) error {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = cfg.TlsConfig
@@ -87,6 +86,7 @@ func New(quit chan<- error, cfg Config) error {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
 	config.ClientID, _ = os.Hostname()
+	config.Consumer.Return.Errors = true
 	sarama.Logger = cfg.Logger
 
 	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)
@@ -107,23 +107,19 @@ func New(quit chan<- error, cfg Config) error {
 		for err := range c.consumer.Errors() {
 			c.logger.Errorf("Consumer encountered error: %s", err)
 			if kafka.IsErrUnauthorized(err) {
-				quit <- fmt.Errorf("credentials rotated or invalidated")
+				c.logger.Errorf("credentials rotated or invalidated")
+				cancel()
+				return
 			}
 		}
 	}()
 
-	ctx := context.Background()
 	go func() {
-		for {
+		for ctx.Err() == nil {
 			c.logger.Infof("(re-)starting consumer on topic %s", cfg.Topic)
 			err := c.consumer.Consume(ctx, []string{cfg.Topic}, c)
 			if err != nil {
 				c.logger.Errorf("Error setting up consumer: %s", err)
-			}
-			// check if context was cancelled, signaling that the consumer should stop
-			if ctx.Err() != nil {
-				c.logger.Errorf("Consumer context error: %s", ctx.Err())
-				ctx = context.Background()
 			}
 			time.Sleep(10 * time.Second)
 		}
