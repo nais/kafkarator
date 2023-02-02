@@ -1,6 +1,9 @@
+import json
 import os
 import re
-from dataclasses import dataclass
+import subprocess
+from dataclasses import dataclass, field
+from typing import Optional
 
 import requests
 
@@ -102,3 +105,37 @@ class AivenKafka(object):
                     yield User(u["username"], u["type"])
             else:
                 print(f"Ignoring {u['username']}, since it did not match any pattern")
+
+
+@dataclass(frozen=True)
+class Secret:
+    username: str
+    name: str
+    namespace: str
+    context: str
+    data: Optional[dict] = field(default_factory=dict, repr=False, compare=False)
+
+
+def get_secrets_in(context, team=None):
+    cmd = [
+        "kubectl",
+        "get", "secret",
+        "--context", context,
+        "--output", "json",
+        "--selector", "type=aivenator.aiven.nais.io"
+    ]
+    if team:
+        cmd.extend(("--namespace", team))
+    else:
+        cmd.append("--all-namespaces")
+    print(f"Executing {' '.join(cmd)}")
+    output = subprocess.check_output(cmd)
+    data = json.loads(output)
+    for item in data["items"]:
+        metadata = item["metadata"]
+        name = metadata["name"]
+        namespace = metadata["namespace"]
+        annotations = metadata.get("annotations", {})
+        username = annotations.get("kafka.aiven.nais.io/serviceUser")
+        if username:
+            yield Secret(username, name, namespace, context, item)

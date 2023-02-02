@@ -1,43 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import json
-import subprocess
-from dataclasses import dataclass
 
-from common import AivenKafka, User
-
-
-@dataclass(frozen=True)
-class Secret:
-    username: str
-    name: str
-    namespace: str
-    context: str
-
-
-def get_secrets_in(context, team):
-    cmd = [
-        "kubectl",
-        "get", "secret",
-        "--context", context,
-        "--output", "json",
-        "--selector", "type=aivenator.aiven.nais.io"
-    ]
-    if team:
-        cmd.extend(("--namespace", team))
-    else:
-        cmd.append("--all-namespaces")
-    print(f"Executing {' '.join(cmd)}")
-    output = subprocess.check_output(cmd)
-    data = json.loads(output)
-    for item in data["items"]:
-        metadata = item["metadata"]
-        name = metadata["name"]
-        namespace = metadata["namespace"]
-        annotations = metadata.get("annotations", {})
-        username = annotations.get("kafka.aiven.nais.io/serviceUser")
-        if username:
-            yield Secret(username, name, namespace, context)
+from common import AivenKafka, User, Secret, get_secrets_in
 
 
 def get_secrets(contexts, team) -> set[Secret]:
