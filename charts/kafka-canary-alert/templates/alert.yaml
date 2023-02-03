@@ -16,11 +16,11 @@ spec:
             namespace: nais-verification
             severity: critical
           annotations:
-            summary: Aiven Kafka is unavailable for applications in {{ pool }}
+            summary: Aiven Kafka is unavailable for applications in {{ .Values.pool }}
             consequence: Kafka is unavailable, probably for all applications
             action: |
               * Check that canary has valid Kafka credentials
-              * Check that Aiven Kafka in {{ pool }} is up and running
+              * Check that Aiven Kafka in {{ .Values.pool }} is up and running
               * Check canary logs: `kubectl logs -n nais-verification deploy/kafka-canary kafka-canary`
 
               Instrumentation: Coming soon!
