@@ -9,13 +9,14 @@ spec:
   groups:
     - name: kafka-canary
       rules:
-        - alert: Aiven Kafka is unavailable
+        - alert: AivenKafkaUnavailable
           expr: '(time()-min(kafkarator_canary_last_consumed) > 120) or absent(kafkarator_canary_last_consumed)'
           for: 5m
           labels:
             namespace: nais-verification
             severity: critical
           annotations:
+            summary: Aiven Kafka is unavailable for applications in {{ pool }}
             consequence: Kafka is unavailable, probably for all applications
             action: |
               * Check that canary has valid Kafka credentials
