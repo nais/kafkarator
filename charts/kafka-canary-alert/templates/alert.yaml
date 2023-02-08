@@ -13,9 +13,11 @@ spec:
           expr: '(time()-min(kafkarator_canary_last_consumed) > 120) or absent(kafkarator_canary_last_consumed)'
           for: 5m
           labels:
-            namespace: nais-verification
             severity: critical
             feature: kafka-canary
+            cluster: "{{ .Values.cluster }}"
+            pool: "{{ .Values.pool }}"
+            namespace: nais-verification
           annotations:
             summary: Aiven Kafka in {{ .Values.pool }} is unavailable for applications in {{ .Values.cluster }}
             consequence: Kafka is unavailable, probably for all applications
