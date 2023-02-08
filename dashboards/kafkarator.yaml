@@ -27,7 +27,7 @@ variables:
       name: ds
       type: prometheus
       regex: /$tenant-(?!management)/
-      include_all: false
+      include_all: true
   - query:
       name: aiven_op
       label: Aiven Operation
@@ -121,31 +121,23 @@ rows:
                 query: label_replace(kube_pod_container_info{container="kafkarator",namespace="nais-system"}, "version", "$1", "image", ".*:(.*)")
                 legend: "{{ version }}"
                 instant: true
-  - name: Kafka
+  - name: Kafka details - $ds
+    repeat_for: ds
     panels:
       - single_stat:
           title: Number of broker nodes
           datasource: $ds
-          repeat: ds
           transparent: true
           height: 20px
           span: 2
-          color:
-            - value
-          sparkline: bottom
           value_type: current
-          thresholds: [1,1]
-          colors:
-            - "#d44a3a"
-            - "rgba(237, 129, 40, 0.89)"
-            - "#299c46"
           targets:
             - prometheus:
                 query: max(kafkarator_kafka_pool_nodes_count)
+                legend: "{{ pool }}"
       - single_stat:
           title: Kafka version
           datasource: $ds
-          repeat: ds
           transparent: true
           height: 20px
           span: 4
@@ -154,12 +146,11 @@ rows:
           targets:
             - prometheus:
                 query: kafkarator_kafka_pool_info
-                legend: "{{ version }}"
+                legend: "{{ pool }}: {{ version }}"
                 instant: true
       - single_stat:
           title: Kafka plan
           datasource: $ds
-          repeat: ds
           transparent: true
           height: 20px
           span: 4
@@ -168,12 +159,14 @@ rows:
           targets:
             - prometheus:
                 query: kafkarator_kafka_pool_info
-                legend: "{{ plan }}"
+                legend: "{{ pool }}: {{ plan }}"
                 instant: true
+  - name: Kafka usage - $ds
+    repeat_for: ds
+    panels:
       - graph:
           title: Topics - $ds
           datasource: $ds
-          repeat: ds
           transparent: true
           span: 4
           targets:
@@ -183,7 +176,6 @@ rows:
       - graph:
           title: ACLs - $ds
           datasource: $ds
-          repeat: ds
           transparent: true
           span: 4
           targets:

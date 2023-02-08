@@ -357,7 +357,7 @@
       "repeat": "ds"
     },
     {
-      "title": "Kafka",
+      "title": "Kafka details - $ds",
       "showTitle": true,
       "collapse": false,
       "editable": true,
@@ -372,17 +372,16 @@
           "id": 6,
           "isNew": false,
           "renderer": "flot",
-          "repeat": "ds",
           "span": 2,
           "title": "Number of broker nodes",
           "transparent": true,
           "type": "singlestat",
           "colors": [
-            "#d44a3a",
+            "#299c46",
             "rgba(237, 129, 40, 0.89)",
-            "#299c46"
+            "#d44a3a"
           ],
-          "colorValue": true,
+          "colorValue": false,
           "colorBackground": false,
           "decimals": 0,
           "format": "",
@@ -407,17 +406,17 @@
           "nullPointMode": "",
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
-            "lineColor": "rgb(31, 120, 193)",
-            "show": true
+            "lineColor": "rgb(31, 120, 193)"
           },
           "targets": [
             {
               "refId": "",
               "expr": "max(kafkarator_kafka_pool_nodes_count)",
+              "legendFormat": "{{ pool }}",
               "format": "time_series"
             }
           ],
-          "thresholds": "1,1",
+          "thresholds": "",
           "valueFontSize": "100%",
           "valueMaps": [
             {
@@ -437,7 +436,6 @@
           "id": 7,
           "isNew": false,
           "renderer": "flot",
-          "repeat": "ds",
           "span": 4,
           "title": "Kafka version",
           "transparent": true,
@@ -478,7 +476,7 @@
             {
               "refId": "",
               "expr": "kafkarator_kafka_pool_info",
-              "legendFormat": "{{ version }}",
+              "legendFormat": "{{ pool }}: {{ version }}",
               "instant": true,
               "format": "time_series"
             }
@@ -503,7 +501,6 @@
           "id": 8,
           "isNew": false,
           "renderer": "flot",
-          "repeat": "ds",
           "span": 4,
           "title": "Kafka plan",
           "transparent": true,
@@ -544,7 +541,7 @@
             {
               "refId": "",
               "expr": "kafkarator_kafka_pool_info",
-              "legendFormat": "{{ plan }}",
+              "legendFormat": "{{ pool }}: {{ plan }}",
               "instant": true,
               "format": "time_series"
             }
@@ -559,7 +556,17 @@
             }
           ],
           "valueName": "name"
-        },
+        }
+      ],
+      "repeat": "ds"
+    },
+    {
+      "title": "Kafka usage - $ds",
+      "showTitle": true,
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
         {
           "datasource": "$ds",
           "editable": false,
@@ -568,7 +575,6 @@
           "id": 9,
           "isNew": false,
           "renderer": "flot",
-          "repeat": "ds",
           "span": 4,
           "title": "Topics - $ds",
           "transparent": true,
@@ -638,7 +644,6 @@
           "id": 10,
           "isNew": false,
           "renderer": "flot",
-          "repeat": "ds",
           "span": 4,
           "title": "ACLs - $ds",
           "transparent": true,
@@ -701,7 +706,7 @@
           ]
         }
       ],
-      "repeat": null
+      "repeat": "ds"
     },
     {
       "title": "Resource usage",
@@ -1116,6 +1121,11 @@
         "refresh": false,
         "options": [
           {
+            "text": "nav",
+            "value": "nav",
+            "selected": false
+          },
+          {
             "text": "dev-nais",
             "value": "dev-nais",
             "selected": false
@@ -1128,11 +1138,6 @@
           {
             "text": "ssb",
             "value": "ssb",
-            "selected": false
-          },
-          {
-            "text": "nav",
-            "value": "nav",
             "selected": false
           }
         ],
@@ -1158,11 +1163,17 @@
         "type": "datasource",
         "datasource": null,
         "refresh": 1,
-        "options": [],
-        "includeAll": false,
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": false
+          }
+        ],
+        "includeAll": true,
         "allFormat": "",
         "allValue": "",
-        "multi": false,
+        "multi": true,
         "multiFormat": "",
         "query": "prometheus",
         "regex": "/$tenant-(?!management)/",
