@@ -1,0 +1,278 @@
+title: Kafkarator
+editable: true
+tags: [generated, yaml]
+auto_refresh: 1m
+time: ["now-24h", "now"]
+timezone: default # valid values are: utc, browser, default
+
+# == How to use ==
+# 0. Update list of tenants in first variable
+# 1. Render to JSON using https://github.com/K-Phoen/grabana v0.21.0 or newer
+#    $ grabana render --input kafkarator.yaml > kafkarator.json
+# 2. Reset slug, uid and maxDataPoints in kafkarator.json as needed (use git diff to find out where)
+# 3. Delete existing Kafkarator dashboard in Grafana
+# 4. Import kafkarator.json to Grafana (remember to select correct folder)
+# 5. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
+
+variables:
+  - custom:
+      name: tenant
+      default: nav
+      values_map:
+        nav: nav
+        dev-nais: dev-nais
+        mtpilot: mtpilot
+        ssb: ssb
+  - datasource:
+      name: ds
+      type: prometheus
+      regex: /$tenant-(?!management)/
+      include_all: false
+  - query:
+      name: aiven_op
+      label: Aiven Operation
+      datasource: $ds
+      request: "label_values(kafkarator_aiven_latency_bucket, operation)"
+      include_all: true
+      default_all: true
+      hide: variable
+
+rows:
+  - name: Status in $ds
+    repeat_for: ds
+    panels:
+      - single_stat:
+          title: Healthy
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - background
+          value_type: current
+          value_font_size: 50%
+          thresholds: [1,1]
+          ranges_to_text:
+            - from: 0
+              to: 0
+              text: Healthy
+            - from: 1
+              to: 1000000
+              text: Unhealthy
+          targets:
+            - prometheus:
+                query: sum(kube_deployment_status_replicas_unavailable{deployment="kafkarator", namespace="nais-system"})
+      - single_stat:
+          title: Running pods
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,1]
+          colors:
+            - "#d44a3a"
+            - "rgba(237, 129, 40, 0.89)"
+            - "#299c46"
+          targets:
+            - prometheus:
+                query: count(kube_pod_container_status_running{container="kafkarator", namespace="nais-system"})
+      - single_stat:
+          title: Pending pods
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,3]
+          targets:
+            - prometheus:
+                query: sum(kube_pod_status_phase{phase="Pending",namespace="nais-system",pod=~"^kafkarator-.+"})
+      - single_stat:
+          title: "# of restarts"
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,20]
+          targets:
+            - prometheus:
+                query: sum(kube_pod_container_status_restarts_total{container="kafkarator", namespace="nais-system"})
+      - single_stat:
+          title: App version
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 4
+          value_type: name
+          value_font_size: 50%
+          targets:
+            - prometheus:
+                query: label_replace(kube_pod_container_info{container="kafkarator",namespace="nais-system"}, "version", "$1", "image", ".*:(.*)")
+                legend: "{{ version }}"
+                instant: true
+  - name: Kafka
+    panels:
+      - single_stat:
+          title: Number of broker nodes
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,1]
+          colors:
+            - "#d44a3a"
+            - "rgba(237, 129, 40, 0.89)"
+            - "#299c46"
+          targets:
+            - prometheus:
+                query: max(kafkarator_kafka_pool_nodes_count)
+      - single_stat:
+          title: Kafka version
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          height: 20px
+          span: 4
+          value_type: name
+          value_font_size: 50%
+          targets:
+            - prometheus:
+                query: kafkarator_kafka_pool_info
+                legend: "{{ version }}"
+                instant: true
+      - single_stat:
+          title: Kafka plan
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          height: 20px
+          span: 4
+          value_type: name
+          value_font_size: 50%
+          targets:
+            - prometheus:
+                query: kafkarator_kafka_pool_info
+                legend: "{{ plan }}"
+                instant: true
+      - graph:
+          title: Topics - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: sum(kafkarator_topics{pool="$ds"}) by (source)
+                legend: "{{ source }}"
+      - graph:
+          title: ACLs - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: sum(kafkarator_acls{pool="$ds"})
+                legend: "acls"
+  - name: Resource usage
+    collapse: true
+    panels:
+      - graph:
+          title: Memory usage - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: avg(kube_pod_container_resource_limits{namespace="nais-system",container="kafkarator",resource="memory"})
+                legend: limits
+            - prometheus:
+                query: avg(kube_pod_container_resource_requests{namespace="nais-system",container="kafkarator",resource="memory"})
+                legend: requests
+            - prometheus:
+                query: sum(container_memory_working_set_bytes{namespace="nais-system",container="kafkarator"}) by (pod)
+                legend: "working set {{ pod }}"
+            - prometheus:
+                query: sum(container_memory_usage_bytes{namespace="nais-system",container="kafkarator"}) by (pod)
+                legend: "Resident set size {{ pod }}"
+      - graph:
+          title: CPU usage - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: avg(kube_pod_container_resource_limits{namespace="nais-system",container="kafkarator",resource="cpu"})
+                legend: limits
+            - prometheus:
+                query: avg(kube_pod_container_resource_requests{namespace="nais-system",container="kafkarator",resource="cpu"})
+                legend: requests
+            - prometheus:
+                query: sum(irate(container_cpu_usage_seconds_total{container="kafkarator",namespace="nais-system"}[2m])) by (pod)
+                legend: "{{ pod }}"
+  - name: Processing
+    collapse: true
+    panels:
+      - graph:
+          title: Topics processed - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: sum(kafkarator_topics_processed) by (synchronization_state)
+                legend: "{{ synchronization_state }}"
+      - graph:
+          title: Streams processed - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: sum(kafkarator_streams_processed) by (synchronization_state)
+                legend: "{{ synchronization_state }}"
+  - name: Aiven Latency - $aiven_op
+    repeat_for: aiven_op
+    collapse: true
+    panels:
+      - heatmap:
+          # Must be done manually in Grafana after import: Set max datapoints to 25
+          title: $ds
+          datasource: $ds
+          repeat: ds
+          data_format: time_series_buckets
+          hide_zero_buckets: true
+          transparent: true
+          span: 4
+          tooltip:
+            show: true
+            showhistogram: false
+            decimals: 0
+          yaxis:
+            unit: "dtdurations"
+            decimals: 0
+          targets:
+            - prometheus:
+                query: sum(increase(kafkarator_aiven_latency_bucket{operation="$aiven_op"}[$__interval])) by (le)
+                legend: "{{ le }}"
+                format: heatmap
