@@ -14,9 +14,7 @@ const (
 	LabelAivenOperation = "operation"
 	LabelApp            = "app"
 	LabelGroupID        = "group_id"
-	LabelNamespace      = "namespace"
 	LabelPool           = "pool"
-	LabelResourceType   = "resource_type"
 	LabelSource         = "source"
 	LabelStatus         = "status"
 	LabelSyncState      = "synchronization_state"
@@ -69,12 +67,6 @@ var (
 		Help:      "unwritten secrets for a specific group id",
 	}, []string{LabelGroupID})
 
-	KubernetesResourcesWritten = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name:      "kubernetes_resources_written",
-		Namespace: Namespace,
-		Help:      "number of kubernetes resources written to the cluster",
-	}, []string{LabelNamespace, LabelResourceType})
-
 	PoolNodes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name:      "kafka_pool_nodes_count",
 		Namespace: Namespace,
@@ -113,7 +105,6 @@ func Register(registry prometheus.Registerer) {
 	registry.MustRegister(
 		Acls,
 		AivenLatency,
-		KubernetesResourcesWritten,
 		SecretQueueSize,
 		Topics,
 		TopicsProcessed,
