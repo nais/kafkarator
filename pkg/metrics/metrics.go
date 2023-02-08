@@ -118,5 +118,7 @@ func Register(registry prometheus.Registerer) {
 		Topics,
 		TopicsProcessed,
 		StreamsProcessed,
+		PoolNodes,
+		PoolInfo,
 	)
 }
