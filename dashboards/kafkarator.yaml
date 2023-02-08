@@ -6,13 +6,14 @@ time: ["now-24h", "now"]
 timezone: default # valid values are: utc, browser, default
 
 # == How to use ==
-# 0. Update list of tenants in first variable
-# 1. Render to JSON using https://github.com/K-Phoen/grabana v0.21.0 or newer
+# 1. Update list of tenants in first variable
+# 2. Render to JSON using https://github.com/K-Phoen/grabana v0.21.0 or newer
 #    $ grabana render --input kafkarator.yaml > kafkarator.json
-# 2. Reset slug, uid and maxDataPoints in kafkarator.json as needed (use git diff to find out where)
-# 3. Delete existing Kafkarator dashboard in Grafana
-# 4. Import kafkarator.json to Grafana (remember to select correct folder)
-# 5. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
+# 3. Reset slug, uid and maxDataPoints in kafkarator.json as needed (use git diff to find out where)
+# 4. Reset multi value for the datasource variable (use git diff)
+# 5. Delete existing Kafkarator dashboard in Grafana
+# 6. Import kafkarator.json to Grafana (remember to select correct folder)
+# 7. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
 
 variables:
   - custom:
@@ -133,7 +134,7 @@ rows:
           value_type: current
           targets:
             - prometheus:
-                query: max(kafkarator_kafka_pool_nodes_count)
+                query: max(kafkarator_kafka_pool_nodes_count) by (pool)
                 legend: "{{ pool }}"
       - single_stat:
           title: Kafka version
