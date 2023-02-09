@@ -17,7 +17,7 @@ spec:
             feature: kafka-canary
             cluster: "{{ .Values.cluster }}"
             pool: "{{ .Values.pool }}"
-            namespace: nais-verification
+            namespace: nais-system
           annotations:
             summary: Aiven Kafka in {{ .Values.pool }} is unavailable for applications in {{ .Values.cluster }}
             consequence: Kafka is unavailable, probably for all applications
