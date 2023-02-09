@@ -22,14 +22,15 @@ type Topic struct {
 	Logger         *log.Entry
 	ReportInterval time.Duration
 	NameResolver   service.NameResolver
+	Projects       []string
 }
 
-func (t *Topic) existingTopics(ctx context.Context, topics []kafka_nais_io_v1.Topic) (map[string][]*aiven.KafkaListTopic, error) {
+func (t *Topic) aivenTopics(ctx context.Context) (map[string][]*aiven.KafkaListTopic, error) {
 	existing := make(map[string][]*aiven.KafkaListTopic)
 
 	// make list of known pools
-	for _, top := range topics {
-		existing[top.Spec.Pool] = nil
+	for _, project := range t.Projects {
+		existing[project] = nil
 	}
 
 	// fetch existing topics
@@ -54,14 +55,13 @@ func (t *Topic) existingTopics(ctx context.Context, topics []kafka_nais_io_v1.To
 }
 
 func (t *Topic) Report(ctx context.Context) error {
-	topics := &kafka_nais_io_v1.TopicList{}
-	// listopts := &client.ListOptions{}
-	err := t.List(ctx, topics)
+	clusterTopics := &kafka_nais_io_v1.TopicList{}
+	err := t.List(ctx, clusterTopics)
 	if err != nil {
 		return fmt.Errorf("list kubernetes topics: %s", err)
 	}
 
-	existing, err := t.existingTopics(ctx, topics.Items)
+	aivenTopics, err := t.aivenTopics(ctx)
 	if err != nil {
 		return fmt.Errorf("list aiven topics: %s", err)
 	}
@@ -81,7 +81,7 @@ func (t *Topic) Report(ctx context.Context) error {
 	}
 
 	reports := make(map[key]int)
-	for _, top := range topics.Items {
+	for _, top := range clusterTopics.Items {
 		k := key{
 			source: metrics.SourceCluster,
 			team:   top.Namespace,
@@ -90,11 +90,11 @@ func (t *Topic) Report(ctx context.Context) error {
 		reports[k]++
 	}
 
-	for pool, tops := range existing {
+	for pool, tops := range aivenTopics {
 		for _, top := range tops {
 			k := key{
 				source: metrics.SourceAiven,
-				team:   topicTeam(top, topics.Items),
+				team:   topicTeam(top, clusterTopics.Items),
 				pool:   pool,
 			}
 			reports[k]++

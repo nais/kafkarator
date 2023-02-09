@@ -24,6 +24,7 @@ func Start(opts *Opts) {
 		Logger:         opts.Logger.WithField("metric-collector", "topic"),
 		ReportInterval: opts.ReportInterval,
 		NameResolver:   opts.NameResolver,
+		Projects:       opts.Projects,
 	}
 	go topicCollector.Run()
 
