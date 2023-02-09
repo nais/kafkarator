@@ -3,55 +3,31 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"github.com/nais/liberator/pkg/aiven/service"
-	"strings"
-	"time"
-
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 type Topic struct {
 	client.Client
-	Aiven          *aiven.Client
-	Logger         *log.Entry
-	ReportInterval time.Duration
-	NameResolver   service.NameResolver
-	Projects       []string
+	projects     []string
+	aiven        *aiven.Client
+	logger       *log.Entry
+	nameResolver service.NameResolver
 }
 
-func (t *Topic) aivenTopics(ctx context.Context) (map[string][]*aiven.KafkaListTopic, error) {
-	existing := make(map[string][]*aiven.KafkaListTopic)
+func (t *Topic) Description() string {
+	return "topic metrics"
+}
 
-	// make list of known pools
-	for _, project := range t.Projects {
-		existing[project] = nil
-	}
-
-	// fetch existing topics
-	for pool := range existing {
-		serviceName, err := t.NameResolver.ResolveKafkaServiceName(pool)
-		if err != nil {
-			return nil, err
-		}
-		topicManager := topic.Manager{
-			AivenTopics: t.Aiven.KafkaTopics,
-			Project:     pool,
-			Service:     serviceName,
-			Logger:      t.Logger.WithContext(ctx),
-		}
-		existing[pool], err = topicManager.List()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return existing, nil
+func (t *Topic) Logger() log.FieldLogger {
+	return t.logger
 }
 
 func (t *Topic) Report(ctx context.Context) error {
@@ -108,26 +84,33 @@ func (t *Topic) Report(ctx context.Context) error {
 	return nil
 }
 
-func (t *Topic) Run() {
-	report := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), t.ReportInterval)
-		now := time.Now()
-		err := t.Report(ctx)
-		duration := time.Now().Sub(now)
-		cancel()
+func (t *Topic) aivenTopics(ctx context.Context) (map[string][]*aiven.KafkaListTopic, error) {
+	existing := make(map[string][]*aiven.KafkaListTopic)
+
+	// make list of known pools
+	for _, project := range t.projects {
+		existing[project] = nil
+	}
+
+	// fetch existing topics
+	for pool := range existing {
+		serviceName, err := t.nameResolver.ResolveKafkaServiceName(pool)
 		if err != nil {
-			t.Logger.Errorf("Unable to report topic metrics: %s", err)
-		} else {
-			t.Logger.Infof("Updated topic metrics in %s", duration)
+			return nil, err
+		}
+		topicManager := topic.Manager{
+			AivenTopics: t.aiven.KafkaTopics,
+			Project:     pool,
+			Service:     serviceName,
+			Logger:      t.logger.WithContext(ctx),
+		}
+		existing[pool], err = topicManager.List()
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	time.Sleep(time.Second * 5) // Wait 5 seconds before running first report, to allow Manager to start K8s Client
-	report()
-	ticker := time.NewTicker(t.ReportInterval)
-	for range ticker.C {
-		report()
-	}
+	return existing, nil
 }
 
 // look up an Aiven topic's team from the kubernetes topic specs

@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"context"
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/sirupsen/logrus"
@@ -19,21 +20,41 @@ type Opts struct {
 
 func Start(opts *Opts) {
 	topicCollector := &Topic{
-		Client:         opts.Client,
-		Aiven:          opts.AivenClient,
-		Logger:         opts.Logger.WithField("metric-collector", "topic"),
-		ReportInterval: opts.ReportInterval,
-		NameResolver:   opts.NameResolver,
-		Projects:       opts.Projects,
+		Client:       opts.Client,
+		projects:     opts.Projects,
+		aiven:        opts.AivenClient,
+		logger:       opts.Logger.WithField("metric-collector", "topic"),
+		nameResolver: opts.NameResolver,
 	}
-	go topicCollector.Run()
+	go run(topicCollector, opts.ReportInterval)
 
 	metadataCollector := &Metadata{
-		Projects:       opts.Projects,
-		Aiven:          opts.AivenClient,
-		Logger:         opts.Logger.WithField("metric-collector", "metadata"),
-		ReportInterval: opts.ReportInterval,
-		NameResolver:   opts.NameResolver,
+		projects:     opts.Projects,
+		aiven:        opts.AivenClient,
+		logger:       opts.Logger.WithField("metric-collector", "metadata"),
+		nameResolver: opts.NameResolver,
 	}
-	go metadataCollector.Run()
+	go run(metadataCollector, opts.ReportInterval)
+}
+
+func run(collector Collector, reportInterval time.Duration) {
+	report := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), reportInterval)
+		now := time.Now()
+		err := collector.Report(ctx)
+		duration := time.Now().Sub(now)
+		cancel()
+		if err != nil {
+			collector.Logger().Errorf("Unable to report %s: %s", collector.Description(), err)
+		} else {
+			collector.Logger().Infof("Updated %s in %s", collector.Description(), duration)
+		}
+	}
+
+	time.Sleep(time.Second * 5) // Wait 5 seconds before running first report, to allow Manager to start K8s Client
+	report()
+	ticker := time.NewTicker(reportInterval)
+	for range ticker.C {
+		report()
+	}
 }
