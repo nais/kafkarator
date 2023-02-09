@@ -343,7 +343,7 @@
             }
           ],
           "thresholds": "",
-          "valueFontSize": "50%",
+          "valueFontSize": "30%",
           "valueMaps": [
             {
               "op": "=",
@@ -482,7 +482,7 @@
             }
           ],
           "thresholds": "",
-          "valueFontSize": "50%",
+          "valueFontSize": "30%",
           "valueMaps": [
             {
               "op": "=",
@@ -501,7 +501,7 @@
           "id": 8,
           "isNew": false,
           "renderer": "flot",
-          "span": 4,
+          "span": 6,
           "title": "Kafka plan",
           "transparent": true,
           "type": "singlestat",
@@ -547,7 +547,7 @@
             }
           ],
           "thresholds": "",
-          "valueFontSize": "50%",
+          "valueFontSize": "30%",
           "valueMaps": [
             {
               "op": "=",
@@ -575,7 +575,7 @@
           "id": 9,
           "isNew": false,
           "renderer": "flot",
-          "span": 4,
+          "span": 6,
           "title": "Topics - $ds",
           "transparent": true,
           "type": "graph",
@@ -606,8 +606,8 @@
           "targets": [
             {
               "refId": "",
-              "expr": "sum(kafkarator_topics{pool=\"$ds\"}) by (source)",
-              "legendFormat": "{{ source }}",
+              "expr": "sum(kafkarator_topics) by (source, pool)",
+              "legendFormat": "{{ pool }} - {{ source }}",
               "format": "time_series"
             }
           ],
@@ -644,7 +644,7 @@
           "id": 10,
           "isNew": false,
           "renderer": "flot",
-          "span": 4,
+          "span": 6,
           "title": "ACLs - $ds",
           "transparent": true,
           "type": "graph",
@@ -675,8 +675,8 @@
           "targets": [
             {
               "refId": "",
-              "expr": "sum(kafkarator_acls{pool=\"$ds\"})",
-              "legendFormat": "acls",
+              "expr": "sum(kafkarator_acls) by (pool)",
+              "legendFormat": "{{ pool }}",
               "format": "time_series"
             }
           ],

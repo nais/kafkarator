@@ -116,7 +116,7 @@ rows:
           height: 20px
           span: 4
           value_type: name
-          value_font_size: 50%
+          value_font_size: 30%
           targets:
             - prometheus:
                 query: label_replace(kube_pod_container_info{container="kafkarator",namespace="nais-system"}, "version", "$1", "image", ".*:(.*)")
@@ -143,7 +143,7 @@ rows:
           height: 20px
           span: 4
           value_type: name
-          value_font_size: 50%
+          value_font_size: 30%
           targets:
             - prometheus:
                 query: kafkarator_kafka_pool_info
@@ -154,9 +154,9 @@ rows:
           datasource: $ds
           transparent: true
           height: 20px
-          span: 4
+          span: 6
           value_type: name
-          value_font_size: 50%
+          value_font_size: 30%
           targets:
             - prometheus:
                 query: kafkarator_kafka_pool_info
@@ -169,20 +169,20 @@ rows:
           title: Topics - $ds
           datasource: $ds
           transparent: true
-          span: 4
+          span: 6
           targets:
             - prometheus:
-                query: sum(kafkarator_topics{pool="$ds"}) by (source)
-                legend: "{{ source }}"
+                query: sum(kafkarator_topics) by (source, pool)
+                legend: "{{ pool }} - {{ source }}"
       - graph:
           title: ACLs - $ds
           datasource: $ds
           transparent: true
-          span: 4
+          span: 6
           targets:
             - prometheus:
-                query: sum(kafkarator_acls{pool="$ds"})
-                legend: "acls"
+                query: sum(kafkarator_acls) by (pool)
+                legend: "{{ pool }}"
   - name: Resource usage
     collapse: true
     panels:
@@ -232,8 +232,8 @@ rows:
           span: 4
           targets:
             - prometheus:
-                query: sum(kafkarator_topics_processed) by (synchronization_state)
-                legend: "{{ synchronization_state }}"
+                query: sum(kafkarator_topics_processed) by (synchronization_state, pool)
+                legend: "{{ pool }} - {{ synchronization_state }}"
       - graph:
           title: Streams processed - $ds
           datasource: $ds
@@ -242,8 +242,8 @@ rows:
           span: 4
           targets:
             - prometheus:
-                query: sum(kafkarator_streams_processed) by (synchronization_state)
-                legend: "{{ synchronization_state }}"
+                query: sum(kafkarator_streams_processed) by (synchronization_state, pool)
+                legend: "{{ pool }} - {{ synchronization_state }}"
   - name: Aiven Latency - $aiven_op
     repeat_for: aiven_op
     collapse: true
