@@ -89,16 +89,16 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Sync to Aiven; retry if necessary
 	result := r.Process(stream, logger)
 
+	if result.Skipped {
+		return ctrl.Result{}, nil
+	}
+
 	defer func() {
 		metrics.StreamsProcessed.With(prometheus.Labels{
 			metrics.LabelSyncState: result.Status.SynchronizationState,
 			metrics.LabelPool:      stream.Spec.Pool,
 		}).Inc()
 	}()
-
-	if result.Skipped {
-		return ctrl.Result{}, nil
-	}
 
 	if result.Error != nil {
 		stream.Status = &result.Status

@@ -215,16 +215,16 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// Sync to Aiven; retry if necessary
 	result := r.Process(topic, logger)
 
+	if result.Skipped {
+		return ctrl.Result{}, nil
+	}
+
 	defer func() {
 		metrics.TopicsProcessed.With(prometheus.Labels{
 			metrics.LabelSyncState: result.Status.SynchronizationState,
 			metrics.LabelPool:      topic.Spec.Pool,
 		}).Inc()
 	}()
-
-	if result.Skipped {
-		return ctrl.Result{}, nil
-	}
 
 	if result.Error != nil {
 		topic.Status = &result.Status
