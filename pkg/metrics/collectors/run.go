@@ -35,6 +35,15 @@ func Start(opts *Opts) {
 		nameResolver: opts.NameResolver,
 	}
 	go run(metadataCollector, opts.ReportInterval)
+
+	aclCollector := &Acls{
+		Client:       opts.Client,
+		projects:     opts.Projects,
+		aiven:        opts.AivenClient,
+		logger:       opts.Logger.WithField("metric-collector", "acls"),
+		nameResolver: opts.NameResolver,
+	}
+	go run(aclCollector, opts.ReportInterval)
 }
 
 func run(collector Collector, reportInterval time.Duration) {
