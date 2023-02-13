@@ -1,0 +1,267 @@
+title: Kafka Canary
+editable: true
+tags: [generated, yaml]
+auto_refresh: 1m
+time: ["now-3h", "now"]
+timezone: default # valid values are: utc, browser, default
+
+# == How to use ==
+# 1. Update list of tenants in first variable
+# 2. Render to JSON using https://github.com/K-Phoen/grabana v0.21.0 or newer
+#    $ grabana render --input kafka-canary.yaml > kafka-canary.json
+# 3. Reset slug, uid and maxDataPoints in kafka-canary.json as needed (use git diff to find out where)
+# 4. Reset multi value for the datasource variable (use git diff)
+# 5. Delete existing Kafka Canary dashboard in Grafana
+# 6. Import kafka-canary.json to Grafana (remember to select correct folder)
+# 7. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
+
+variables:
+  - custom:
+      name: tenant
+      default: nav
+      values_map:
+        nav: nav
+        dev-nais: dev-nais
+        mtpilot: mtpilot
+        ssb: ssb
+  - datasource:
+      name: ds
+      type: prometheus
+      regex: /$tenant-(?!management)/
+      include_all: true
+
+rows:
+  - name: Status in $ds
+    repeat_for: ds
+    panels:
+      - single_stat:
+          title: Healthy
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - background
+          value_type: current
+          value_font_size: 50%
+          thresholds: [1,1]
+          ranges_to_text:
+            - from: 0
+              to: 0
+              text: Healthy
+            - from: 1
+              to: 1000000
+              text: Unhealthy
+          targets:
+            - prometheus:
+                query: sum(kube_deployment_status_replicas_unavailable{deployment="kafka-canary", namespace="nais-verification"})
+      - single_stat:
+          title: Running pods
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,1]
+          colors:
+            - "#d44a3a"
+            - "rgba(237, 129, 40, 0.89)"
+            - "#299c46"
+          targets:
+            - prometheus:
+                query: count(kube_pod_container_status_running{container="kafka-canary", namespace="nais-verification"})
+      - single_stat:
+          title: Pending pods
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,3]
+          targets:
+            - prometheus:
+                query: sum(kube_pod_status_phase{phase="Pending",namespace="nais-verification",pod=~"^kafkarator-.+"})
+      - single_stat:
+          title: "# of restarts"
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 2
+          color:
+            - value
+          sparkline: bottom
+          value_type: current
+          thresholds: [1,20]
+          targets:
+            - prometheus:
+                query: sum(kube_pod_container_status_restarts_total{container="kafka-canary", namespace="nais-verification"})
+      - single_stat:
+          title: App version
+          datasource: $ds
+          transparent: true
+          height: 20px
+          span: 4
+          value_type: name
+          value_font_size: 30%
+          targets:
+            - prometheus:
+                query: label_replace(kube_pod_container_info{container="kafka-canary",namespace="nais-verification"}, "version", "$1", "image", ".*:(.*)")
+                legend: "{{ version }}"
+                instant: true
+  - name: Kafka Canary - $ds
+    repeat_for: ds
+    panels:
+      - gauge:
+          title: Age
+          datasource: $ds
+          transparent: true
+          span: 1
+          value_type: last
+          unit: s
+          decimals: 0
+          threshold_mode: absolute
+          thresholds:
+            - color: green
+              value: 0
+            - color: yellow
+              value: 1800
+            - color: red
+              value: 2400
+          targets:
+            - prometheus:
+                query: time() - max(kafkarator_canary_start_timestamp)
+      - gauge:
+          title: Last consumed
+          datasource: $ds
+          transparent: true
+          span: 1
+          value_type: last
+          unit: s
+          threshold_mode: absolute
+          thresholds:
+            - color: green
+              value: 0
+            - color: yellow
+              value: 180
+            - color: red
+              value: 240
+          targets:
+            - prometheus:
+                query: time() - max(kafkarator_canary_last_consumed)
+      - gauge:
+          title: Last produced
+          datasource: $ds
+          transparent: true
+          span: 1
+          value_type: last
+          unit: s
+          threshold_mode: absolute
+          thresholds:
+            - color: green
+              value: 0
+            - color: yellow
+              value: 180
+            - color: red
+              value: 240
+          targets:
+            - prometheus:
+                query: time() - max(kafkarator_canary_last_produced)
+      - graph:
+          title: Message latency percentiles
+          description: How long does it take from a message is produced until it is seen by the consumer?
+          datasource: $ds
+          transparent: true
+          span: 3
+          axes:
+            left:
+              unit: s
+              log_base: 2
+          targets:
+            - prometheus:
+                query: histogram_quantile(0.99, sum(rate(kafkarator_canary_consume_latency_bucket[5m])) by (le))
+                legend: 99th
+            - prometheus:
+                query: histogram_quantile(0.95, sum(rate(kafkarator_canary_consume_latency_bucket[5m])) by (le))
+                legend: 95th
+            - prometheus:
+                query: histogram_quantile(0.80, sum(rate(kafkarator_canary_consume_latency_bucket[5m])) by (le))
+                legend: 80th
+            - prometheus:
+                query: histogram_quantile(0.50, sum(rate(kafkarator_canary_consume_latency_bucket[5m])) by (le))
+                legend: 50th
+      - graph:
+          title: Offset skew
+          description: How many messages have been produced, but not yet consumed?
+          datasource: $ds
+          transparent: true
+          span: 3
+          targets:
+            - prometheus:
+                query: sum(kafkarator_canary_last_produced_offset)-sum(kafkarator_canary_last_consumed_offset)
+      - graph:
+          title: Sync producer latency percentiles
+          description: How long does it take to produce a message and persist it on the Kafka pool?
+          datasource: $ds
+          transparent: true
+          span: 3
+          axes:
+            left:
+              unit: s
+              log_base: 2
+          targets:
+            - prometheus:
+                query: histogram_quantile(0.99, sum(rate(kafkarator_canary_produce_latency_bucket[5m])) by (le))
+                legend: 99th
+            - prometheus:
+                query: histogram_quantile(0.95, sum(rate(kafkarator_canary_produce_latency_bucket[5m])) by (le))
+                legend: 95th
+            - prometheus:
+                query: histogram_quantile(0.80, sum(rate(kafkarator_canary_produce_latency_bucket[5m])) by (le))
+                legend: 80th
+            - prometheus:
+                query: histogram_quantile(0.50, sum(rate(kafkarator_canary_produce_latency_bucket[5m])) by (le))
+                legend: 50th
+  - name: Resource usage
+    collapse: true
+    panels:
+      - graph:
+          title: Memory usage - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: avg(kube_pod_container_resource_limits{namespace="nais-verification",container="kafka-canary",resource="memory"})
+                legend: limits
+            - prometheus:
+                query: avg(kube_pod_container_resource_requests{namespace="nais-verification",container="kafka-canary",resource="memory"})
+                legend: requests
+            - prometheus:
+                query: sum(container_memory_working_set_bytes{namespace="nais-verification",container="kafka-canary"}) by (pod)
+                legend: "working set {{ pod }}"
+            - prometheus:
+                query: sum(container_memory_usage_bytes{namespace="nais-verification",container="kafka-canary"}) by (pod)
+                legend: "Resident set size {{ pod }}"
+      - graph:
+          title: CPU usage - $ds
+          datasource: $ds
+          repeat: ds
+          transparent: true
+          span: 4
+          targets:
+            - prometheus:
+                query: avg(kube_pod_container_resource_limits{namespace="nais-verification",container="kafka-canary",resource="cpu"})
+                legend: limits
+            - prometheus:
+                query: avg(kube_pod_container_resource_requests{namespace="nais-verification",container="kafka-canary",resource="cpu"})
+                legend: requests
+            - prometheus:
+                query: sum(irate(container_cpu_usage_seconds_total{container="kafka-canary",namespace="nais-verification"}[2m])) by (pod)
+                legend: "{{ pod }}"
