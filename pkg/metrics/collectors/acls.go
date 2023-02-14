@@ -20,6 +20,12 @@ type Acls struct {
 	nameResolver service.NameResolver
 }
 
+type metric struct {
+	topic  string
+	pool   string
+	source string
+}
+
 func (a *Acls) Description() string {
 	return "acl metrics"
 }
@@ -29,6 +35,43 @@ func (a *Acls) Logger() log.FieldLogger {
 }
 
 func (a *Acls) Report(ctx context.Context) error {
+	err := a.reportFromClusterTopics(ctx)
+	if err != nil {
+		return err
+	}
+
+	return a.reportFromAivenProjects()
+}
+
+func (a *Acls) reportFromAivenProjects() error {
+	for _, project := range a.projects {
+		svcName, err := a.nameResolver.ResolveKafkaServiceName(project)
+		if err != nil {
+			return fmt.Errorf("resolve kafka service name in project %s: %s", project, err)
+		}
+
+		acls, err := a.aiven.KafkaACLs.List(project, svcName)
+		if err != nil {
+			return fmt.Errorf("list acls in in project %s: %s", project, err)
+		}
+
+		topics := make(map[string][]*aiven.KafkaACL)
+		for _, kafkaACL := range acls {
+			topics[kafkaACL.Topic] = append(topics[kafkaACL.Topic], kafkaACL)
+		}
+
+		for topicName, kafkaACLS := range topics {
+			metrics.Acls.With(prometheus.Labels{
+				metrics.LabelTopic:  topicName,
+				metrics.LabelPool:   project,
+				metrics.LabelSource: metrics.SourceAiven,
+			}).Set(float64(len(kafkaACLS)))
+		}
+	}
+	return nil
+}
+
+func (a *Acls) reportFromClusterTopics(ctx context.Context) error {
 	clusterTopics := &kafka_nais_io_v1.TopicList{}
 	err := a.List(ctx, clusterTopics)
 	if err != nil {
@@ -36,37 +79,12 @@ func (a *Acls) Report(ctx context.Context) error {
 	}
 
 	for _, topic := range clusterTopics.Items {
-		a.reportTopic(topic)
+		metrics.Acls.With(prometheus.Labels{
+			metrics.LabelTopic:  topic.Name,
+			metrics.LabelPool:   topic.Spec.Pool,
+			metrics.LabelSource: metrics.SourceCluster,
+		}).Set(float64(len(topic.Spec.ACL)))
 	}
 
 	return nil
-}
-
-func (a *Acls) reportTopic(topic kafka_nais_io_v1.Topic) {
-	type metric struct {
-		topic string
-		team  string
-		app   string
-		pool  string
-	}
-
-	uniq := make(map[metric]int)
-	for _, acl := range topic.Spec.ACL {
-		key := metric{
-			topic: topic.Name,
-			team:  acl.Team,
-			app:   acl.Application,
-			pool:  topic.Spec.Pool,
-		}
-		uniq[key]++
-	}
-
-	for key, count := range uniq {
-		metrics.Acls.With(prometheus.Labels{
-			metrics.LabelTopic: key.topic,
-			metrics.LabelTeam:  key.team,
-			metrics.LabelApp:   key.app,
-			metrics.LabelPool:  key.pool,
-		}).Set(float64(count))
-	}
 }

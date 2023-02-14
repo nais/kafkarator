@@ -52,7 +52,7 @@ var (
 		Name:      "acls",
 		Namespace: Namespace,
 		Help:      "number of acls",
-	}, []string{LabelTopic, LabelTeam, LabelApp, LabelPool})
+	}, []string{LabelTopic, LabelPool, LabelSource})
 
 	AivenLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:      "aiven_latency",
