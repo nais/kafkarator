@@ -17,7 +17,7 @@ spec:
     enabled: true
     path: /metrics
   resources:
-    request:
+    requests:
       cpu: 50m
       memory: 64Mi
   env:
