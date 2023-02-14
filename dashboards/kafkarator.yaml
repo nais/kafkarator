@@ -181,8 +181,8 @@ rows:
           span: 6
           targets:
             - prometheus:
-                query: sum(kafkarator_acls) by (pool)
-                legend: "{{ pool }}"
+                query: sum(kafkarator_acls) by (pool, source)
+                legend: "{{ source }} - {{ pool }}"
   - name: Resource usage
     collapse: true
     panels:

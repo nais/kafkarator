@@ -675,8 +675,8 @@
           "targets": [
             {
               "refId": "",
-              "expr": "sum(kafkarator_acls) by (pool)",
-              "legendFormat": "{{ pool }}",
+              "expr": "sum(kafkarator_acls) by (pool, source)",
+              "legendFormat": "{{ source }} - {{ pool }}",
               "format": "time_series"
             }
           ],
@@ -935,8 +935,8 @@
           "targets": [
             {
               "refId": "",
-              "expr": "sum(kafkarator_topics_processed) by (synchronization_state)",
-              "legendFormat": "{{ synchronization_state }}",
+              "expr": "sum(kafkarator_topics_processed) by (synchronization_state, pool)",
+              "legendFormat": "{{ pool }} - {{ synchronization_state }}",
               "format": "time_series"
             }
           ],
@@ -1005,8 +1005,8 @@
           "targets": [
             {
               "refId": "",
-              "expr": "sum(kafkarator_streams_processed) by (synchronization_state)",
-              "legendFormat": "{{ synchronization_state }}",
+              "expr": "sum(kafkarator_streams_processed) by (synchronization_state, pool)",
+              "legendFormat": "{{ pool }} - {{ synchronization_state }}",
               "format": "time_series"
             }
           ],
@@ -1121,6 +1121,11 @@
         "refresh": false,
         "options": [
           {
+            "text": "nav",
+            "value": "nav",
+            "selected": false
+          },
+          {
             "text": "dev-nais",
             "value": "dev-nais",
             "selected": false
@@ -1133,11 +1138,6 @@
           {
             "text": "ssb",
             "value": "ssb",
-            "selected": false
-          },
-          {
-            "text": "nav",
-            "value": "nav",
             "selected": false
           }
         ],
