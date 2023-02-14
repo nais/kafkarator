@@ -11,6 +11,7 @@ on:
       - doc/**
       - examples/**
       - scripts/**
+      - dashboards/**
 
 env:
   kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
