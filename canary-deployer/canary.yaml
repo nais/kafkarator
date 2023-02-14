@@ -16,6 +16,10 @@ spec:
   prometheus:
     enabled: true
     path: /metrics
+  resources:
+    request:
+      cpu: 50m
+      memory: 64Mi
   env:
     - name: DEPLOY_START
       value: "{{ now }}"
