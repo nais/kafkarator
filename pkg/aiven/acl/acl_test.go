@@ -54,13 +54,13 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
-		{ // Keep
+		{ // Delete because of old naming convention
 			ID:         "abcdef",
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
-		{ // Keep, same as above with new name
+		{ // Keep
 			ID:         "abcdef-new",
 			Permission: "write",
 			Topic:      FullTopic,
@@ -72,29 +72,14 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 		{ // Added because existing uses wrong username
 			Permission: "read",
 			Topic:      FullTopic,
-			Username:   "user.app*",
-		},
-		{ // Added because existing uses wrong username, alternate name
-			Permission: "read",
-			Topic:      FullTopic,
 			Username:   "user_app_0841666a_*",
 		},
 		{ // Already exists
 			Permission: "write",
 			Topic:      FullTopic,
-			Username:   "user2.app*",
-		},
-		{ // Already exists, new name
-			Permission: "write",
-			Topic:      FullTopic,
 			Username:   "user2_app_eb343e9a_*",
 		},
 		{ // Added because of new user
-			Permission: "readwrite",
-			Topic:      FullTopic,
-			Username:   "user3.app*",
-		},
-		{ // Added because of new user, alternate name
 			Permission: "readwrite",
 			Topic:      FullTopic,
 			Username:   "user3_app_538859ff_*",
@@ -105,17 +90,7 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 		{
 			Permission: "read",
 			Topic:      FullTopic,
-			Username:   "user.app*",
-		},
-		{
-			Permission: "read",
-			Topic:      FullTopic,
 			Username:   "user_app_0841666a_*",
-		},
-		{
-			Permission: "readwrite",
-			Topic:      FullTopic,
-			Username:   "user3.app*",
 		},
 		{
 			Permission: "readwrite",
@@ -143,6 +118,12 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
+		{
+			ID:         "abcdef",
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2.app*",
+		},
 	}
 
 	suite.kafkaAcls = []*aiven.KafkaACL{
@@ -164,13 +145,13 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
-		{ // Keep
+		{ // Delete because of old naming convention
 			ID:         "abcdef",
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
-		{ // Keep, same as above with new name
+		{ // Keep
 			ID:         "abcdef-new",
 			Permission: "write",
 			Topic:      FullTopic,
@@ -230,10 +211,10 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 		Once().
 		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
-		Times(4).
+		Times(2).
 		Return(nil, nil)
 	m.On("Delete", TestPool, TestService, mock.Anything).
-		Times(3).
+		Times(4).
 		Return(nil)
 
 	aclManager := acl.Manager{
@@ -266,7 +247,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 		Once().
 		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
-		Times(2).
+		Times(1).
 		Return(nil, nil)
 
 	aclManager := acl.Manager{

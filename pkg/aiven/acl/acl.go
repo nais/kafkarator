@@ -76,14 +76,6 @@ func (r *Manager) getExistingAcls() ([]Acl, error) {
 func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.TopicACL) ([]Acl, error) {
 	wantedAcls := make([]Acl, 0, len(topicAcls))
 	for _, aclSpec := range topicAcls {
-		oldNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
-			return topicAcl.ACLname(), nil
-		})
-		if err != nil {
-			return nil, err
-		}
-		wantedAcls = append(wantedAcls, oldNameAcl)
-
 		newNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
 			return topicAcl.ServiceUserNameWithSuffix("*")
 		})

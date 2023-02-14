@@ -23,20 +23,11 @@ aiven:
           - key: created-by
             value: Kafkarator
     acls:
-      - username: myteam.myapplication*
-        permission: read
-        topic: myteam.mytopic
       - username: myteam_myapplication_1c62faf5_*
         permission: read
         topic: myteam.mytopic
-      - username: otherteam.otherapplication*
-        permission: write
-        topic: myteam.mytopic
       - username: otherteam_otherapplication_21a2c9c6_*
         permission: write
-        topic: myteam.mytopic
-      - username: team-redundant-team.team-redundant-team-application*
-        permission: read
         topic: myteam.mytopic
       - username: redundant-team_application_18515795_*
         permission: read
