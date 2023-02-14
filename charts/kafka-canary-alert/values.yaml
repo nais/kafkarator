@@ -4,3 +4,4 @@
 
 pool: "" # Mapped in fasit
 cluster: "" # Mapped in fasit
+tenant: "" # Mapped in fasit

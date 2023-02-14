@@ -10,7 +10,7 @@ spec:
     - name: kafka-canary
       rules:
         - alert: AivenKafkaUnavailable
-          expr: '(time()-min(kafkarator_canary_last_consumed) > 120) or absent(kafkarator_canary_last_consumed)'
+          expr: '(time()-max(kafkarator_canary_last_consumed) > 120) or absent(kafkarator_canary_last_consumed)'
           for: 5m
           labels:
             severity: critical
@@ -26,4 +26,4 @@ spec:
               * Check that Aiven Kafka in {{ .Values.pool }} is up and running
               * Check canary logs: `kubectl logs --namespace nais-verification deploy/kafka-canary kafka-canary`
 
-              Instrumentation: Coming soon!
+              Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
