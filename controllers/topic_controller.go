@@ -73,7 +73,9 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 			}
 		}
 		status.SynchronizationState = state
-		status.LatestAivenSyncFailure = time.Now().Format(time.RFC3339)
+		if !retry {
+			status.LatestAivenSyncFailure = time.Now().Format(time.RFC3339)
+		}
 
 		return TopicReconcileResult{
 			Requeue: retry,
