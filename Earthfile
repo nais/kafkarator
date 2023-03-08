@@ -47,7 +47,7 @@ docker-kafkarator:
     ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG kafkarator_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/kafkarator
+    ARG kafkarator_image=europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
@@ -61,7 +61,7 @@ docker-canary:
     ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG canary_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary
+    ARG canary_image=europe-north1-docker.pkg.dev/nais-io/nais/images/canary
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_image}:${VERSION} ${canary_image}:latest
 
@@ -79,7 +79,7 @@ docker-canary-deployer:
     ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG canary_deployer_image=ghcr.io/$EARTHLY_GIT_PROJECT_NAME/canary-deployer
+    ARG canary_deployer_image=europe-north1-docker.pkg.dev/nais-io/nais/images/canary-deployer
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_deployer_image}:${VERSION} ${canary_deployer_image}:latest
 

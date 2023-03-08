@@ -14,9 +14,10 @@ on:
       - dashboards/**
 
 env:
-  kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
-  canary_image: ghcr.io/${{ github.repository }}/canary
-  canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
+  REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
+  kafkarator_image: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
+  canary_image: europe-north1-docker.pkg.dev/nais-io/nais/images/canary
+  canary_deployer_image: europe-north1-docker.pkg.dev/nais-io/nais/images/canary-deployer
   cache_image: ghcr.io/${{ github.repository }}/cache
 
 jobs:
@@ -52,12 +53,19 @@ jobs:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
       - uses: actions/checkout@v3
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1.0.0"
+        with:
+          workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
+          token_format: "access_token"
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
       - name: Install earthly
         uses: earthly/actions-setup@v1
       - name: Build and possibly push kafkarator and canary
