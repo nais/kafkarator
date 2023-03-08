@@ -77,6 +77,8 @@ jobs:
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Install earthly
         uses: earthly/actions-setup@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and possibly push kafkarator and canary
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
