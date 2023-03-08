@@ -15,10 +15,11 @@ on:
 
 env:
   REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
-  kafkarator_image: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
-  canary_image: europe-north1-docker.pkg.dev/nais-io/nais/images/canary
-  canary_deployer_image: europe-north1-docker.pkg.dev/nais-io/nais/images/canary-deployer
-  cache_image: ghcr.io/${{ github.repository }}/cache
+  EARTHLY_USE_INLINE_CACHE: true
+  EARTHLY_SAVE_INLINE_CACHE: true
+  EARTHLY_VERBOSE: true
+  EARTHLY_FULL_TARGET: true
+  EARTHLY_OUTPUT: true
 
 jobs:
   setup:
@@ -31,14 +32,8 @@ jobs:
         run: |
           export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
           echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
-          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> ${GITHUB_OUTPUT}
-          echo "CANARY_IMAGE=${canary_image}:${version}" >> ${GITHUB_OUTPUT}
-          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> ${GITHUB_OUTPUT}
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
-      KAFKARATOR_IMAGE: "${{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
-      CANARY_IMAGE: "${{ steps.constants.outputs.CANARY_IMAGE }}"
-      CANARY_DEPLOYER_IMAGE: "${{ steps.constants.outputs.CANARY_DEPLOYER_IMAGE }}"
   build:
     name: Build and push
     runs-on: ubuntu-latest
@@ -63,12 +58,6 @@ jobs:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
           token_format: "access_token"
-      - name: Login to GitHub Docker Registry (used for cache)
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Login to Google Artifact Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
         with:
@@ -83,7 +72,7 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          earthly --ci --remote-cache=${cache_image} +docker-${{ matrix.target }} --VERSION=${VERSION}
+          earthly +docker-${{ matrix.target }} --VERSION=${VERSION}
   deploy-fasit:
     name: Deploy to Fasit
     if: github.ref == 'refs/heads/master'

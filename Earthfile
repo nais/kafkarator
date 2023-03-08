@@ -44,7 +44,6 @@ docker-kafkarator:
     CMD ["/kafkarator"]
 
     # builtins must be declared
-    ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
     ARG kafkarator_image=europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
@@ -58,7 +57,6 @@ docker-canary:
     CMD ["/canary"]
 
     # builtins must be declared
-    ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
     ARG canary_image=europe-north1-docker.pkg.dev/nais-io/nais/images/canary
@@ -76,7 +74,6 @@ docker-canary-deployer:
     CMD ["python3", "/canary/deployer.py"]
 
     # builtins must be declared
-    ARG EARTHLY_GIT_PROJECT_NAME
     ARG EARTHLY_GIT_SHORT_HASH
 
     ARG canary_deployer_image=europe-north1-docker.pkg.dev/nais-io/nais/images/canary-deployer
