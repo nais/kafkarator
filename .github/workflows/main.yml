@@ -63,7 +63,13 @@ jobs:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
           token_format: "access_token"
-      - name: Login to GitHub Packages Docker Registry
+      - name: Login to GitHub Docker Registry (used for cache)
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Google Artifact Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
         with:
           registry: ${{ env.REGISTRY }}
