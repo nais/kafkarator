@@ -17,3 +17,24 @@ Kafkarator translates it to Aiven _topics_ and _ACL entries_.
 Kafkarator uses [earthly](https://earthly.dev) via [earthlyw](https://github.com/mortenlj/earthlyw) for building.
 
 Use `./earthlyw +docker` to build docker images for kafkarator and canary.
+
+## Verifying the kafkarator images and their contents
+
+The images are signed "keylessly" (is that a word?) using [Sigstore cosign](https://github.com/sigstore/cosign).
+To verify their authenticity run
+```
+cosign verify \
+--certificate-identity "https://github.com/nais/kafkarator/.github/workflows/main.yml@refs/heads/master" \
+--certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator@sha256:<shasum>
+```
+
+The images are also attested with SBOMs in the [CycloneDX](https://cyclonedx.org/) format.
+You can verify these by running
+```
+cosign verify-attestation --type cyclonedx  \
+--certificate-identity "https://github.com/nais/kafkarator/.github/workflows/main.yml@refs/heads/master" \
+--certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator@sha256:<shasum>
+```
+
