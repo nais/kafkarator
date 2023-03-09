@@ -14,7 +14,7 @@ kubebuilder:
     SAVE IMAGE --cache-hint
 
 dependencies:
-    FROM golang:1.19
+    FROM golang:1.20
     # Go settings, needs to be ENV to be inherited into build
     ENV CGO_ENABLED=0
     ENV GOOS="linux"
