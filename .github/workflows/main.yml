@@ -11,11 +11,12 @@ on:
       - scripts/**
       - dashboards/**
 env:
-  kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
-  canary_image: ghcr.io/${{ github.repository }}/canary
-  canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
-  cache_image: ghcr.io/${{ github.repository }}/cache
-  registry: ghcr.io
+  REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
+  EARTHLY_USE_INLINE_CACHE: true
+  EARTHLY_SAVE_INLINE_CACHE: true
+  EARTHLY_VERBOSE: true
+  EARTHLY_FULL_TARGET: true
+  EARTHLY_OUTPUT: true
 jobs:
   setup:
     name: Set variables
@@ -27,17 +28,14 @@ jobs:
         run: |
           export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
           echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
-          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> ${GITHUB_OUTPUT}
-          echo "CANARY_IMAGE=${canary_image}:${version}" >> ${GITHUB_OUTPUT}
-          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> ${GITHUB_OUTPUT}
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
-      KAFKARATOR_IMAGE: "${{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
-      CANARY_IMAGE: "${{ steps.constants.outputs.CANARY_IMAGE }}"
-      CANARY_DEPLOYER_IMAGE: "${{ steps.constants.outputs.CANARY_DEPLOYER_IMAGE }}"
   build:
     name: Build and push
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     needs: setup
     strategy:
       matrix:
@@ -49,14 +47,23 @@ jobs:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # ratchet:actions/checkout@v3
-      - name: Login to GitHub Packages Docker Registry
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d" # ratchet:google-github-actions/auth@v1.0.0
+        with:
+          workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
+          token_format: "access_token"
+      - name: Login to Google Artifact Registry
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # ratchet:docker/login-action@v2
         with:
-          registry: ${{ env.registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
       - name: Install earthly
         uses: earthly/actions-setup@cce953f2ea75f5ff76f6483a788bac66a733de3a # ratchet:earthly/actions-setup@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install cosign
         uses: sigstore/cosign-installer@bd2d1189b064bcddc3903176a807dcdba72d7fd0 # ratchet:sigstore/cosign-installer@main
         with:
@@ -65,13 +72,16 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          earthly --ci --remote-cache=${cache_image} +docker-${{ matrix.target }} --VERSION=${VERSION}
+          earthly +docker-${{ matrix.target }} --VERSION=${VERSION}
       - name: Retrieve image digest
         id: imgdigest
-        run: echo "digest=$(docker inspect ${{ env.registry }}/${{ github.repository }}/${{ matrix.target }}:${VERSION} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
+        if: github.ref == 'refs/heads/master'
+        run: echo "digest=$(docker inspect ${{ env.registry }}/${{ matrix.target }}:${VERSION} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
+        if: github.ref == 'refs/heads/master'
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
       - name: Create SBOM
+        if: github.ref == 'refs/heads/master'
         uses: aquasecurity/trivy-action@1f0aa582c8c8f5f7639610d6d38baddfea4fdcee # ratchet:aquasecurity/trivy-action@master
         with:
           scan-type: 'image'
@@ -79,6 +89,7 @@ jobs:
           output: 'cyclone.sbom.json'
           image-ref: ${{ steps.imgdigest.outputs.digest }}
       - name: Attest image
+        if: github.ref == 'refs/heads/master'
         run: cosign attest --yes --predicate cyclone.sbom.json --type cyclonedx ${{ steps.imgdigest.outputs.digest }}
   deploy-fasit:
     name: Deploy to Fasit
