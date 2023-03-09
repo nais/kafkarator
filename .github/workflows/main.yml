@@ -1,9 +1,7 @@
 name: Build and deploy Kafkarator
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 on:
   push:
     paths-ignore:
@@ -12,34 +10,34 @@ on:
       - examples/**
       - scripts/**
       - dashboards/**
-
 env:
-  REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
-  EARTHLY_USE_INLINE_CACHE: true
-  EARTHLY_SAVE_INLINE_CACHE: true
-  EARTHLY_VERBOSE: true
-  EARTHLY_FULL_TARGET: true
-  EARTHLY_OUTPUT: true
-
+  kafkarator_image: ghcr.io/${{ github.repository }}/kafkarator
+  canary_image: ghcr.io/${{ github.repository }}/canary
+  canary_deployer_image: ghcr.io/${{ github.repository }}/canary-deployer
+  cache_image: ghcr.io/${{ github.repository }}/cache
+  registry: ghcr.io
 jobs:
   setup:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # ratchet:actions/checkout@v3
       - name: "Set image version"
         id: constants
         run: |
           export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
           echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
+          echo "KAFKARATOR_IMAGE=${kafkarator_image}:${version}" >> ${GITHUB_OUTPUT}
+          echo "CANARY_IMAGE=${canary_image}:${version}" >> ${GITHUB_OUTPUT}
+          echo "CANARY_DEPLOYER_IMAGE=${canary_deployer_image}:${version}" >> ${GITHUB_OUTPUT}
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
+      KAFKARATOR_IMAGE: "${{ steps.constants.outputs.KAFKARATOR_IMAGE }}"
+      CANARY_IMAGE: "${{ steps.constants.outputs.CANARY_IMAGE }}"
+      CANARY_DEPLOYER_IMAGE: "${{ steps.constants.outputs.CANARY_DEPLOYER_IMAGE }}"
   build:
     name: Build and push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     needs: setup
     strategy:
       matrix:
@@ -50,29 +48,38 @@ jobs:
     env:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@v3
-      - id: "auth"
-        name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v1.0.0"
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # ratchet:actions/checkout@v3
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # ratchet:docker/login-action@v2
         with:
-          workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
-          token_format: "access_token"
-      - name: Login to Google Artifact Registry
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # Use commit-sha1 instead of tag for security concerns
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: "oauth2accesstoken"
-          password: "${{ steps.auth.outputs.access_token }}"
+          registry: ${{ env.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
-        uses: earthly/actions-setup@v1
+        uses: earthly/actions-setup@cce953f2ea75f5ff76f6483a788bac66a733de3a # ratchet:earthly/actions-setup@v1
+      - name: Install cosign
+        uses: sigstore/cosign-installer@bd2d1189b064bcddc3903176a807dcdba72d7fd0 # ratchet:sigstore/cosign-installer@main
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cosign-release: 'v2.0.0'
       - name: Build and possibly push kafkarator and canary
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          earthly +docker-${{ matrix.target }} --VERSION=${VERSION}
+          earthly --ci --remote-cache=${cache_image} +docker-${{ matrix.target }} --VERSION=${VERSION}
+      - name: Retrieve image digest
+        id: imgdigest
+        run: echo "digest=$(docker inspect ${{ env.registry }}/${{ github.repository }}/${{ matrix.target }}:${VERSION} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
+      - name: Sign the container image
+        run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
+      - name: Create SBOM
+        uses: aquasecurity/trivy-action@1f0aa582c8c8f5f7639610d6d38baddfea4fdcee # ratchet:aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          format: 'cyclonedx'
+          output: 'cyclone.sbom.json'
+          image-ref: ${{ steps.imgdigest.outputs.digest }}
+      - name: Attest image
+        run: cosign attest --yes --predicate cyclone.sbom.json --type cyclonedx ${{ steps.imgdigest.outputs.digest }}
   deploy-fasit:
     name: Deploy to Fasit
     if: github.ref == 'refs/heads/master'
@@ -84,11 +91,9 @@ jobs:
       - setup
       - build
     steps:
-      - uses: nais/fasit-deploy@main
+      - uses: nais/fasit-deploy@b2c0b6d049b53bef41b321eec406fe66938576fd # ratchet:nais/fasit-deploy@main
         with:
           json: '{"image": {"tag": "${{ needs.setup.outputs.VERSION }}"}}'
           feature_name: kafkarator
-      - uses: nais/fasit-deploy@main
+      - uses: nais/fasit-deploy@b2c0b6d049b53bef41b321eec406fe66938576fd # ratchet:nais/fasit-deploy@main
         with:
-          json: '{"canary":{"image":{"tag":"${{ needs.setup.outputs.VERSION }}"}},"deployer":{"image":{"tag":"${{ needs.setup.outputs.VERSION }}"}}}'
-          feature_name: kafka-canary
