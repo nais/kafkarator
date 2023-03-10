@@ -13,11 +13,11 @@ deploy_key_secret_name: "nais-verification-deploy-key"
 
 canary:
   image:
-    repository: ghcr.io/nais/kafkarator/canary
+    repository: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator/canary
     tag: latest # Overridden in fasit
 
 deployer:
   image:
-    repository: ghcr.io/nais/kafkarator/canary-deployer
+    repository: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator/canary-deployer
     pullPolicy: IfNotPresent
     tag: latest # Overridden in fasit
