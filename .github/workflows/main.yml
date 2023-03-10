@@ -72,7 +72,7 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          earthly +docker-${{ matrix.target }} --VERSION=${VERSION}
+          earthly +docker-${{ matrix.target }} --VERSION=${VERSION} --REGISTRY=${REGISTRY}
       - name: Retrieve image digest
         id: imgdigest
         if: github.ref == 'refs/heads/master'
