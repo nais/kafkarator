@@ -36,7 +36,6 @@ build:
     RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/main.go
     RUN go build -installsuffix cgo -o canary cmd/canary/main.go
 
-	SAVE ARTIFACT cache-buster # TODO: Remove when earthly resolves body reuse issue
     SAVE ARTIFACT kafkarator
     SAVE ARTIFACT canary
     SAVE IMAGE --cache-hint
@@ -45,7 +44,6 @@ docker-kafkarator:
     FROM alpine:3
     WORKDIR /
     COPY +build/kafkarator /
-	COPY +build/cache-buster / # TODO: Remove when earthly resolves body reuse issue
     CMD ["/kafkarator"]
 
     # builtins must be declared
@@ -59,7 +57,6 @@ docker-canary:
     FROM alpine:3
     WORKDIR /
     COPY +build/canary /
-	COPY +build/cache-buster / # TODO: Remove when earthly resolves body reuse issue
     CMD ["/canary"]
 
     # builtins must be declared
@@ -71,7 +68,6 @@ docker-canary:
 
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
-	COPY +build/cache-buster / # TODO: Remove when earthly resolves body reuse issue
     COPY canary-deployer/requirements.lock /canary/
     RUN apk add python3 && \
         python3 -m ensurepip && \
