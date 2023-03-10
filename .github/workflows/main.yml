@@ -38,6 +38,7 @@ jobs:
       id-token: write
     needs: setup
     strategy:
+      fail-fast: false
       matrix:
         target:
           - kafkarator
