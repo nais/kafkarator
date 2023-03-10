@@ -72,6 +72,7 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
+          date > cache-buster  # TODO: Remove when earthly resolves body reuse issue
           earthly +docker-${{ matrix.target }} --VERSION=${VERSION} --REGISTRY=${REGISTRY}
       - name: Retrieve image digest
         id: imgdigest
