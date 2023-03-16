@@ -77,7 +77,9 @@ jobs:
       - name: Retrieve image digest
         id: imgdigest
         if: github.ref == 'refs/heads/master'
-        run: echo "digest=$(docker inspect ${{ env.REGISTRY }}/kafkarator/${{ matrix.target }}:${VERSION} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
+        run: |
+          docker pull ${{ env.REGISTRY }}/kafkarator/${{ matrix.target }}:${VERSION}
+          echo "digest=$(docker inspect ${{ env.REGISTRY }}/kafkarator/${{ matrix.target }}:${VERSION} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
         if: github.ref == 'refs/heads/master'
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
