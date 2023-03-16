@@ -10,8 +10,9 @@ spec:
   successfulJobsHistoryLimit: 1
   suspend: false
   concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 600
       template:
         {{- include "kafka-canary.job-template" . | nindent 8 }}

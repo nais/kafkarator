@@ -11,5 +11,6 @@ metadata:
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  activeDeadlineSeconds: 600
   template:
     {{- include "kafka-canary.job-template" . | nindent 4 }}
