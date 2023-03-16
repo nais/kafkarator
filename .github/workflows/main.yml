@@ -69,7 +69,7 @@ jobs:
         uses: sigstore/cosign-installer@bd2d1189b064bcddc3903176a807dcdba72d7fd0 # ratchet:sigstore/cosign-installer@main
         with:
           cosign-release: 'v2.0.0'
-      - name: Build and possibly push kafkarator and canary
+      - name: Build and possibly push ${{ matrix.target }}
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
