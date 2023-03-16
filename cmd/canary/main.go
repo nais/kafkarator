@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -40,6 +39,7 @@ const (
 	KafkaGroupID         = "kafka-group-id"
 	KafkaKeyPath         = "kafka-key-path"
 	KafkaTopic           = "kafka-topic"
+	DeployStartTime      = "deploy-start-time"
 	LogFormat            = "log-format"
 	MessageInterval      = "message-interval"
 	MetricsAddress       = "metrics-address"
@@ -57,7 +57,7 @@ type Consume struct {
 }
 
 var (
-	deployStartTimestamp int64
+	deployStartTime time.Time
 
 	LeadTime = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "lead_time",
@@ -124,7 +124,7 @@ var (
 
 func init() {
 	// Automatically read configuration options from environment variables.
-	// i.e. --aiven-token will be configurable using KAFKARATOR_AIVEN_TOKEN.
+	// i.e. --aiven-token will be configurable using CANARY_AIVEN_TOKEN.
 	viper.SetEnvPrefix("CANARY")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
@@ -133,7 +133,7 @@ func init() {
 	flag.String(LogFormat, "text", "Log format, either 'text' or 'json'")
 
 	flag.Duration(MessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
-	flag.Int64Var(&deployStartTimestamp, "deploy-start-time", getEnvInt("DEPLOY_START", time.Now().UnixNano()), "unix timestamp with nanoseconds, specifies when NAIS deploy of testapp started")
+	flag.String(DeployStartTime, time.Now().Format(time.RFC3339), "RFC3339 formatted time of deploy")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -188,17 +188,7 @@ func formatter(logFormat string) (log.Formatter, error) {
 	return nil, fmt.Errorf("unsupported log format '%s'", logFormat)
 }
 
-func getEnvInt(key string, fallback int64) int64 {
-	if value, ok := os.LookupEnv(key); ok {
-		i, _ := strconv.ParseInt(value, 10, 64)
-		return i
-	}
-
-	return fallback
-}
-
 func timeSinceDeploy() float64 {
-	deployStartTime := time.Unix(0, deployStartTimestamp)
 	return time.Now().Sub(deployStartTime).Seconds()
 }
 
@@ -220,7 +210,7 @@ func main() {
 	logger.Infof("kafkarator-canary starting up...")
 
 	StartTimestamp.SetToCurrentTime()
-	DeployTimestamp.Set(float64(deployStartTimestamp) / 10e8)
+	DeployTimestamp.Set(float64(deployStartTime.Unix()))
 	LeadTime.Set(timeSinceDeploy())
 	TimeSinceDeploy.Set(timeSinceDeploy())
 
