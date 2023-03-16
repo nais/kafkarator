@@ -209,6 +209,12 @@ func main() {
 
 	logger.Infof("kafkarator-canary starting up...")
 
+	deployStartTime, err := time.Parse(time.RFC3339, viper.GetString(DeployStartTime))
+	if err != nil {
+		logger.Error(err)
+		os.Exit(ExitConfig)
+	}
+
 	StartTimestamp.SetToCurrentTime()
 	DeployTimestamp.Set(float64(deployStartTime.Unix()))
 	LeadTime.Set(timeSinceDeploy())
