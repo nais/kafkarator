@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -61,7 +61,7 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
             "team": settings.team,
             "image": settings.image,
             "pool": config.pool,
-            "now": datetime.now().isoformat(),
+            "now": datetime.now(timezone.utc).isoformat(),
             "canary_kafka_topic": f"{settings.team}.kafka-canary-{config.canary_cluster}",
             "groupid": config.canary_cluster,
         }
