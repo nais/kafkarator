@@ -65,12 +65,6 @@ var (
 		Help:      "seconds used in deployment pipeline, from making the request until the application is available",
 	})
 
-	TimeSinceDeploy = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name:      "time_since_deploy",
-		Namespace: Namespace,
-		Help:      "seconds since the latest deploy of this application",
-	})
-
 	DeployTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "deploy_timestamp",
 		Namespace: Namespace,
@@ -168,7 +162,6 @@ func init() {
 		LeadTime,
 		ProduceLatency,
 		StartTimestamp,
-		TimeSinceDeploy,
 	)
 }
 
@@ -186,10 +179,6 @@ func formatter(logFormat string) (log.Formatter, error) {
 		}, nil
 	}
 	return nil, fmt.Errorf("unsupported log format '%s'", logFormat)
-}
-
-func timeSinceDeploy() float64 {
-	return time.Now().Sub(deployStartTime).Seconds()
 }
 
 func main() {
@@ -217,8 +206,7 @@ func main() {
 
 	StartTimestamp.SetToCurrentTime()
 	DeployTimestamp.Set(float64(deployStartTime.Unix()))
-	LeadTime.Set(timeSinceDeploy())
-	TimeSinceDeploy.Set(timeSinceDeploy())
+	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
 
 	go func() {
 		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
