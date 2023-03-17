@@ -17,6 +17,7 @@ spec:
             feature: kafka-canary
             cluster: "{{ .Values.cluster }}"
             pool: "{{ .Values.pool }}"
+            tenant: "{{ .Values.tenant }}"
             namespace: nais-system
           annotations:
             summary: Aiven Kafka in {{ .Values.pool }} is unavailable for applications in {{ .Values.cluster }}
@@ -25,5 +26,24 @@ spec:
               * Check that canary has valid Kafka credentials
               * Check that Aiven Kafka in {{ .Values.pool }} is up and running
               * Check canary logs: `kubectl logs --namespace nais-verification deploy/kafka-canary kafka-canary`
+
+              Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
+        - alert: AivenKafkaCanaryNotDeployed
+          expr: '(time() - max(kafkarator_canary_deploy_timestamp) > 3600)'
+          for: 5m
+          labels:
+            severity: critical
+            feature: kafka-canary
+            cluster: "{{ .Values.cluster }}"
+            pool: "{{ .Values.pool }}"
+            tenant: "{{ .Values.tenant }}"
+            namespace: nais-system
+          annotations:
+            summary: Aiven Kafka Canary in {{ .Values.tenant}}-{{ .Values.cluster }} has not been deployed in over an hour
+            consequence: Kafka canary is unable to test that provisioning of credentials work
+            action: |
+              * Check canary deployer logs: `kubectl --context={{ .Values.tenant}}-management --namespace=nais-system logs -lapp.kubernetes.io/name=kafka-canary`
+              * Check status of canary deployer jobs: `kubectl --context={{ .Values.tenant}}-management --namespace=nais-system describe job -lapp.kubernetes.io/name=kafka-canary`
+              * Check status of canary deployer cronjob: `kubectl --context={{ .Values.tenant}}-management --namespace=nais-system describe cronjob kafka-canary-deployer`
 
               Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
