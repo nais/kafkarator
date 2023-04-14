@@ -20,7 +20,7 @@ Use `./earthlyw +docker` to build docker images for kafkarator and canary.
 
 ## Verifying the kafkarator images and their contents
 
-The images are signed "keylessly" (is that a word?) using [Sigstore cosign](https://github.com/sigstore/cosign).
+The images are signed "keylessly" using [Sigstore cosign](https://github.com/sigstore/cosign).
 To verify their authenticity run
 ```
 cosign verify \

@@ -1,22 +1,22 @@
 VERSION 0.6
 
-FROM busybox
+FROM cgr.dev/chainguard/static
 
 ARG REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images
 
 kubebuilder:
-    FROM curlimages/curl:latest
+    FROM cgr.dev/chainguard/go:1.20
     # Constants
     ARG os="linux"
     ARG arch="amd64"
     ARG kubebuilder_version="2.3.1"
 
-    RUN curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kubebuilder_version}/kubebuilder_${kubebuilder_version}_${os}_${arch}.tar.gz | tar -xz -C /tmp/
+    RUN wget -qO - https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kubebuilder_version}/kubebuilder_${kubebuilder_version}_${os}_${arch}.tar.gz | tar -xz -C /tmp/
     SAVE ARTIFACT /tmp/kubebuilder_${kubebuilder_version}_${os}_${arch}/*
     SAVE IMAGE --cache-hint
 
 dependencies:
-    FROM golang:1.20
+    FROM cgr.dev/chainguard/go:1.20
     # Go settings, needs to be ENV to be inherited into build
     ENV CGO_ENABLED=0
     ENV GOOS="linux"
@@ -41,7 +41,7 @@ build:
     SAVE IMAGE --cache-hint
 
 docker-kafkarator:
-    FROM alpine:3
+    FROM cgr.dev/chainguard/static
     WORKDIR /
     COPY +build/kafkarator /
     CMD ["/kafkarator"]
@@ -54,7 +54,7 @@ docker-kafkarator:
     SAVE IMAGE --push europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator:${VERSION} ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
 docker-canary:
-    FROM alpine:3
+    FROM cgr.dev/chainguard/static
     WORKDIR /
     COPY +build/canary /
     CMD ["/canary"]

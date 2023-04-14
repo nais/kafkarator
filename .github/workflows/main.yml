@@ -1,7 +1,9 @@
 name: Build and deploy Kafkarator
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
 on:
   push:
     paths-ignore:
@@ -10,6 +12,7 @@ on:
       - examples/**
       - scripts/**
       - dashboards/**
+
 env:
   REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
   EARTHLY_USE_INLINE_CACHE: true
@@ -17,6 +20,7 @@ env:
   EARTHLY_VERBOSE: true
   EARTHLY_FULL_TARGET: true
   EARTHLY_OUTPUT: true
+
 jobs:
   setup:
     name: Set variables
@@ -30,6 +34,7 @@ jobs:
           echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
     outputs:
       VERSION: "${{ steps.constants.outputs.VERSION }}"
+
   build:
     name: Build and push
     runs-on: ubuntu-latest
@@ -48,6 +53,15 @@ jobs:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # ratchet:actions/checkout@v3
+      - name: Install cosign
+        if: github.ref == 'refs/heads/master'
+        uses: sigstore/cosign-installer@9e9de2292db7abb3f51b7f4808d98f0d347a8919 # ratchet:sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v2.0.0'
+      - name: Verify builder image
+        run: cosign verify --certificate-identity "https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main"  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" cgr.dev/chainguard/go:1.20
+      - name: Verify runner image
+        run: cosign verify --certificate-identity "https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main"  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" cgr.dev/chainguard/static
       - id: "auth"
         if: github.ref == 'refs/heads/master'
         name: "Authenticate to Google Cloud"
@@ -67,11 +81,6 @@ jobs:
         uses: earthly/actions-setup@135d686cdc4619918fd1b542d0a08d61dd104518 # ratchet:earthly/actions-setup@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install cosign
-        if: github.ref == 'refs/heads/master'
-        uses: sigstore/cosign-installer@9e9de2292db7abb3f51b7f4808d98f0d347a8919 # ratchet:sigstore/cosign-installer@main
-        with:
-          cosign-release: 'v2.0.0'
       - name: Build and possibly push ${{ matrix.target }}
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
@@ -97,6 +106,7 @@ jobs:
       - name: Attest image
         if: github.ref == 'refs/heads/master'
         run: cosign attest --yes --predicate cyclone.sbom.json --type cyclonedx ${{ steps.imgdigest.outputs.digest }}
+
   deploy-fasit:
     name: Deploy to Fasit
     if: github.ref == 'refs/heads/master'
