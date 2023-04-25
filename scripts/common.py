@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import requests
+from alive_progress import alive_it
 
 OPERATOR_PATTERNS = (
     re.compile(r"[^_]+_[^_]+_[^_]+_.+"),
@@ -80,7 +81,7 @@ class AivenKafka(object):
         return {Acl(**a) for a in data["acl"]}
 
     def delete_acls(self, acls_to_delete):
-        for acl in acls_to_delete:
+        for acl in alive_it(acls_to_delete, title="Deleting ACLs"):
             if not self.dry_run:
                 print(f"Deleting {acl}")
                 resp = self.session.delete(f"{self.base_url}/acl/{acl.id}")
@@ -89,7 +90,7 @@ class AivenKafka(object):
                 print(f"Would have deleted {acl}")
 
     def delete_users(self, users_to_delete):
-        for username in users_to_delete:
+        for username in alive_it(users_to_delete, title="Deleting users"):
             if not self.dry_run:
                 print(f"Deleting {username}")
                 resp = self.session.delete(f"{self.base_url}/user/{username}")
