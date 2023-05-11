@@ -5,7 +5,7 @@ FROM cgr.dev/chainguard/static
 ARG REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images
 
 kubebuilder:
-    FROM cgr.dev/chainguard/go:1.20
+    FROM cgr.dev/chainguard/go:1.20.4
     # Constants
     ARG os="linux"
     ARG arch="amd64"
@@ -16,7 +16,7 @@ kubebuilder:
     SAVE IMAGE --cache-hint
 
 dependencies:
-    FROM cgr.dev/chainguard/go:1.20
+    FROM cgr.dev/chainguard/go:1.20.4
     # Go settings, needs to be ENV to be inherited into build
     ENV CGO_ENABLED=0
     ENV GOOS="linux"
