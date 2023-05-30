@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	gotest.tools v2.2.0+incompatible
 	k8s.io/apimachinery v0.27.2
 	k8s.io/client-go v0.27.2
