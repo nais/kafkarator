@@ -71,7 +71,7 @@ jobs:
           token_format: "access_token"
       - name: Login to Google Artifact Registry
         if: github.ref == 'refs/heads/master'
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # ratchet:docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: "oauth2accesstoken"
