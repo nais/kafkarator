@@ -2,6 +2,7 @@ package topic
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"net/http"
 	"time"
 
@@ -82,18 +83,25 @@ func (r *Manager) create() error {
 		return fmt.Errorf("MinimumInSyncReplicas (%d) shouldn't be bigger than Replication (%d)",
 			*cfg.MinimumInSyncReplicas, *cfg.Replication)
 	}
+	minCleanableDirtyRatio, err := percentToRatio(cfg.MinCleanableDirtyRatioPercent)
+	if err != nil {
+		return fmt.Errorf("failed to parse MinCleanableDirtyRatioPercent; must be a number 0-100 with optionally a percent sign: %w", err)
+	}
 
 	req := aiven.CreateKafkaTopicRequest{
 		TopicName:   r.Topic.FullName(),
 		Partitions:  cfg.Partitions,
 		Replication: cfg.Replication,
 		Config: aiven.KafkaTopicConfig{
-			CleanupPolicy:     cleanupPolicy(cfg),
-			MaxMessageBytes:   intpToInt64p(cfg.MaxMessageBytes),
-			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
-			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
-			RetentionMs:       retentionMs(cfg),
-			SegmentMs:         segmentMs(cfg),
+			CleanupPolicy:          cleanupPolicy(cfg),
+			MaxMessageBytes:        intpToInt64p(cfg.MaxMessageBytes),
+			MinInsyncReplicas:      intpToInt64p(cfg.MinimumInSyncReplicas),
+			RetentionBytes:         intpToInt64p(cfg.RetentionBytes),
+			RetentionMs:            retentionMs(cfg),
+			SegmentMs:              segmentMs(cfg),
+			MinCleanableDirtyRatio: minCleanableDirtyRatio,
+			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
+			MaxCompactionLagMs:     intpToInt64p(cfg.MaxCompactionLagMs),
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
@@ -114,17 +122,28 @@ func (r *Manager) update() error {
 	if cfg == nil {
 		cfg = &kafka_nais_io_v1.Config{}
 	}
+	if intpBiggerThan(cfg.MinimumInSyncReplicas, cfg.Replication) {
+		return fmt.Errorf("MinimumInSyncReplicas (%d) shouldn't be bigger than Replication (%d)",
+			*cfg.MinimumInSyncReplicas, *cfg.Replication)
+	}
+	minCleanableDirtyRatio, err := percentToRatio(cfg.MinCleanableDirtyRatioPercent)
+	if err != nil {
+		return fmt.Errorf("failed to parse MinCleanableDirtyRatioPercent; must be a number 0-100 with optionally a percent sign: %w", err)
+	}
 
 	req := aiven.UpdateKafkaTopicRequest{
 		Partitions:  cfg.Partitions,
 		Replication: cfg.Replication,
 		Config: aiven.KafkaTopicConfig{
-			CleanupPolicy:     cleanupPolicy(cfg),
-			MaxMessageBytes:   intpToInt64p(cfg.MaxMessageBytes),
-			MinInsyncReplicas: intpToInt64p(cfg.MinimumInSyncReplicas),
-			RetentionBytes:    intpToInt64p(cfg.RetentionBytes),
-			RetentionMs:       retentionMs(cfg),
-			SegmentMs:         segmentMs(cfg),
+			CleanupPolicy:          cleanupPolicy(cfg),
+			MaxMessageBytes:        intpToInt64p(cfg.MaxMessageBytes),
+			MinInsyncReplicas:      intpToInt64p(cfg.MinimumInSyncReplicas),
+			RetentionBytes:         intpToInt64p(cfg.RetentionBytes),
+			RetentionMs:            retentionMs(cfg),
+			SegmentMs:              segmentMs(cfg),
+			MinCleanableDirtyRatio: minCleanableDirtyRatio,
+			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
+			MaxCompactionLagMs:     intpToInt64p(cfg.MaxCompactionLagMs),
 		},
 		Tags: []aiven.KafkaTopicTag{
 			{Key: "created-by", Value: "Kafkarator"},
@@ -152,19 +171,52 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config.RetentionHours != nil && topic.Config.RetentionMs.Value != *retentionMs(config) {
 		return true
 	}
-	if config.RetentionBytes != nil && topic.Config.RetentionBytes.Value != int64(*config.RetentionBytes) {
+	if intPToValueChanged(config.RetentionBytes, topic.Config.RetentionBytes) {
 		return true
 	}
-	if config.MinimumInSyncReplicas != nil && topic.Config.MinInsyncReplicas.Value != int64(*config.MinimumInSyncReplicas) {
+	if intPToValueChanged(config.MinimumInSyncReplicas, topic.Config.MinInsyncReplicas) {
 		return true
 	}
 	if config.SegmentHours != nil && topic.Config.SegmentMs.Value != *segmentMs(config) {
 		return true
 	}
-	if config.MaxMessageBytes != nil && topic.Config.MaxMessageBytes.Value != int64(*config.MaxMessageBytes) {
+	if intPToValueChanged(config.MaxMessageBytes, topic.Config.MaxMessageBytes) {
 		return true
 	}
+
+	if intPToValueChanged(config.MinCompactionLagMs, topic.Config.MinCompactionLagMs) {
+		return true
+	}
+	if intPToValueChanged(config.MaxCompactionLagMs, topic.Config.MaxCompactionLagMs) {
+		return true
+	}
+	if config.MinCleanableDirtyRatioPercent != nil {
+		ratio, err := percentToRatio(config.MinCleanableDirtyRatioPercent)
+		if err != nil || topic.Config.MinCleanableDirtyRatio.Value != *ratio {
+			return true
+		}
+
+	}
 	return false
+}
+
+func percentToRatio(percent *intstr.IntOrString) (*float64, error) {
+	if percent == nil {
+		return nil, nil
+	}
+	value, err := intstr.GetScaledValueFromIntOrPercent(percent, 100, false)
+	if err != nil {
+		return nil, err
+	}
+	if value <= 0 || 100 < value {
+		return nil, fmt.Errorf("invalid percentage value (%d)", value)
+	}
+	ratio := float64(value) / 100.0
+	return &ratio, nil
+}
+
+func intPToValueChanged(cfg *int, tcfg aiven.KafkaTopicConfigResponseInt) bool {
+	return cfg != nil && tcfg.Value != int64(*cfg)
 }
 
 func retentionMs(cfg *kafka_nais_io_v1.Config) *int64 {
