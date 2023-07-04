@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/Shopify/sarama v1.38.1
-	github.com/aiven/aiven-go-client v1.21.0
+	github.com/aiven/aiven-go-client v1.23.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.5.9
 	github.com/nais/liberator v0.0.0-20230621114854-4a5f0267927d
