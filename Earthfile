@@ -1,11 +1,11 @@
 VERSION 0.6
 
-FROM cgr.dev/chainguard/static
+FROM gcr.io/distroless/static-debian11
 
 ARG REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images
 
 kubebuilder:
-    FROM cgr.dev/chainguard/go:1.20
+    FROM golang:1.20
     # Constants
     ARG os="linux"
     ARG arch="amd64"
@@ -16,7 +16,7 @@ kubebuilder:
     SAVE IMAGE --cache-hint
 
 dependencies:
-    FROM cgr.dev/chainguard/go:1.20
+    FROM golang:1.20
     # Go settings, needs to be ENV to be inherited into build
     ENV CGO_ENABLED=0
     ENV GOOS="linux"
@@ -41,7 +41,7 @@ build:
     SAVE IMAGE --cache-hint
 
 docker-kafkarator:
-    FROM cgr.dev/chainguard/static
+    FROM gcr.io/distroless/static-debian11
     WORKDIR /
     COPY +build/kafkarator /
     CMD ["/kafkarator"]
@@ -54,7 +54,7 @@ docker-kafkarator:
     SAVE IMAGE --push europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator:${VERSION} ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
 docker-canary:
-    FROM cgr.dev/chainguard/static
+    FROM gcr.io/distroless/static-debian11
     WORKDIR /
     COPY +build/canary /
     CMD ["/canary"]
