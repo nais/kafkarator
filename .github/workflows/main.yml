@@ -164,7 +164,7 @@ jobs:
         feature:
           - kafkarator
           - kafka-canary
-          - kafka-canary-alerts
+          - kafka-canary-alert
     steps:
       - uses: nais/fasit-deploy@badff0705af8a57bcf0ab172895273da09ae5959 # ratchet:nais/fasit-deploy@v2
         with:
