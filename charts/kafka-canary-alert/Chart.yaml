@@ -1,6 +1,8 @@
 apiVersion: v2
 name: kafka-canary-alert
-description: Install the kafka-canary alert, requires that the canary is already installed
+description: Installs alert for kafka-canary. Requires that kafka-canary is installed in management cluster.
+sources:
+  - https://github.com/nais/kafkarator/tree/master/charts/kafka-canary-alert
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -15,4 +17,4 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.6
+version: invalid

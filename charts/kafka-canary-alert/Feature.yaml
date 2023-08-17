@@ -1,0 +1,21 @@
+dependencies:
+  - allOf:
+      - aivenator
+environmentKinds:
+  - tenant
+  - legacy
+  - onprem
+values:
+  cluster:
+    description: The nais cluster the alert is installed in
+    displayName: NAIS cluster
+    computed:
+      template: '"{{ .Env.name }}"'
+  pool:
+    description: Kafka pool this canary alert should monitor
+    displayName: Cluster Pool
+    computed:
+      template: '{{ .Env.aiven_project }}'
+  tenant:
+    computed:
+      template: '"{{ .Tenant.Name }}"'

@@ -1,0 +1,50 @@
+dependencies:
+  - allOf:
+      - nais-verification
+environmentKinds:
+  - management
+values:
+  canary.image.repository:
+    config:
+      type: string
+  canary.image.tag:
+    config:
+      type: string
+  deploy_configs:
+    description: |
+      Expects a JSON-list of objects with `cluster_name`, `kind`, `tenant` and `pool`.
+      `cluster_name` is the cluster to deploy the canary to
+      `pool` is the Aiven Kafka pool this instance of the canary should use
+      `kind` is the environmentKind of this cluster
+      `tenant` is the name of the current tenant
+    displayName: Deploy Configs
+    computed:
+      template: |
+        [
+          {{ $tenant_name := .Tenant.Name }}
+          {{ range .Envs }}
+          {{ if and (ne .name "ci-fss") (ne .name "ci-gcp") }}
+          {
+            "kind": "{{ .kind }}",
+            "cluster_name": "{{ .name }}",
+            "aiven_project": "{{ .aiven_project }}",
+            "tenant": "{{ $tenant_name }}",
+          },
+          {{ end }}
+          {{ end }}
+        ]
+  deploy_server:
+    computed:
+      template: '"hookd-grpc:9090"'
+  deploy_use_tls:
+    computed:
+      template: '"false"'
+  deployer.image.pullPolicy:
+    config:
+      type: string
+  deployer.image.repository:
+    config:
+      type: string
+  deployer.image.tag:
+    config:
+      type: string
