@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import argparse
-import itertools
 import os
 import tempfile
-import typing
 
 import pyaml
 import requests
@@ -16,11 +14,8 @@ REQUIREMENTS = (
     "pydantic",
 )
 
-TOPICS = (
-    "quiz-rapid",
-    "quiz-rapid-kurs-test",
-    "leesah-quiz-online",
-)
+TEST_TOPIC_NAME = "leesah-quiz-test"
+TOPIC_NAME_FORMAT = "leesah-quiz-{event}-{i}"
 
 TOPIC_CONFIG = {
     "cleanup_policy": "delete",  # delete, compact, compact,delete
@@ -177,15 +172,15 @@ class Packet(BaseModel):
     user: User
     ca: str
     broker: str
-    topics: typing.Collection[str]
+    topics: list[str]
 
 
-def main(topics):
+def main(event, count):
     import logging
     logging.basicConfig(level=logging.DEBUG)
     kafka = AivenKafka("nav-integration-test")
     service = kafka.get_service()
-    actual_topics = set(itertools.chain(topics, TOPICS))
+    actual_topics = [TOPIC_NAME_FORMAT.format(event=event, i=i) for i in range(1, count+1)] + [TEST_TOPIC_NAME]
     for topic_name in actual_topics:
         kafka.create_topic(service, topic_name)
         kafka.create_acl(service, topic_name, USER_NAME, ACCESS_LEVEL)
@@ -203,9 +198,10 @@ def main(topics):
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser()
-        parser.add_argument("topics", nargs="*", help="Additional topics to create")
+        parser.add_argument("event", help="Name of event")
+        parser.add_argument("count", nargs="?", type=int, default=1, help="Number of topics to create")
         options = parser.parse_args()
-        main(options.topics)
+        main(options.event, options.count)
     except requests.exceptions.RequestException as re:
         from requests_toolbelt.utils import dump
 
