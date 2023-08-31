@@ -138,6 +138,8 @@ jobs:
           for chart in charts/*; do
             yq e '.version = "${{ needs.version.outputs.VERSION }}"' --inplace "${chart}/Chart.yaml"
             yq e '.image.tag = "${{ needs.version.outputs.VERSION }}"' --inplace "${chart}/values.yaml"
+            yq e '.canary.image.tag = "${{ needs.version.outputs.VERSION }}"' --inplace "${chart}/values.yaml"
+            yq e '.deployer.image.tag = "${{ needs.version.outputs.VERSION }}"' --inplace "${chart}/values.yaml"
           done
       - name: Build Chart
         run: |-

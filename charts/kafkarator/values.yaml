@@ -5,7 +5,7 @@
 image:
   repository: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator/kafkarator
   pullPolicy: IfNotPresent
-  tag: latest
+  tag: latest # Overridden in main workflow
 
 resources:
   limits:
