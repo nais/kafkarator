@@ -11,7 +11,7 @@ import (
 type Synchronizer struct {
 	ACLs   acl.Manager
 	Topics topic.Manager
-	Logger *log.Entry
+	Logger log.FieldLogger
 }
 
 type SyncResult struct {
@@ -21,7 +21,7 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
+func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger log.FieldLogger) (*Synchronizer, error) {
 	projectName := t.Spec.Pool
 	serviceName, err := a.NameResolver.ResolveKafkaServiceName(projectName)
 	if err != nil {

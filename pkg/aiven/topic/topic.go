@@ -26,7 +26,7 @@ type Manager struct {
 	Project     string
 	Service     string
 	Topic       kafka_nais_io_v1.Topic
-	Logger      *log.Entry
+	Logger      log.FieldLogger
 }
 
 func aivenError(err error) *aiven.Error {

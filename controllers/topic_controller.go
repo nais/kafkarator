@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/liberator/pkg/controller"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
@@ -59,7 +61,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	status.FullyQualifiedName = topic.FullName()
 
-	fail := func(err error, state string, retry bool) TopicReconcileResult {
+	fail := func(err error, state controller.SynchronizationState, retry bool) TopicReconcileResult {
 		aivenError, ok := err.(aiven.Error)
 		if !ok {
 			status.Message = err.Error()
@@ -88,7 +90,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	projectName := topic.Spec.Pool
 	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
 	if err != nil {
-		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
+		return fail(err, controller.SynchronizationStateFailed, false)
 	}
 
 	if topic.ObjectMeta.DeletionTimestamp != nil {
@@ -104,7 +106,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		}
 		err = aclManager.Synchronize()
 		if err != nil {
-			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), controller.SynchronizationStateFailed, true)
 		}
 		status.Message = "Topic and ACLs deleted, data kept"
 
@@ -115,14 +117,14 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 				if aiven.IsNotFound(err) {
 					logger.Info("Topic already removed from Aiven")
 				} else {
-					return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+					return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), controller.SynchronizationStateFailed, true)
 				}
 			}
 			status.Message = "Topic, ACLs and data permanently deleted"
 		}
 
 		logger.Info(status.Message)
-		status.SynchronizationTime = time.Now().Format(time.RFC3339)
+		status.SynchronizationTime = &metav1.Time{Time: time.Now()}
 		status.Errors = nil
 		return TopicReconcileResult{
 			DeleteFinalized: true,
@@ -137,7 +139,8 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	hash, err = topic.Hash()
 	if err != nil {
-		return fail(fmt.Errorf("unable to calculate synchronization hash"), kafka_nais_io_v1.EventFailedPrepare, false)
+		// TODO: Add log or event about failing prepare
+		return fail(fmt.Errorf("unable to calculate synchronization hash"), controller.SynchronizationStateFailed, false)
 	}
 
 	if !topic.NeedsSynchronization(hash) {
@@ -148,17 +151,18 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	}
 
 	if !r.projectWhitelisted(projectName) {
-		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
+		// TODO: Add log or event about failing prepare
+		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), controller.SynchronizationStateFailed, false)
 	}
 
 	synchronizer, _ := NewSynchronizer(r.Aiven, topic, logger)
 	err = synchronizer.Synchronize()
 	if err != nil {
-		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
+		return fail(err, controller.SynchronizationStateFailed, true)
 	}
 
-	status.SynchronizationTime = time.Now().Format(time.RFC3339)
-	status.SynchronizationState = kafka_nais_io_v1.EventRolloutComplete
+	status.SynchronizationTime = &metav1.Time{Time: time.Now()}
+	status.SynchronizationState = controller.SynchronizationStateSuccessful
 	status.SynchronizationHash = hash
 	status.Message = "Topic configuration synchronized to Kafka pool"
 	status.Errors = nil
@@ -225,7 +229,7 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	defer func() {
 		metrics.TopicsProcessed.With(prometheus.Labels{
-			metrics.LabelSyncState: result.Status.SynchronizationState,
+			metrics.LabelSyncState: string(result.Status.SynchronizationState),
 			metrics.LabelPool:      topic.Spec.Pool,
 		}).Inc()
 	}()
