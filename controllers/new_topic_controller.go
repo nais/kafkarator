@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aiven/aiven-go-client"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/liberator/pkg/controller"
 	log "github.com/sirupsen/logrus"
@@ -101,9 +102,63 @@ func (r *NewTopicReconciler) Process(topic *kafka_nais_io_v1.Topic, logger log.F
 	}
 }
 
-func (r *NewTopicReconciler) Delete(topic *kafka_nais_io_v1.Topic, logger log.FieldLogger, eventRecorder record.EventRecorder) bool {
-	//TODO implement me
-	panic("implement me")
+func (r *NewTopicReconciler) Delete(topic *kafka_nais_io_v1.Topic, logger log.FieldLogger, eventRecorder record.EventRecorder) error {
+	fail := func(err error, reason string, retry bool) error {
+		var aivenError aiven.Error
+		ok := errors.As(err, &aivenError)
+		var message string
+		if !ok {
+			message = err.Error()
+		} else {
+			message = fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo)
+		}
+
+		logger.Errorf("%s - %s", reason, message)
+		eventRecorder.Event(topic, "Warning", reason, message)
+
+		return err
+	}
+
+	projectName := topic.Spec.Pool
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	if err != nil {
+		return fail(err, "ServiceNameResolutionFailed", false)
+	}
+
+	strippedTopic := topic.DeepCopy()
+	strippedTopic.Spec.ACL = nil
+	aclManager := acl.Manager{
+		AivenACLs: r.Aiven.ACLs,
+		Project:   projectName,
+		Service:   serviceName,
+		Source:    acl.TopicAdapter{Topic: strippedTopic},
+		Logger:    logger,
+	}
+
+	logger.Info("Deleting ACls for topic")
+	err = aclManager.Synchronize()
+	if err != nil {
+		return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), "ACLCleanupFailed", true)
+	}
+
+	message := "ACLs deleted, Topic data kept"
+
+	if topic.RemoveDataWhenDeleted() {
+		logger.Info("Permanently deleting Aiven topic and its data")
+		err = r.Aiven.Topics.Delete(projectName, serviceName, topic.FullName())
+		if err != nil {
+			if aiven.IsNotFound(err) {
+				logger.Info("Topic already removed from Aiven")
+			} else {
+				return fail(fmt.Errorf("failed to delete topic on Aiven: %s", err), "TopicCleanupFailed", true)
+			}
+		}
+		message = "Topic, ACLs and data permanently deleted"
+	}
+
+	logger.Info(message)
+	eventRecorder.Eventf(topic, "Normal", "TopicDeleted", message)
+	return nil
 }
 
 func (r *NewTopicReconciler) NeedsProcessing(topic *kafka_nais_io_v1.Topic, logger log.FieldLogger, eventRecorder record.EventRecorder) bool {
