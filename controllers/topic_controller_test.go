@@ -35,7 +35,6 @@ const (
 
 type testCase struct {
 	Config testCaseConfig
-	Error  *string
 	Aiven  aivenSpec
 	Topic  json.RawMessage
 	Output controllers.TopicReconcileResult
@@ -222,10 +221,6 @@ func yamlSubTest(t *testing.T, path string) {
 	}
 
 	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))
-	if test.Error != nil {
-		assert.Equal(t, result.Error, *test.Error)
-		return
-	}
 
 	// hard to test current time with static data
 	test.Output.Status.SynchronizationTime = result.Status.SynchronizationTime
