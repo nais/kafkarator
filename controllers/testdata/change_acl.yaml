@@ -96,6 +96,6 @@ topic:
 
 output:
   status:
-    synchronizationState: RolloutComplete
+    synchronizationState: Successful
     message: Topic configuration synchronized to Kafka pool
     fullyQualifiedName: myteam.mytopic

@@ -82,7 +82,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		return TopicReconcileResult{
 			Requeue: retry,
 			Status:  status,
-			Error:   fmt.Errorf("%s: %s", state, err),
+			Error:   fmt.Errorf("%s: %s", state.String(), err),
 		}
 	}
 
@@ -139,7 +139,6 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	hash, err = topic.Hash()
 	if err != nil {
-		// TODO: Add log or event about failing prepare
 		return fail(fmt.Errorf("unable to calculate synchronization hash"), controller.SynchronizationStateFailed, false)
 	}
 
@@ -151,7 +150,6 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 	}
 
 	if !r.projectWhitelisted(projectName) {
-		// TODO: Add log or event about failing prepare
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), controller.SynchronizationStateFailed, false)
 	}
 
