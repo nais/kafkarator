@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/liberator/pkg/aiven/service"
+	"github.com/nais/liberator/pkg/controller"
 	"os"
 	"os/signal"
 	"strings"
@@ -167,18 +168,16 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 
 	nameResolver := service.NewCachedNameResolver(aivenClient.Services)
 
-	topicReconciler := &controllers.TopicReconciler{
+	var inner controller.NaisReconciler[*kafka_nais_io_v1.Topic] = &controllers.NewTopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
 			ACLs:         aivenClient.KafkaACLs,
 			Topics:       aivenClient.KafkaTopics,
 			NameResolver: nameResolver,
 		},
-		Client:          mgr.GetClient(),
-		Logger:          logger,
-		Projects:        viper.GetStringSlice(Projects),
-		RequeueInterval: viper.GetDuration(RequeueInterval),
+		Projects: viper.GetStringSlice(Projects),
 	}
-	if err = topicReconciler.SetupWithManager(mgr); err != nil {
+	_, err = controller.CreateWithManager(mgr, inner, logger)
+	if err != nil {
 		quit <- fmt.Errorf("unable to set up topicReconciler: %s", err)
 		return
 	}
