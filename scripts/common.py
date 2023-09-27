@@ -117,7 +117,7 @@ class Secret:
     data: Optional[dict] = field(default_factory=dict, repr=False, compare=False)
 
 
-def get_secrets_in(context, team=None):
+def get_secrets_in(context, team=None, project=None):
     cmd = [
         "kubectl",
         "get", "secret",
@@ -138,5 +138,6 @@ def get_secrets_in(context, team=None):
         namespace = metadata["namespace"]
         annotations = metadata.get("annotations", {})
         username = annotations.get("kafka.aiven.nais.io/serviceUser")
-        if username:
+        pool = annotations.get("kafka.aiven.nais.io/pool")
+        if username and (project is None or project == pool):
             yield Secret(username, name, namespace, context, item)
