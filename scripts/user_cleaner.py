@@ -22,7 +22,7 @@ def main(env, dry_run, team):
     if env != "infrastructure":
         contexts = {f"nav-{env}-{kind}" for kind in ("fss", "gcp")}
     else:
-        contexts = {f"nav-prod-{kind}" for kind in ("fss", "gcp")}
+        contexts = {f"nav-{e}-{kind}" for kind in ("fss", "gcp") for e in ("dev", "prod")}
 
     aiven = AivenKafka(project, dry_run=dry_run)
 
