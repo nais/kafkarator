@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 
+from rich import print
+
 from common import AivenKafka, User, Secret, get_secrets_in
 
 

@@ -2,13 +2,14 @@
 import argparse
 from fnmatch import fnmatch
 
-from alive_progress import alive_it
+from rich.progress import track
+from rich import print
 
 from common import AivenKafka, User
 
 
 def find_unused_acls(topics, acls):
-    for acl in alive_it(acls, title="Searching for unused ACLs"):
+    for acl in track(acls, description="Searching for unused ACLs"):
         if any((acl.topic.startswith("__"),
                 "_stream_" in acl.topic,
                 acl.topic in topics)):
@@ -18,7 +19,7 @@ def find_unused_acls(topics, acls):
 
 def find_unused_users(acls, users: set[User]):
     acl_patterns = {acl.username for acl in acls}
-    for user in alive_it(users, title="Searching for unused users"):
+    for user in track(users, description="Searching for unused users"):
         if user.username == "avnadmin":
             continue
         if not any(fnmatch(user.username, pattern) for pattern in acl_patterns):
@@ -26,7 +27,7 @@ def find_unused_users(acls, users: set[User]):
 
 
 def find_old_acls(acls):
-    for acl in alive_it(acls, title="Searching for old ACLs"):
+    for acl in track(acls, description="Searching for old ACLs"):
         if "." in acl.username:
             yield acl
 

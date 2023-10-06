@@ -2,4 +2,4 @@ requests
 pyaml
 pydantic
 requests-toolbelt
-alive-progress
+rich

@@ -3,18 +3,20 @@
 
 import argparse
 import base64
-import textwrap
+import re
 
-from alive_progress import alive_it
+from rich import print
+from rich.table import Table
 
 from common import get_secrets_in
 
 
 def get_secrets_for_user(env, username):
-    contexts = {f"{env}-{kind}" for kind in ("fss", "gcp")}
+    pattern = re.compile(username)
+    contexts = {f"nav-{env}-{kind}" for kind in ("fss", "gcp")}
     for context in contexts:
-        for secret in alive_it(get_secrets_in(context)):
-            if secret.username == username:
+        for secret in get_secrets_in(context):
+            if pattern.match(secret.username):
                 yield secret
 
 
@@ -28,17 +30,19 @@ def print_secret_info(secret):
     metadata = secret.data.get("metadata", {})
     labels = metadata.get("labels", {})
     annotations = metadata.get("annotations", {})
-    print(textwrap.dedent(f"""\
-        secretname: {secret.name}
-        username: {secret.username}
-        context: {secret.context}
-        updated_at: {extract_updated_at(data)}
-        secret_created_at: {metadata.get("creationTimestamp")}
-        team: {labels.get("team")}
-        namespace: {secret.namespace}
-        app: {labels.get("app")}
-        protected: {annotations.get("aivenator.aiven.nais.io/protected")}
-    """))
+    table = Table(show_header=False)
+    table.add_column("Key")
+    table.add_column("Value")
+    table.add_row("secretname", secret.name)
+    table.add_row("username", secret.username)
+    table.add_row("context", secret.context)
+    table.add_row("updated_at", extract_updated_at(data))
+    table.add_row("secret_created_at", metadata.get("creationTimestamp"))
+    table.add_row("team", labels.get("team"))
+    table.add_row("namespace", secret.namespace)
+    table.add_row("app", labels.get("app"))
+    table.add_row("protected", annotations.get("aivenator.aiven.nais.io/protected"))
+    print(table)
 
 
 def main(env, username):
@@ -51,6 +55,6 @@ def main(env, username):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("env", action="store", help="Environment to process")
-    parser.add_argument("username", action="store", help="Username to search for")
+    parser.add_argument("username", action="store", help="Username to search for (can be regex)")
     options = parser.parse_args()
     main(options.env, options.username)

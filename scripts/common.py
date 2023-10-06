@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import requests
-from alive_progress import alive_it
+from rich import print, get_console
+from rich.progress import track
 
 OPERATOR_PATTERNS = (
     re.compile(r"[^_]+_[^_]+_[^_]+_.+"),
@@ -60,13 +61,15 @@ class AivenKafka(object):
         self.base_url = f"{self.base}/{self.project}/service/{self.service}"
 
     def get_topics(self):
-        resp = self.session.get(f"{self.base_url}/topic")
+        with get_console().status("Getting topics"):
+            resp = self.session.get(f"{self.base_url}/topic")
         resp.raise_for_status()
         data = resp.json()
         return [t["topic_name"] for t in data["topics"]]
 
     def get_service(self, team=None):
-        resp = self.session.get(self.base_url)
+        with get_console().status("Getting service"):
+            resp = self.session.get(self.base_url)
         resp.raise_for_status()
         data = resp.json()
         acls = {Acl(**a) for a in data["service"]["acl"]}
@@ -75,13 +78,14 @@ class AivenKafka(object):
         return Service(acls, topics, users)
 
     def get_acls(self):
-        resp = self.session.get(f"{self.base_url}/acl")
+        with get_console().status("Getting ACLs"):
+            resp = self.session.get(f"{self.base_url}/acl")
         resp.raise_for_status()
         data = resp.json()
         return {Acl(**a) for a in data["acl"]}
 
     def delete_acls(self, acls_to_delete):
-        for acl in alive_it(acls_to_delete, title="Deleting ACLs"):
+        for acl in track(acls_to_delete, description="Deleting ACLs"):
             if not self.dry_run:
                 print(f"Deleting {acl}")
                 resp = self.session.delete(f"{self.base_url}/acl/{acl.id}")
@@ -90,7 +94,7 @@ class AivenKafka(object):
                 print(f"Would have deleted {acl}")
 
     def delete_users(self, users_to_delete):
-        for username in alive_it(users_to_delete, title="Deleting users"):
+        for username in track(users_to_delete, description="Deleting users"):
             if not self.dry_run:
                 print(f"Deleting {username}")
                 resp = self.session.delete(f"{self.base_url}/user/{username}")
@@ -100,7 +104,7 @@ class AivenKafka(object):
 
     @staticmethod
     def extract_users(data, team):
-        for u in data["service"]["users"]:
+        for u in track(data["service"]["users"], description="Parsing user data"):
             if any(p.match(u["username"]) for p in OPERATOR_PATTERNS):
                 if not team or u["username"].startswith(team):
                     yield User(u["username"], u["type"])
@@ -129,10 +133,11 @@ def get_secrets_in(context, team=None, project=None):
         cmd.extend(("--namespace", team))
     else:
         cmd.append("--all-namespaces")
-    print(f"Executing {' '.join(cmd)}")
-    output = subprocess.check_output(cmd)
-    data = json.loads(output)
-    for item in data["items"]:
+    with get_console().status(f"Executing {' '.join(cmd)}"):
+        output = subprocess.check_output(cmd)
+        data = json.loads(output)
+    print(f"Got secret data from {context}")
+    for item in track(data["items"], description=f"Parsing secrets from {context}"):
         metadata = item["metadata"]
         name = metadata["name"]
         namespace = metadata["namespace"]
