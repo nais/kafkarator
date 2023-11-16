@@ -50,10 +50,14 @@ const (
 	LogFormatText = "text"
 )
 
-type Consume struct {
+type Message struct {
 	offset    int64
 	timeStamp time.Time
 	partition int32
+}
+
+func (c *Message) String() string {
+	return fmt.Sprintf("offset=%d, partition=%d, timestamp=%s", c.offset, c.partition, c.timeStamp.Format(time.RFC3339Nano))
 }
 
 var (
@@ -185,7 +189,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	signals := make(chan os.Signal, 1)
-	cons := make(chan Consume, 32)
+	cons := make(chan Message, 32)
 
 	logger := log.New()
 	logfmt, err := formatter(viper.GetString(LogFormat))
@@ -255,12 +259,12 @@ func main() {
 		if err != nil {
 			return false, fmt.Errorf("converting string to timestamp: %s", err)
 		}
-		c := Consume{
+		c := Message{
 			offset:    msg.Offset,
 			timeStamp: t,
 			partition: msg.Partition,
 		}
-		logger.Infof("Consumed message: %v", c)
+		logger.Infof("Consumed message: %s", c.String())
 		cons <- c
 
 		return false, nil
@@ -294,11 +298,12 @@ func main() {
 		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
-			logger.Infof("Produced message: %v", Consume{
+			message := Message{
 				offset:    offset,
 				timeStamp: timer,
 				partition: partition,
-			})
+			}
+			logger.Infof("Produced message: %s", message.String())
 			LastProducedTimestamp.SetToCurrentTime()
 			LastProducedOffset.Set(float64(offset))
 		} else {
