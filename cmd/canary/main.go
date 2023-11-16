@@ -43,6 +43,7 @@ const (
 	LogFormat            = "log-format"
 	MessageInterval      = "message-interval"
 	MetricsAddress       = "metrics-address"
+	SlowConsumer         = "slow-consumer"
 )
 
 const (
@@ -132,6 +133,8 @@ func init() {
 
 	flag.Duration(MessageInterval, time.Minute*1, "Interval between each produced canary message to Kafka")
 	flag.String(DeployStartTime, time.Now().Format(time.RFC3339), "RFC3339 formatted time of deploy")
+
+	flag.Bool(SlowConsumer, false, "Simulate a slow consumer by sleeping for 10 seconds after each consumed message")
 
 	// Kafka configuration
 	hostname, _ := os.Hostname()
@@ -254,6 +257,7 @@ func main() {
 
 	logger.Infof("Started message producer.")
 
+	slowConsumer := viper.GetBool(SlowConsumer)
 	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
 		t, err := time.Parse(time.RFC3339Nano, string(msg.Value))
 		if err != nil {
@@ -263,6 +267,10 @@ func main() {
 			offset:    msg.Offset,
 			timeStamp: t,
 			partition: msg.Partition,
+		}
+		if slowConsumer {
+			logger.Infof("Slow consumer is sleepy...")
+			time.Sleep(time.Second * 10)
 		}
 		logger.Infof("Consumed message: %s", c.String())
 		cons <- c
