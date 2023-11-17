@@ -20,7 +20,7 @@ type AivenKafkaAclAdapter struct {
 }
 
 // Create implements AivenAdapter.
-func (a AivenKafkaAclAdapter) Create(project string, service string, acl Acl) (Acl, error) {
+func (a AivenKafkaAclAdapter) Create(acl Acl) (Acl, error) {
 	req := aiven.CreateKafkaACLRequest{
 		Permission: acl.Permission,
 		Topic:      acl.TopicPattern,
@@ -38,7 +38,7 @@ func (a AivenKafkaAclAdapter) Create(project string, service string, acl Acl) (A
 }
 
 // Delete implements AivenAdapter.
-func (a AivenKafkaAclAdapter) Delete(project string, service string, aclID string) error {
+func (a AivenKafkaAclAdapter) Delete(aclID string) error {
 	_, err := metrics.GObserveAivenLatency("SCHEMA_ACL_Delete", a.Project, func() (any, error) {
 		return nil, a.KafkaAclInterface.Delete(a.Project, a.Service, aclID)
 	})
@@ -46,7 +46,7 @@ func (a AivenKafkaAclAdapter) Delete(project string, service string, aclID strin
 }
 
 // List implements AivenAdapter.
-func (a AivenKafkaAclAdapter) List(project string, service string) ([]Acl, error) {
+func (a AivenKafkaAclAdapter) List() ([]Acl, error) {
 	aivenAcls, err := metrics.GObserveAivenLatency("SCHEMA_ACL_List", a.Project, func() ([]*aiven.KafkaACL, error) {
 		return a.KafkaAclInterface.List(a.Project, a.Service)
 	})

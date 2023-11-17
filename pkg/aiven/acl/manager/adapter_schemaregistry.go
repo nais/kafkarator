@@ -21,7 +21,7 @@ type AivenSchemaRegistryACLAdapter struct {
 }
 
 // Create implements AivenAdapter.
-func (a AivenSchemaRegistryACLAdapter) Create(project string, service string, acl Acl) (Acl, error) {
+func (a AivenSchemaRegistryACLAdapter) Create(acl Acl) (Acl, error) {
 	req := aiven.CreateKafkaSchemaRegistryACLRequest{
 		Permission: acl.Permission,
 		Resource:   "Subject:" + acl.TopicPattern,
@@ -38,7 +38,7 @@ func (a AivenSchemaRegistryACLAdapter) Create(project string, service string, ac
 }
 
 // Delete implements AivenAdapter.
-func (a AivenSchemaRegistryACLAdapter) Delete(project string, service string, aclID string) error {
+func (a AivenSchemaRegistryACLAdapter) Delete(aclID string) error {
 	_, err := metrics.GObserveAivenLatency("SCHEMA_ACL_Delete", a.Project, func() (any, error) {
 		return nil, a.SchemaRegistryAclInterface.Delete(a.Project, a.Service, aclID)
 	})
@@ -46,7 +46,7 @@ func (a AivenSchemaRegistryACLAdapter) Delete(project string, service string, ac
 }
 
 // List implements AivenAdapter.
-func (a AivenSchemaRegistryACLAdapter) List(project string, service string) ([]Acl, error) {
+func (a AivenSchemaRegistryACLAdapter) List() ([]Acl, error) {
 	aivenAcls, err := metrics.GObserveAivenLatency("SCHEMA_ACL_List", a.Project, func() ([]*aiven.KafkaSchemaRegistryACL, error) {
 		return a.SchemaRegistryAclInterface.List(a.Project, a.Service)
 	})

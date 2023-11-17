@@ -3,15 +3,14 @@ package manager
 import (
 	"fmt"
 
-	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 )
 
 type AclAdapter interface {
-	List(project, service string) ([]Acl, error)
-	Create(project, service string, acl Acl) (Acl, error)
-	Delete(project, service, aclID string) error
+	List() ([]Acl, error)
+	Create(acl Acl) (Acl, error)
+	Delete(aclID string) error
 }
 
 type Source interface {
@@ -22,8 +21,6 @@ type Source interface {
 
 type Manager struct {
 	AivenAdapter AclAdapter
-	Project      string
-	Service      string
 	Source       Source
 	Logger       log.FieldLogger
 }
@@ -59,7 +56,7 @@ func (r *Manager) Synchronize() error {
 }
 
 func (r *Manager) getExistingAcls() ([]Acl, error) {
-	kafkaAcls, err := r.AivenAdapter.List(r.Project, r.Service)
+	kafkaAcls, err := r.AivenAdapter.List()
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +83,7 @@ func (r *Manager) getWantedAcls() ([]Acl, error) {
 
 func (r *Manager) add(toAdd []Acl) error {
 	for _, acl := range toAdd {
-		err := metrics.ObserveAivenLatency("SCHEMA_ACL_Create", r.Project, func() error {
-			var err error
-			_, err = r.AivenAdapter.Create(r.Project, r.Service, acl)
-			return err
-		})
+		_, err := r.AivenAdapter.Create(acl)
 		if err != nil {
 			return err
 		}
@@ -108,9 +101,7 @@ func (r *Manager) delete(toDelete []Acl) error {
 		if len(acl.ID) == 0 {
 			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
 		}
-		err := metrics.ObserveAivenLatency("SCHEMA_ACL_Delete", r.Project, func() error {
-			return r.AivenAdapter.Delete(r.Project, r.Service, acl.ID)
-		})
+		err := r.AivenAdapter.Delete(acl.ID)
 		if err != nil {
 			return err
 		}

@@ -225,10 +225,8 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 			Project:                    TestPool,
 			Service:                    TestService,
 		},
-		Project: TestPool,
-		Service: TestService,
-		Source:  manager.TopicAdapter{Topic: &source},
-		Logger:  log.New(),
+		Source: manager.TopicAdapter{Topic: &source},
+		Logger: log.New(),
 	}
 
 	err := aclManager.Synchronize()
@@ -260,10 +258,8 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 			Project:                    TestPool,
 			Service:                    TestService,
 		},
-		Project: TestPool,
-		Service: TestService,
-		Source:  manager.StreamAdapter{Stream: &source},
-		Logger:  log.New(),
+		Source: manager.StreamAdapter{Stream: &source},
+		Logger: log.New(),
 	}
 
 	err := aclManager.Synchronize()
