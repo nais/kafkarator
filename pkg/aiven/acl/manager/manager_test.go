@@ -32,39 +32,39 @@ type ACLFilterTestSuite struct {
 	shouldAdd    []manager.Acl
 	shouldRemove []manager.Acl
 
-	kafkaAcls []*aiven.KafkaSchemaRegistryACL
-	topicAcls []kafka_nais_io_v1.TopicACL
+	kafkaSchemaRegistryAcls []*aiven.KafkaSchemaRegistryACL
+	topicAcls               []kafka_nais_io_v1.TopicACL
 }
 
 func (suite *ACLFilterTestSuite) SetupSuite() {
 	suite.existingAcls = []manager.Acl{
 		{ // Delete because of username
 			ID:           "abc",
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
 			ID:           "abcde",
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user.app*",
 		},
 		{ // Delete because of username and permission
 			ID:           "123",
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
 			ID:           "abcdef",
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user2.app*",
 		},
 		{ // Keep
 			ID:           "abcdef-new",
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user2_app_eb343e9a_*",
 		},
@@ -72,17 +72,17 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.wantedAcls = []manager.Acl{
 		{ // Added because existing uses wrong username
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user_app_0841666a_*",
 		},
 		{ // Already exists
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user2_app_eb343e9a_*",
 		},
 		{ // Added because of new user
-			Permission:   "readwrite",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user3_app_538859ff_*",
 		},
@@ -90,12 +90,12 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.shouldAdd = []manager.Acl{
 		{
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user_app_0841666a_*",
 		},
 		{
-			Permission:   "readwrite",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user3_app_538859ff_*",
 		},
@@ -104,58 +104,58 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 	suite.shouldRemove = []manager.Acl{
 		{
 			ID:           "abc",
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user.app-f1fbd6bd",
 		},
 		{
 			ID:           "abcde",
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user.app*",
 		},
 		{
 			ID:           "123",
-			Permission:   "read",
+			Permission:   "schema_registry_read",
 			TopicPattern: FullTopic,
 			Username:     "user2.app-4ca551f9",
 		},
 		{
 			ID:           "abcdef",
-			Permission:   "write",
+			Permission:   "schema_registry_write",
 			TopicPattern: FullTopic,
 			Username:     "user2.app*",
 		},
 	}
 
-	suite.kafkaAcls = []*aiven.KafkaSchemaRegistryACL{
+	suite.kafkaSchemaRegistryAcls = []*aiven.KafkaSchemaRegistryACL{
 		{ // Delete because of username
 			ID:         "abc",
-			Permission: "read",
+			Permission: "schema_registry_read",
 			Resource:   Resource,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
 			ID:         "abcde",
-			Permission: "write",
+			Permission: "schema_registry_write",
 			Resource:   Resource,
 			Username:   "user.app*",
 		},
 		{ // Delete because of username and permission
 			ID:         "123",
-			Permission: "read",
+			Permission: "schema_registry_read",
 			Resource:   Resource,
 			Username:   "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
 			ID:         "abcdef",
-			Permission: "write",
+			Permission: "schema_registry_write",
 			Resource:   Resource,
 			Username:   "user2.app*",
 		},
 		{ // Keep
 			ID:         "abcdef-new",
-			Permission: "write",
+			Permission: "schema_registry_write",
 			Resource:   Resource,
 			Username:   "user2_app_eb343e9a_*",
 		},
@@ -211,7 +211,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 	m := manager.NewMockSchemaRegistryAclInterface(suite.T())
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.kafkaAcls, nil)
+		Return(suite.kafkaSchemaRegistryAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
 		Times(2).
 		Return(&aiven.KafkaSchemaRegistryACL{}, nil)
@@ -247,7 +247,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	m := manager.NewMockSchemaRegistryAclInterface(suite.T())
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.kafkaAcls, nil)
+		Return(suite.kafkaSchemaRegistryAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
 		Times(1).
 		Return(&aiven.KafkaSchemaRegistryACL{}, nil)

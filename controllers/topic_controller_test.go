@@ -52,7 +52,7 @@ type aivenSpec struct {
 
 type aivenCreated struct {
 	Topics             []aiven.CreateKafkaTopicRequest
-	TopicAcls          []aiven.CreateKafkaACLRequest
+	KafkaAcls          []aiven.CreateKafkaACLRequest
 	SchemaRegistryACLs []aiven.CreateKafkaSchemaRegistryACLRequest
 }
 
@@ -62,7 +62,7 @@ type aivenUpdated struct {
 
 type aivenDeleted struct {
 	Topics             []string
-	TopicACLs          []string
+	KafkaAcls          []string
 	SchemaRegistryAcls []string
 }
 
@@ -72,7 +72,7 @@ type aivenMissing struct {
 
 type aivenData struct {
 	Topics             []*aiven.KafkaTopic
-	TopicAcls          []*aiven.KafkaACL
+	KafkaAcls          []*aiven.KafkaACL
 	SchemaRegistryAcls []*aiven.KafkaSchemaRegistryACL
 }
 
@@ -109,7 +109,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 		kafkaAclMock.
 			On("List", project, svc).
 			Maybe().
-			Return(test.Aiven.Existing.TopicAcls, nil)
+			Return(test.Aiven.Existing.KafkaAcls, nil)
 		schemaRegistryAclMock.
 			On("List", project, svc).
 			Maybe().
@@ -145,7 +145,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 				Return(nil)
 		}
 
-		for _, a := range test.Aiven.Created.TopicAcls {
+		for _, a := range test.Aiven.Created.KafkaAcls {
 			kafkaAclMock.
 				On("Create", project, svc, a).
 				Return(
@@ -185,7 +185,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 				Return(nil)
 		}
 
-		for _, a := range test.Aiven.Deleted.TopicACLs {
+		for _, a := range test.Aiven.Deleted.KafkaAcls {
 			kafkaAclMock.
 				On("Delete", project, svc, a).
 				Return(nil)

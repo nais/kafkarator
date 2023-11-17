@@ -20,10 +20,18 @@ type AivenSchemaRegistryACLAdapter struct {
 	Service                    string
 }
 
+func permissionFromTopic(access string) string {
+	if strings.EqualFold(access, "read") {
+		return "schema_registry_read"
+	} else {
+		return "schema_registry_write"
+	}
+}
+
 // Create implements AivenAdapter.
 func (a AivenSchemaRegistryACLAdapter) Create(acl Acl) (Acl, error) {
 	req := aiven.CreateKafkaSchemaRegistryACLRequest{
-		Permission: acl.Permission,
+		Permission: permissionFromTopic(acl.Permission),
 		Resource:   "Subject:" + acl.TopicPattern,
 		Username:   acl.Username,
 	}
