@@ -1,37 +1,39 @@
 package acl
 
 import (
-	"github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
-	"github.com/nais/kafkarator/pkg/aiven/acl/topic"
+	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
 	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
-	topicManager          topic.Manager
-	schemaRegistryManager schemaregistry.Manager
+	topicManager          manager.Manager
+	schemaRegistryManager manager.Manager
 }
 
-func New(topicACLs topic.Interface,
-	schemaRegistryACLs schemaregistry.Interface,
+func New(kafkaAcls manager.KafkaAclInterface,
+	schemaRegistryACLs manager.SchemaRegistryAclInterface,
 	project string,
 	service string,
-	topicSource topic.Source,
-	schemaRegistrySource schemaregistry.Source,
+	source manager.Source,
 	log logrus.FieldLogger) Manager {
 	return Manager{
-		topicManager: topic.Manager{
-			AivenACLs: topicACLs,
-			Project:   project,
-			Service:   service,
-			Source:    topicSource,
-			Logger:    log,
+		topicManager: manager.Manager{
+			AivenAdapter: manager.AivenKafkaAclAdapter{
+				KafkaAclInterface: kafkaAcls,
+				Project:           project,
+				Service:           service,
+			},
+			Source: source,
+			Logger: log,
 		},
-		schemaRegistryManager: schemaregistry.Manager{
-			AivenSchemaACLs: schemaRegistryACLs,
-			Project:         project,
-			Service:         service,
-			Source:          schemaRegistrySource,
-			Logger:          log},
+		schemaRegistryManager: manager.Manager{
+			AivenAdapter: manager.AivenSchemaRegistryACLAdapter{
+				SchemaRegistryAclInterface: schemaRegistryACLs,
+				Project:                    project,
+				Service:                    service,
+			},
+			Source: source,
+			Logger: log},
 	}
 }
 

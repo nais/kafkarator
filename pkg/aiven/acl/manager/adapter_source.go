@@ -1,4 +1,4 @@
-package topic
+package manager
 
 import (
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"

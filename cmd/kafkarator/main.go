@@ -169,8 +169,8 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 
 	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			TopicACLs:          aivenClient.KafkaACLs,
-			SchemaRegistryACLs: aivenClient.KafkaSchemaRegistryACLs,
+			KafkaAcls:          aivenClient.KafkaACLs,
+			SchemaRegistryAcls: aivenClient.KafkaSchemaRegistryACLs,
 			Topics:             aivenClient.KafkaTopics,
 			NameResolver:       nameResolver,
 		},
@@ -187,8 +187,8 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 	streamReconciler := &controllers.StreamReconciler{
 		Client: mgr.GetClient(),
 		Aiven: kafkarator_aiven.Interfaces{
-			TopicACLs:          aivenClient.KafkaACLs,
-			SchemaRegistryACLs: aivenClient.KafkaSchemaRegistryACLs,
+			KafkaAcls:          aivenClient.KafkaACLs,
+			SchemaRegistryAcls: aivenClient.KafkaSchemaRegistryACLs,
 			Topics:             aivenClient.KafkaTopics,
 			NameResolver:       nameResolver,
 		},

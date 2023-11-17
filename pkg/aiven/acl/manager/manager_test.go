@@ -1,4 +1,4 @@
-package schemaregistry_test
+package manager_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
+	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 )
 
@@ -27,108 +27,108 @@ const (
 type ACLFilterTestSuite struct {
 	suite.Suite
 
-	existingAcls []schemaregistry.Acl
-	wantedAcls   []schemaregistry.Acl
-	shouldAdd    []schemaregistry.Acl
-	shouldRemove []schemaregistry.Acl
+	existingAcls []manager.Acl
+	wantedAcls   []manager.Acl
+	shouldAdd    []manager.Acl
+	shouldRemove []manager.Acl
 
-	kafkaSchemaAcls []*aiven.KafkaSchemaRegistryACL
-	topicAcls       []kafka_nais_io_v1.TopicACL
+	kafkaAcls []*aiven.KafkaSchemaRegistryACL
+	topicAcls []kafka_nais_io_v1.TopicACL
 }
 
 func (suite *ACLFilterTestSuite) SetupSuite() {
-	suite.existingAcls = []schemaregistry.Acl{
+	suite.existingAcls = []manager.Acl{
 		{ // Delete because of username
-			ID:         "abc",
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user.app-f1fbd6bd",
+			ID:           "abc",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
-			ID:         "abcde",
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user.app*",
+			ID:           "abcde",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user.app*",
 		},
 		{ // Delete because of username and permission
-			ID:         "123",
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user2.app-4ca551f9",
+			ID:           "123",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
-			ID:         "abcdef",
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user2.app*",
+			ID:           "abcdef",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user2.app*",
 		},
 		{ // Keep
-			ID:         "abcdef-new",
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user2_app_eb343e9a_*",
+			ID:           "abcdef-new",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user2_app_eb343e9a_*",
 		},
 	}
 
-	suite.wantedAcls = []schemaregistry.Acl{
+	suite.wantedAcls = []manager.Acl{
 		{ // Added because existing uses wrong username
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user_app_0841666a_*",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user_app_0841666a_*",
 		},
 		{ // Already exists
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user2_app_eb343e9a_*",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user2_app_eb343e9a_*",
 		},
 		{ // Added because of new user
-			Permission: "readwrite",
-			Resource:   Resource,
-			Username:   "user3_app_538859ff_*",
+			Permission:   "readwrite",
+			TopicPattern: FullTopic,
+			Username:     "user3_app_538859ff_*",
 		},
 	}
 
-	suite.shouldAdd = []schemaregistry.Acl{
+	suite.shouldAdd = []manager.Acl{
 		{
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user_app_0841666a_*",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user_app_0841666a_*",
 		},
 		{
-			Permission: "readwrite",
-			Resource:   Resource,
-			Username:   "user3_app_538859ff_*",
-		},
-	}
-
-	suite.shouldRemove = []schemaregistry.Acl{
-		{
-			ID:         "abc",
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user.app-f1fbd6bd",
-		},
-		{
-			ID:         "abcde",
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user.app*",
-		},
-		{
-			ID:         "123",
-			Permission: "read",
-			Resource:   Resource,
-			Username:   "user2.app-4ca551f9",
-		},
-		{
-			ID:         "abcdef",
-			Permission: "write",
-			Resource:   Resource,
-			Username:   "user2.app*",
+			Permission:   "readwrite",
+			TopicPattern: FullTopic,
+			Username:     "user3_app_538859ff_*",
 		},
 	}
 
-	suite.kafkaSchemaAcls = []*aiven.KafkaSchemaRegistryACL{
+	suite.shouldRemove = []manager.Acl{
+		{
+			ID:           "abc",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user.app-f1fbd6bd",
+		},
+		{
+			ID:           "abcde",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user.app*",
+		},
+		{
+			ID:           "123",
+			Permission:   "read",
+			TopicPattern: FullTopic,
+			Username:     "user2.app-4ca551f9",
+		},
+		{
+			ID:           "abcdef",
+			Permission:   "write",
+			TopicPattern: FullTopic,
+			Username:     "user2.app*",
+		},
+	}
+
+	suite.kafkaAcls = []*aiven.KafkaSchemaRegistryACL{
 		{ // Delete because of username
 			ID:         "abc",
 			Permission: "read",
@@ -181,17 +181,17 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 }
 
 func (suite *ACLFilterTestSuite) TestNewACLs() {
-	added := schemaregistry.NewACLs(suite.existingAcls, suite.wantedAcls)
+	added := manager.NewACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldAdd, added, cmpopts.SortSlices(func(a, b schemaregistry.Acl) bool {
+	assert.DeepEqual(suite.T(), suite.shouldAdd, added, cmpopts.SortSlices(func(a, b manager.Acl) bool {
 		return a.Username < b.Username
 	}))
 }
 
 func (suite *ACLFilterTestSuite) TestDeleteACLs() {
-	removed := schemaregistry.DeleteACLs(suite.existingAcls, suite.wantedAcls)
+	removed := manager.DeleteACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *schemaregistry.Acl) bool {
+	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *manager.Acl) bool {
 		return a.ID < b.ID
 	}))
 }
@@ -208,29 +208,31 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 		},
 	}
 
-	m := &schemaregistry.MockInterface{}
+	m := manager.NewMockSchemaRegistryAclInterface(suite.T())
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.kafkaSchemaAcls, nil)
+		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
 		Times(2).
-		Return(nil, nil)
+		Return(&aiven.KafkaSchemaRegistryACL{}, nil)
 	m.On("Delete", TestPool, TestService, mock.Anything).
 		Times(4).
 		Return(nil)
 
-	aclManager := schemaregistry.Manager{
-		AivenSchemaACLs: m,
-		Project:         TestPool,
-		Service:         TestService,
-		Source:          schemaregistry.TopicAdapter{Topic: &source},
-		Logger:          log.New(),
+	aclManager := manager.Manager{
+		AivenAdapter: manager.AivenSchemaRegistryACLAdapter{
+			SchemaRegistryAclInterface: m,
+			Project:                    TestPool,
+			Service:                    TestService,
+		},
+		Project: TestPool,
+		Service: TestService,
+		Source:  manager.TopicAdapter{Topic: &source},
+		Logger:  log.New(),
 	}
 
 	err := aclManager.Synchronize()
 	suite.NoError(err)
-
-	m.AssertExpectations(suite.T())
 }
 
 func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
@@ -244,26 +246,28 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 		},
 	}
 
-	m := &schemaregistry.MockInterface{}
+	m := manager.NewMockSchemaRegistryAclInterface(suite.T())
 	m.On("List", TestPool, TestService).
 		Once().
-		Return(suite.kafkaSchemaAcls, nil)
+		Return(suite.kafkaAcls, nil)
 	m.On("Create", TestPool, TestService, mock.Anything).
 		Times(1).
-		Return(nil, nil)
+		Return(&aiven.KafkaSchemaRegistryACL{}, nil)
 
-	aclManager := schemaregistry.Manager{
-		AivenSchemaACLs: m,
-		Project:         TestPool,
-		Service:         TestService,
-		Source:          schemaregistry.StreamAdapter{Stream: &source},
-		Logger:          log.New(),
+	aclManager := manager.Manager{
+		AivenAdapter: manager.AivenSchemaRegistryACLAdapter{
+			SchemaRegistryAclInterface: m,
+			Project:                    TestPool,
+			Service:                    TestService,
+		},
+		Project: TestPool,
+		Service: TestService,
+		Source:  manager.StreamAdapter{Stream: &source},
+		Logger:  log.New(),
 	}
 
 	err := aclManager.Synchronize()
 	suite.NoError(err)
-
-	m.AssertExpectations(suite.T())
 }
 
 func TestACLFilter(t *testing.T) {

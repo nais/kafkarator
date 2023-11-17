@@ -3,11 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	acl_schemaregistry "github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
-	acl_topic "github.com/nais/kafkarator/pkg/aiven/acl/topic"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
+
+	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven"
@@ -98,12 +98,11 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil
 		aclManager := acl.New(
-			r.Aiven.TopicACLs,
-			r.Aiven.SchemaRegistryACLs,
+			r.Aiven.KafkaAcls,
+			r.Aiven.SchemaRegistryAcls,
 			projectName,
 			serviceName,
-			acl_topic.TopicAdapter{Topic: strippedTopic},
-			acl_schemaregistry.TopicAdapter{Topic: strippedTopic},
+			manager.TopicAdapter{Topic: strippedTopic},
 			logger,
 		)
 		err = aclManager.Synchronize()
