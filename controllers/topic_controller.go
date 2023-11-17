@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	acl_schemaregistry "github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
+	acl_topic "github.com/nais/kafkarator/pkg/aiven/acl/topic"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
@@ -95,13 +97,15 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		logger.Info("Deleting ACls for topic")
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil
-		aclManager := acl.Manager{
-			AivenACLs: r.Aiven.ACLs,
-			Project:   projectName,
-			Service:   serviceName,
-			Source:    acl.TopicAdapter{Topic: strippedTopic},
-			Logger:    logger,
-		}
+		aclManager := acl.New(
+			r.Aiven.TopicACLs,
+			r.Aiven.SchemaRegistryACLs,
+			projectName,
+			serviceName,
+			acl_topic.TopicAdapter{Topic: strippedTopic},
+			acl_schemaregistry.TopicAdapter{Topic: strippedTopic},
+			logger,
+		)
 		err = aclManager.Synchronize()
 		if err != nil {
 			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)

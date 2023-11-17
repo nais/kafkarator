@@ -3,6 +3,8 @@ package controllers
 import (
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	acl_schemaregistry "github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
+	acl_topic "github.com/nais/kafkarator/pkg/aiven/acl/topic"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
@@ -37,13 +39,15 @@ func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, lo
 			Topic:       t,
 			Logger:      logger,
 		},
-		ACLs: acl.Manager{
-			AivenACLs: a.ACLs,
-			Project:   projectName,
-			Service:   serviceName,
-			Source:    acl.TopicAdapter{Topic: &t},
-			Logger:    logger,
-		},
+		ACLs: acl.New(
+			a.TopicACLs,
+			a.SchemaRegistryACLs,
+			projectName,
+			serviceName,
+			acl_topic.TopicAdapter{Topic: &t},
+			acl_schemaregistry.TopicAdapter{Topic: &t},
+			logger,
+		),
 	}, nil
 }
 

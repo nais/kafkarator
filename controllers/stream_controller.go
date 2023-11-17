@@ -6,6 +6,8 @@ import (
 	"github.com/aiven/aiven-go-client"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	acl_schemaregistry "github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
+	acl_topic "github.com/nais/kafkarator/pkg/aiven/acl/topic"
 	"github.com/nais/kafkarator/pkg/metrics"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -192,13 +194,15 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
-	aclManager := acl.Manager{
-		AivenACLs: r.Aiven.ACLs,
-		Project:   projectName,
-		Service:   serviceName,
-		Source:    acl.StreamAdapter{Stream: &stream},
-		Logger:    logger,
-	}
+	aclManager := acl.New(
+		r.Aiven.TopicACLs,
+		r.Aiven.SchemaRegistryACLs,
+		projectName,
+		serviceName,
+		acl_topic.StreamAdapter{Stream: &stream},
+		acl_schemaregistry.StreamAdapter{Stream: &stream},
+		logger,
+	)
 	err = aclManager.Synchronize()
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
@@ -228,13 +232,15 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
 
-	aclManager := acl.Manager{
-		AivenACLs: r.Aiven.ACLs,
-		Project:   projectName,
-		Service:   serviceName,
-		Source:    acl.StreamAdapter{Stream: &stream, Delete: true},
-		Logger:    logger,
-	}
+	aclManager := acl.New(
+		r.Aiven.TopicACLs,
+		r.Aiven.SchemaRegistryACLs,
+		projectName,
+		serviceName,
+		acl_topic.StreamAdapter{Stream: &stream, Delete: true},
+		acl_schemaregistry.StreamAdapter{Stream: &stream, Delete: true},
+		logger,
+	)
 	err = aclManager.Synchronize()
 	if err != nil {
 		return fail(fmt.Errorf("failed to delete ACL %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)

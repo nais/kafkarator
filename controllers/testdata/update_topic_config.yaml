@@ -5,11 +5,16 @@ config:
 
 aiven:
   existing:
-    acls:
+    topicAcls:
       - acl_id: new-well-known-id
         username: myteam_myapplication_1c62faf5_*
         permission: read
         topic: myteam.mytopic
+    schemaRegistryAcls:
+      - acl_id: new-well-known-id
+        username: myteam_myapplication_1c62faf5_*
+        permission: read
+        resource: Subject:myteam.mytopic
     topics:
       - topic_name: myteam.mytopic
         partitions:
@@ -33,7 +38,8 @@ aiven:
             value: Kafkarator
   created:
     topics: [ ]
-    acls: [ ]
+    topicAcls: [ ]
+    schemaRegistryAcls: [ ]
   updated:
     topics:
       myteam.mytopic:
@@ -51,8 +57,8 @@ aiven:
           - key: created-by
             value: Kafkarator
   deleted:
-    acls: [ ]
-
+    topicAcls: [ ]
+    schemaRegistryAcls: [ ]
 topic:
   apiVersion: kafka.nais.io/v1
   kind: Topic

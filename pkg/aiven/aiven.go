@@ -1,7 +1,8 @@
 package kafkarator_aiven
 
 import (
-	"github.com/nais/kafkarator/pkg/aiven/acl"
+	acl_schemaregistry "github.com/nais/kafkarator/pkg/aiven/acl/schemaregistry"
+	acl_topic "github.com/nais/kafkarator/pkg/aiven/acl/topic"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/liberator/pkg/aiven/service"
 )
@@ -11,7 +12,8 @@ func ServiceName(project string) string {
 }
 
 type Interfaces struct {
-	ACLs         acl.Interface
-	Topics       topic.Interface
-	NameResolver service.NameResolver
+	TopicACLs          acl_topic.Interface
+	SchemaRegistryACLs acl_schemaregistry.Interface
+	Topics             topic.Interface
+	NameResolver       service.NameResolver
 }
