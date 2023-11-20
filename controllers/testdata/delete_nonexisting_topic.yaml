@@ -5,13 +5,15 @@ config:
 
 aiven:
   existing:
-    acls:
+    kafkaAcls:
+    schemaRegistryAcls:
     topics:
   created: {}
   updated: {}
   deleted:
     topics:
-    acls:
+    kafkaAcls:
+    schemaRegistryAcls:
   missing:
     topics:
       - myteam.mytopic

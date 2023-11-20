@@ -3,9 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/aiven/aiven-go-client"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
 	"github.com/nais/kafkarator/pkg/metrics"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -14,8 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
-	"time"
 )
 
 type StreamReconcileResult struct {
@@ -192,13 +194,14 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
-	aclManager := acl.Manager{
-		AivenACLs: r.Aiven.ACLs,
-		Project:   projectName,
-		Service:   serviceName,
-		Source:    acl.StreamAdapter{Stream: &stream},
-		Logger:    logger,
-	}
+	aclManager := acl.New(
+		r.Aiven.KafkaAcls,
+		r.Aiven.SchemaRegistryAcls,
+		projectName,
+		serviceName,
+		manager.StreamAdapter{Stream: &stream},
+		logger,
+	)
 	err = aclManager.Synchronize()
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
@@ -228,13 +231,14 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
 
-	aclManager := acl.Manager{
-		AivenACLs: r.Aiven.ACLs,
-		Project:   projectName,
-		Service:   serviceName,
-		Source:    acl.StreamAdapter{Stream: &stream, Delete: true},
-		Logger:    logger,
-	}
+	aclManager := acl.New(
+		r.Aiven.KafkaAcls,
+		r.Aiven.SchemaRegistryAcls,
+		projectName,
+		serviceName,
+		manager.StreamAdapter{Stream: &stream, Delete: true},
+		logger,
+	)
 	err = aclManager.Synchronize()
 	if err != nil {
 		return fail(fmt.Errorf("failed to delete ACL %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)

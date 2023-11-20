@@ -80,6 +80,26 @@ var (
 	}, []string{LabelPool, LabelVersion, LabelPlan})
 )
 
+func GObserveAivenLatency[T any](operation, pool string, fun func() (T, error)) (T, error) {
+	timer := time.Now()
+	value, err := fun()
+	used := time.Now().Sub(timer)
+	status := 200
+	if err != nil {
+		aivenErr, ok := err.(aiven.Error)
+		if ok {
+			status = aivenErr.Status
+		} else {
+			status = 0
+		}
+	}
+	AivenLatency.With(prometheus.Labels{
+		LabelAivenOperation: operation,
+		LabelPool:           pool,
+		LabelStatus:         strconv.Itoa(status),
+	}).Observe(used.Seconds())
+	return value, err
+}
 func ObserveAivenLatency(operation, pool string, fun func() error) error {
 	timer := time.Now()
 	err := fun()

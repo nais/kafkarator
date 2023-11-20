@@ -2,9 +2,6 @@ package controllers_test
 
 import (
 	"encoding/json"
-	"github.com/nais/kafkarator/pkg/utils"
-	"github.com/nais/liberator/pkg/aiven/service"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,11 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/aiven/service"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/aiven/aiven-go-client"
 	"github.com/ghodss/yaml"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
-	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
 	topic_package "github.com/nais/kafkarator/pkg/aiven/topic"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -50,8 +51,9 @@ type aivenSpec struct {
 }
 
 type aivenCreated struct {
-	Topics []aiven.CreateKafkaTopicRequest
-	Acls   []aiven.CreateKafkaACLRequest
+	Topics             []aiven.CreateKafkaTopicRequest
+	KafkaAcls          []aiven.CreateKafkaACLRequest
+	SchemaRegistryACLs []aiven.CreateKafkaSchemaRegistryACLRequest
 }
 
 type aivenUpdated struct {
@@ -59,8 +61,9 @@ type aivenUpdated struct {
 }
 
 type aivenDeleted struct {
-	Topics []string
-	Acls   []string
+	Topics             []string
+	KafkaAcls          []string
+	SchemaRegistryAcls []string
 }
 
 type aivenMissing struct {
@@ -68,8 +71,9 @@ type aivenMissing struct {
 }
 
 type aivenData struct {
-	Topics []*aiven.KafkaTopic
-	Acls   []*aiven.KafkaACL
+	Topics             []*aiven.KafkaTopic
+	KafkaAcls          []*aiven.KafkaACL
+	SchemaRegistryAcls []*aiven.KafkaSchemaRegistryACL
 }
 
 type testCaseConfig struct {
@@ -95,17 +99,21 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 	mockNameResolver := service.NewMockNameResolver(t)
 	mockNameResolver.On("ResolveKafkaServiceName", mock.Anything).Return("kafka", nil)
 
-	aclMock := &acl.MockInterface{}
-	aclMock.Test(t)
+	kafkaAclMock := manager.NewMockKafkaAclInterface(t)
+	schemaRegistryAclMock := manager.NewMockSchemaRegistryAclInterface(t)
 	topicMock := &topic_package.MockInterface{}
 	topicMock.Test(t)
 
 	for _, project := range test.Config.Projects {
 		svc, _ := mockNameResolver.ResolveKafkaServiceName(project)
-		aclMock.
+		kafkaAclMock.
 			On("List", project, svc).
 			Maybe().
-			Return(test.Aiven.Existing.Acls, nil)
+			Return(test.Aiven.Existing.KafkaAcls, nil)
+		schemaRegistryAclMock.
+			On("List", project, svc).
+			Maybe().
+			Return(test.Aiven.Existing.SchemaRegistryAcls, nil)
 
 		for _, topic := range test.Aiven.Missing.Topics {
 			topicMock.
@@ -137,14 +145,28 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 				Return(nil)
 		}
 
-		for _, a := range test.Aiven.Created.Acls {
-			aclMock.
+		for _, a := range test.Aiven.Created.KafkaAcls {
+			kafkaAclMock.
 				On("Create", project, svc, a).
 				Return(
 					&aiven.KafkaACL{
 						ID:         wellKnownID,
 						Permission: a.Permission,
 						Topic:      a.Topic,
+						Username:   a.Username,
+					},
+					nil,
+				)
+		}
+
+		for _, a := range test.Aiven.Created.SchemaRegistryACLs {
+			schemaRegistryAclMock.
+				On("Create", project, svc, a).
+				Return(
+					&aiven.KafkaSchemaRegistryACL{
+						ID:         wellKnownID,
+						Permission: a.Permission,
+						Resource:   a.Resource,
 						Username:   a.Username,
 					},
 					nil,
@@ -163,21 +185,32 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 				Return(nil)
 		}
 
-		for _, a := range test.Aiven.Deleted.Acls {
-			aclMock.
+		for _, a := range test.Aiven.Deleted.KafkaAcls {
+			kafkaAclMock.
+				On("Delete", project, svc, a).
+				Return(nil)
+		}
+
+		for _, a := range test.Aiven.Deleted.SchemaRegistryAcls {
+			schemaRegistryAclMock.
 				On("Delete", project, svc, a).
 				Return(nil)
 		}
 	}
 
 	return kafkarator_aiven.Interfaces{
-			ACLs:         aclMock,
-			Topics:       topicMock,
-			NameResolver: mockNameResolver,
+			KafkaAcls:          kafkaAclMock,
+			SchemaRegistryAcls: schemaRegistryAclMock,
+			Topics:             topicMock,
+			NameResolver:       mockNameResolver,
 		}, func(t mock.TestingT) bool {
 			result := false
-			if ok := aclMock.AssertExpectations(t); !ok {
-				t.Errorf("Expectations on ACLs failed")
+			if ok := kafkaAclMock.AssertExpectations(t); !ok {
+				t.Errorf("Expectations on Topic ACLs failed")
+				result = result || ok
+			}
+			if ok := schemaRegistryAclMock.AssertExpectations(t); !ok {
+				t.Errorf("Expectations on Schema Registry ACLs failed")
 				result = result || ok
 			}
 			if ok := topicMock.AssertExpectations(t); !ok {
