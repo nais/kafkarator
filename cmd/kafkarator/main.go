@@ -6,6 +6,7 @@ import (
 	"github.com/nais/liberator/pkg/aiven/service"
 	"os"
 	"os/signal"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"strings"
 	"syscall"
 	"time"
@@ -26,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -118,9 +120,13 @@ func main() {
 
 	syncPeriod := viper.GetDuration(SyncPeriod)
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		SyncPeriod:         &syncPeriod,
-		Scheme:             scheme,
-		MetricsBindAddress: viper.GetString(MetricsAddress),
+		Cache: cache.Options{
+			SyncPeriod: &syncPeriod,
+		},
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: viper.GetString(MetricsAddress),
+		},
 	})
 
 	if err != nil {

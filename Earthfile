@@ -5,7 +5,7 @@ FROM gcr.io/distroless/static-debian11
 ARG REGISTRY=europe-north1-docker.pkg.dev
 
 kubebuilder:
-    FROM golang:1.20
+    FROM golang:1.21
     # Constants
     ARG os="linux"
     ARG arch="amd64"
@@ -16,7 +16,7 @@ kubebuilder:
     SAVE IMAGE --cache-hint
 
 dependencies:
-    FROM golang:1.20
+    FROM golang:1.21
     # Go settings, needs to be ENV to be inherited into build
     ENV CGO_ENABLED=0
     ENV GOOS="linux"
