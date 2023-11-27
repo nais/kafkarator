@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
 
 	"github.com/nais/kafkarator/pkg/aiven/acl"
@@ -268,6 +269,9 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 func (r *TopicReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 10,
+		}).
 		For(&kafka_nais_io_v1.Topic{}).
 		Complete(r)
 }
