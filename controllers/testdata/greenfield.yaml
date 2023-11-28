@@ -1,5 +1,6 @@
 config:
   description: creation of topics, users, and acls in a clean environment
+  schemaRegistryACLEnabled: true
   projects:
     - nav-integration-test
 

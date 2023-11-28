@@ -42,6 +42,8 @@ spec:
             value: json
           - name: KAFKARATOR_METRICS_ADDRESS
             value: 0.0.0.0:8080
+          - name: KAFKARATOR_SCHEMA_REGISTRY_ACL_ENABLED
+            value: {{ .Values.schemaRegistryACLEnabled }}
           - name: KAFKARATOR_PROJECTS
             value: "{{ .Values.aiven.projects }}"
           {{- range $key, $value := .Values.extraEnv }}

@@ -1,5 +1,6 @@
 config:
   description: topic configuration updates are propagated
+  schemaRegistryACLEnabled: true
   projects:
     - nav-integration-test
 
