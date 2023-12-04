@@ -1,0 +1,45 @@
+{{- if .Capabilities.APIVersions.Has "kyverno.io/v1" }}
+{{- $valid := splitList " " .Values.aiven.projects }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: validate-kafkarator
+  annotations:
+    policies.kyverno.io/title: Validate fields for Kafka resources.
+    policies.kyverno.io/category: Nais
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Topic, Stream
+    policies.kyverno.io/description: >-
+      Validates that the fields for the given resources has allowed values.
+      Currently only validates the pool field.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 15
+  rules:
+    - name: "validate-pool"
+      match:
+        all:
+          - resources:
+              kinds:
+                - kafka.nais.io/v1/Topic
+                - kafka.nais.io/v1/Stream
+              operations:
+                - "CREATE"
+                - "UPDATE"
+      validate:
+        message: >-
+          Kafka pool {{ "{{ request.object.spec.pool }}" | quote }} is not supported in this cluster.
+          Allowed values: [{{ $valid | join ", " }}]
+
+          See documentation: https://doc.nais.io/persistence/kafka/manage_topics/#creating-topics-and-defining-access
+        deny:
+          conditions:
+            all:
+              - key: {{ "{{ request.object.spec.pool }}" | quote }}
+                operator: AnyNotIn
+                value:
+                  {{- range $valid }}
+                  - {{ . | quote }}
+                  {{- end }}
+{{- end }}
