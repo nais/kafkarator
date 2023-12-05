@@ -5,7 +5,7 @@ config:
 
 aiven:
   existing:
-    kafkaAcls:
+    acls:
       - id: acl-1
         username: myteam.myapplication*
         permission: read
@@ -22,23 +22,6 @@ aiven:
         username: otherteam.myapplication*
         permission: read
         topic: otherteam.othertopic
-    schemaRegistryAcls:
-      - id: acl-1
-        username: myteam.myapplication*
-        permission: schema_registry_read
-        resource: Subject:myteam.mytopic
-      - id: acl-2
-        username: otherteam.otherapplication*
-        permission: schema_registry_write
-        resource: Subject:myteam.mytopic
-      - id: acl-3
-        username: myteam.no-wildcard-680515dc
-        permission: schema_registry_write
-        resource: Subject:myteam.mytopic
-      - id: not-relevant-acl
-        username: otherteam.myapplication*
-        permission: schema_registry_read
-        resource: Subject:otherteam.othertopic
     topics:
       - topic_name: myteam.mytopic
         replication: 3
@@ -48,11 +31,7 @@ aiven:
   created: {}
   updated: {}
   deleted:
-    kafkaAcls:
-      - acl-1
-      - acl-2
-      - acl-3
-    schemaRegistryAcls:
+    acls:
       - acl-1
       - acl-2
       - acl-3

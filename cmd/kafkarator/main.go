@@ -175,10 +175,9 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 
 	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			KafkaAcls:          aivenClient.KafkaACLs,
-			SchemaRegistryAcls: aivenClient.KafkaSchemaRegistryACLs,
-			Topics:             aivenClient.KafkaTopics,
-			NameResolver:       nameResolver,
+			ACLs:         aivenClient.KafkaACLs,
+			Topics:       aivenClient.KafkaTopics,
+			NameResolver: nameResolver,
 		},
 		Client:          mgr.GetClient(),
 		Logger:          logger,
@@ -193,10 +192,9 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 	streamReconciler := &controllers.StreamReconciler{
 		Client: mgr.GetClient(),
 		Aiven: kafkarator_aiven.Interfaces{
-			KafkaAcls:          aivenClient.KafkaACLs,
-			SchemaRegistryAcls: aivenClient.KafkaSchemaRegistryACLs,
-			Topics:             aivenClient.KafkaTopics,
-			NameResolver:       nameResolver,
+			ACLs:         aivenClient.KafkaACLs,
+			Topics:       aivenClient.KafkaTopics,
+			NameResolver: nameResolver,
 		},
 		Logger:          logger,
 		Projects:        viper.GetStringSlice(Projects),

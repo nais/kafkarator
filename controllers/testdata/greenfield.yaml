@@ -5,8 +5,7 @@ config:
 
 aiven:
   existing:
-    kafkaAcls: []
-    schemaRegistryAcls: []
+    acls: []
     topics: []
   created:
     topics:
@@ -23,7 +22,7 @@ aiven:
         tags:
           - key: created-by
             value: Kafkarator
-    kafkaAcls:
+    acls:
       - username: myteam_myapplication_1c62faf5_*
         permission: read
         topic: myteam.mytopic
@@ -33,21 +32,10 @@ aiven:
       - username: redundant-team_application_18515795_*
         permission: read
         topic: myteam.mytopic
-    schemaRegistryAcls:
-      - username: myteam_myapplication_1c62faf5_*
-        permission: schema_registry_read
-        resource: Subject:myteam.mytopic
-      - username: otherteam_otherapplication_21a2c9c6_*
-        permission: schema_registry_write
-        resource: Subject:myteam.mytopic
-      - username: redundant-team_application_18515795_*
-        permission: schema_registry_read
-        resource: Subject:myteam.mytopic
   updated:
     topics: {}
   deleted:
-    kafkaAcls: []
-    schemaRegistryAcls: []
+    acls: []
 
 topic:
   apiVersion: kafka.nais.io/v1

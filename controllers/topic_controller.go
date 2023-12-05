@@ -3,15 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
-
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/acl/manager"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/aiven/aiven-go-client"
 	"github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -98,14 +96,13 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		logger.Info("Deleting ACls for topic")
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil
-		aclManager := acl.New(
-			r.Aiven.KafkaAcls,
-			r.Aiven.SchemaRegistryAcls,
-			projectName,
-			serviceName,
-			manager.TopicAdapter{Topic: strippedTopic},
-			logger,
-		)
+		aclManager := acl.Manager{
+			AivenACLs: r.Aiven.ACLs,
+			Project:   projectName,
+			Service:   serviceName,
+			Source:    acl.TopicAdapter{Topic: strippedTopic},
+			Logger:    logger,
+		}
 		err = aclManager.Synchronize()
 		if err != nil {
 			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
