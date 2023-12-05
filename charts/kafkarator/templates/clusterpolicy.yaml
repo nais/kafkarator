@@ -12,6 +12,8 @@ metadata:
     policies.kyverno.io/description: >-
       Validates that the fields for the given resources has allowed values.
       Currently only validates the pool field.
+  labels:
+    {{- include "kafkarator.labels" . | nindent 4 }}
 spec:
   validationFailureAction: Enforce
   background: false
