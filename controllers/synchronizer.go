@@ -22,7 +22,7 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, schemaRegistryACLEnabled bool, logger *log.Entry) (*Synchronizer, error) {
+func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
 	projectName := t.Spec.Pool
 	serviceName, err := a.NameResolver.ResolveKafkaServiceName(projectName)
 	if err != nil {
@@ -41,7 +41,6 @@ func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, sc
 		ACLs: acl.New(
 			a.KafkaAcls,
 			a.SchemaRegistryAcls,
-			schemaRegistryACLEnabled,
 			projectName,
 			serviceName,
 			manager.TopicAdapter{Topic: &t},

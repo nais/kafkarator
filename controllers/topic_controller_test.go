@@ -77,9 +77,8 @@ type aivenData struct {
 }
 
 type testCaseConfig struct {
-	Description              string
-	Projects                 []string
-	SchemaRegistryACLEnabled bool
+	Description string
+	Projects    []string
 }
 
 func fileReader(file string) io.Reader {
@@ -250,10 +249,9 @@ func yamlSubTest(t *testing.T, path string) {
 	aivenMocks, assertMocks := aivenMockInterfaces(t, test)
 
 	reconciler := controllers.TopicReconciler{
-		Aiven:                    aivenMocks,
-		Logger:                   log.New(),
-		Projects:                 test.Config.Projects,
-		SchemaRegistryACLEnabled: test.Config.SchemaRegistryACLEnabled,
+		Aiven:    aivenMocks,
+		Logger:   log.New(),
+		Projects: test.Config.Projects,
 	}
 
 	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))

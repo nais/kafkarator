@@ -1,6 +1,5 @@
 config:
   description: topic is not actually deleted when annotation is not set, but ACLs are
-  schemaRegistryACLEnabled: true
   projects:
     - nav-integration-test
 

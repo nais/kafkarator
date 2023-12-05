@@ -14,13 +14,6 @@ values:
     config:
       type: string
       secret: true
-  schemaRegistryACLEnabled:
-    description: Enable synchronizing schema registry ACLs
-    displayName: Schema Registry ACL manager
-    config:
-      type: bool
-      secret: false
-    
   caBundle:
     description: Enable CA bundle for Aiven API
     displayName: Enable CA bundle

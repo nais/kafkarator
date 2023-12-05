@@ -6,42 +6,35 @@ import (
 )
 
 type Manager struct {
-	topicManager             manager.Manager
-	schemaRegistryManager    manager.Manager
-	schemaRegistryACLEnabled bool
+	topicManager          manager.Manager
+	schemaRegistryManager manager.Manager
 }
 
 func New(kafkaAcls manager.KafkaAclInterface,
 	schemaRegistryACLs manager.SchemaRegistryAclInterface,
-	schemaRegistryACLEnabled bool,
 	project string,
 	service string,
 	source manager.Source,
 	log logrus.FieldLogger) Manager {
-
-	m := Manager{schemaRegistryACLEnabled: schemaRegistryACLEnabled}
-	m.topicManager = manager.Manager{
-		AivenAdapter: manager.AivenKafkaAclAdapter{
-			KafkaAclInterface: kafkaAcls,
-			Project:           project,
-			Service:           service,
+	return Manager{
+		topicManager: manager.Manager{
+			AivenAdapter: manager.AivenKafkaAclAdapter{
+				KafkaAclInterface: kafkaAcls,
+				Project:           project,
+				Service:           service,
+			},
+			Source: source,
+			Logger: log,
 		},
-		Source: source,
-		Logger: log,
-	}
-
-	if schemaRegistryACLEnabled {
-		m.schemaRegistryManager = manager.Manager{
+		schemaRegistryManager: manager.Manager{
 			AivenAdapter: manager.AivenSchemaRegistryACLAdapter{
 				SchemaRegistryAclInterface: schemaRegistryACLs,
 				Project:                    project,
 				Service:                    service,
 			},
 			Source: source,
-			Logger: log,
-		}
+			Logger: log},
 	}
-	return m
 }
 
 func (m *Manager) Synchronize() error {
@@ -49,10 +42,8 @@ func (m *Manager) Synchronize() error {
 		return err
 	}
 
-	if m.schemaRegistryACLEnabled {
-		if err := m.schemaRegistryManager.Synchronize(); err != nil {
-			return err
-		}
+	if err := m.schemaRegistryManager.Synchronize(); err != nil {
+		return err
 	}
 
 	return nil

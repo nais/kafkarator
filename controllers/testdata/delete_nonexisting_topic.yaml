@@ -1,6 +1,5 @@
 config:
   description: topic is permanently deleted when annotation is set
-  schemaRegistryACLEnabled: true
   projects:
     - nav-integration-test
 

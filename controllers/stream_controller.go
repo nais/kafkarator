@@ -30,11 +30,10 @@ type StreamReconcileResult struct {
 
 type StreamReconciler struct {
 	client.Client
-	Aiven                    kafkarator_aiven.Interfaces
-	Logger                   log.FieldLogger
-	Projects                 []string
-	RequeueInterval          time.Duration
-	SchemaRegistryACLEnabled bool
+	Aiven           kafkarator_aiven.Interfaces
+	Logger          log.FieldLogger
+	Projects        []string
+	RequeueInterval time.Duration
 }
 
 func (r *StreamReconciler) projectWhitelisted(project string) bool {
@@ -198,7 +197,6 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 	aclManager := acl.New(
 		r.Aiven.KafkaAcls,
 		r.Aiven.SchemaRegistryAcls,
-		r.SchemaRegistryACLEnabled,
 		projectName,
 		serviceName,
 		manager.StreamAdapter{Stream: &stream},
@@ -236,7 +234,6 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 	aclManager := acl.New(
 		r.Aiven.KafkaAcls,
 		r.Aiven.SchemaRegistryAcls,
-		r.SchemaRegistryACLEnabled,
 		projectName,
 		serviceName,
 		manager.StreamAdapter{Stream: &stream, Delete: true},

@@ -43,14 +43,13 @@ const (
 )
 
 const (
-	AivenToken               = "aiven-token"
-	LogFormat                = "log-format"
-	MetricsAddress           = "metrics-address"
-	Projects                 = "projects"
-	RequeueInterval          = "requeue-interval"
-	SyncPeriod               = "sync-period"
-	TopicReportInterval      = "topic-report-interval"
-	SchemaRegistryACLEnabled = "schema-registry-acl-enabled"
+	AivenToken          = "aiven-token"
+	LogFormat           = "log-format"
+	MetricsAddress      = "metrics-address"
+	Projects            = "projects"
+	RequeueInterval     = "requeue-interval"
+	SyncPeriod          = "sync-period"
+	TopicReportInterval = "topic-report-interval"
 )
 
 const (
@@ -72,7 +71,6 @@ func init() {
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
 	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
-	flag.Bool(SchemaRegistryACLEnabled, false, "Enable ACLs for Schema Registry")
 	flag.StringSlice(Projects, []string{"nav-integration-test"}, "List of projects allowed to operate on")
 
 	flag.Parse()
@@ -174,7 +172,6 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 	}
 
 	nameResolver := service.NewCachedNameResolver(aivenClient.Services)
-	schemaRegistryACLEnabled := viper.GetBool(SchemaRegistryACLEnabled)
 
 	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
@@ -183,11 +180,10 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 			Topics:             aivenClient.KafkaTopics,
 			NameResolver:       nameResolver,
 		},
-		SchemaRegistryACLEnabled: schemaRegistryACLEnabled,
-		Client:                   mgr.GetClient(),
-		Logger:                   logger,
-		Projects:                 viper.GetStringSlice(Projects),
-		RequeueInterval:          viper.GetDuration(RequeueInterval),
+		Client:          mgr.GetClient(),
+		Logger:          logger,
+		Projects:        viper.GetStringSlice(Projects),
+		RequeueInterval: viper.GetDuration(RequeueInterval),
 	}
 	if err = topicReconciler.SetupWithManager(mgr); err != nil {
 		quit <- fmt.Errorf("unable to set up topicReconciler: %s", err)
@@ -202,10 +198,9 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 			Topics:             aivenClient.KafkaTopics,
 			NameResolver:       nameResolver,
 		},
-		SchemaRegistryACLEnabled: schemaRegistryACLEnabled,
-		Logger:                   logger,
-		Projects:                 viper.GetStringSlice(Projects),
-		RequeueInterval:          viper.GetDuration(RequeueInterval),
+		Logger:          logger,
+		Projects:        viper.GetStringSlice(Projects),
+		RequeueInterval: viper.GetDuration(RequeueInterval),
 	}
 	if err = streamReconciler.SetupWithManager(mgr); err != nil {
 		quit <- fmt.Errorf("unable to set up streamReconciler: %s", err)

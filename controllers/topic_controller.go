@@ -35,11 +35,10 @@ type TopicReconcileResult struct {
 
 type TopicReconciler struct {
 	client.Client
-	Aiven                    kafkarator_aiven.Interfaces
-	Logger                   *log.Logger
-	Projects                 []string
-	RequeueInterval          time.Duration
-	SchemaRegistryACLEnabled bool
+	Aiven           kafkarator_aiven.Interfaces
+	Logger          *log.Logger
+	Projects        []string
+	RequeueInterval time.Duration
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -102,7 +101,6 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		aclManager := acl.New(
 			r.Aiven.KafkaAcls,
 			r.Aiven.SchemaRegistryAcls,
-			r.SchemaRegistryACLEnabled,
 			projectName,
 			serviceName,
 			manager.TopicAdapter{Topic: strippedTopic},
@@ -157,7 +155,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer, _ := NewSynchronizer(r.Aiven, topic, r.SchemaRegistryACLEnabled, logger)
+	synchronizer, _ := NewSynchronizer(r.Aiven, topic, logger)
 	err = synchronizer.Synchronize()
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
