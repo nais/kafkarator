@@ -5,7 +5,7 @@ canary:
 	go build -o bin/canary cmd/canary/*.go
 
 mocks:
-	cd pkg/aiven && mockery --inpackage --all --case snake
+	cd pkg/aiven && go run github.com/vektra/mockery/v2 --inpackage --all --case snake
 
 test:
 	go test ./... -count=1
