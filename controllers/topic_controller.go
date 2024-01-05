@@ -217,6 +217,9 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		logger.Info("Topic not synchronized before")
 	}
 
+	// Append Kafkarator to finalizers to ensure proper cleanup when topic is deleted
+	controllerutil.AddFinalizer(&topic, Finalizer)
+
 	// Sync to Aiven; retry if necessary
 	result := r.Process(topic, logger)
 
@@ -241,11 +244,8 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// If Aiven was purged of data, mark resource as finally deleted by removing finalizer.
-	// Otherwise, append Kafkarator to finalizers to ensure proper cleanup when topic is deleted
 	if result.DeleteFinalized {
 		controllerutil.RemoveFinalizer(&topic, Finalizer)
-	} else {
-		controllerutil.AddFinalizer(&topic, Finalizer)
 	}
 
 	// Write topic status; retry always
