@@ -14,7 +14,7 @@ values:
     description: |
       Expects a JSON-list of objects with `cluster_name`, `kind`, `tenant` and `pool`.
       `cluster_name` is the cluster to deploy the canary to
-      `pool` is the Aiven Kafka pool this instance of the canary should use
+      `aiven_project` is the Aiven project this instance of the canary should use
       `kind` is the environmentKind of this cluster
       `tenant` is the name of the current tenant
     displayName: Deploy Configs
@@ -23,7 +23,7 @@ values:
         [
           {{ $tenant_name := .Tenant.Name }}
           {{ range .Envs }}
-          {{ if and (ne .name "ci-fss") (ne .name "ci-gcp") }}
+          {{ if or (ne $tenant_name "nav") (and (ne .name "ci-fss") (ne .name "ci-gcp") (ne .name "dev")) }}
           {
             "kind": "{{ .kind }}",
             "cluster_name": "{{ .name }}",
