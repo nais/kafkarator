@@ -14,6 +14,7 @@ REQUIREMENTS = (
     "pydantic",
 )
 
+TOPIC_ACL_USERS = ["leesah-quiz-master", "leesah-quiz-student"]
 TOPIC_NAME_FORMAT = "leesah-quiz-{event}-{i}"
 
 TOPIC_CONFIG = {
@@ -23,7 +24,6 @@ TOPIC_CONFIG = {
     "retention_ms": 24 * 60 * 60 * 1000,  # 48 hours
 }
 
-USER_NAME = "leesah-quiz-master"
 ACCESS_LEVEL = "admin"
 
 
@@ -182,14 +182,16 @@ def main(event, count):
     actual_topics = [TOPIC_NAME_FORMAT.format(event=event, i=i) for i in range(1, count+1)]
     for topic_name in actual_topics:
         kafka.create_topic(service, topic_name)
-        kafka.create_acl(service, topic_name, USER_NAME, ACCESS_LEVEL)
+        for user_name in TOPIC_ACL_USERS:
+            kafka.create_acl(service, topic_name, user_name, ACCESS_LEVEL)
+
     packet = Packet(
-        user=kafka.create_user(service, USER_NAME),
+        user=kafka.create_user(service, TOPIC_ACL_USERS[1]),
         ca=kafka.get_ca(),
         broker=service.get_broker(),
         topics=actual_topics,
     )
-    with tempfile.NamedTemporaryFile(prefix="leesah-quiz-master", suffix=".yaml", delete=False) as fobj:
+    with tempfile.NamedTemporaryFile(prefix="leesah-quiz-cert", suffix=".yaml", delete=False) as fobj:
         pyaml.dump(packet.model_dump(), fobj)
         print(f"Packet saved to {fobj.name}")
 
