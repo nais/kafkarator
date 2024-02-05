@@ -55,7 +55,7 @@ class AivenKafka(object):
         resp = self.session.get(self.base_url)
         resp.raise_for_status()
         data = resp.json()
-        return Service.parse_obj(data["service"])
+        return Service.model_validate(data["service"])
 
     def get_ca(self):
         url = f"{self.base}/{self.project}/kms/ca"
@@ -190,7 +190,7 @@ def main(event, count):
         topics=actual_topics,
     )
     with tempfile.NamedTemporaryFile(prefix="leesah-quiz-master", suffix=".yaml", delete=False) as fobj:
-        pyaml.dump(packet.dict(), fobj)
+        pyaml.dump(packet.model_dump(), fobj)
         print(f"Packet saved to {fobj.name}")
 
 
