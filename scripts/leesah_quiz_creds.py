@@ -21,7 +21,7 @@ TOPIC_CONFIG = {
     "cleanup_policy": "delete",  # delete, compact, compact,delete
     "min_insync_replicas": 3,
     "retention_bytes": -1,  # -1 means unlimited
-    "retention_ms": 48 * 60 * 60 * 1000,  # 48 hours
+    "retention_ms": 24 * 60 * 60 * 1000,  # 48 hours
 }
 
 USER_NAME = "leesah-quiz-master"
