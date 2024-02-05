@@ -14,7 +14,6 @@ REQUIREMENTS = (
     "pydantic",
 )
 
-TEST_TOPIC_NAME = "leesah-quiz-test"
 TOPIC_NAME_FORMAT = "leesah-quiz-{event}-{i}"
 
 TOPIC_CONFIG = {
@@ -180,7 +179,7 @@ def main(event, count):
     logging.basicConfig(level=logging.DEBUG)
     kafka = AivenKafka("nav-integration-test")
     service = kafka.get_service()
-    actual_topics = [TOPIC_NAME_FORMAT.format(event=event, i=i) for i in range(1, count+1)] + [TEST_TOPIC_NAME]
+    actual_topics = [TOPIC_NAME_FORMAT.format(event=event, i=i) for i in range(1, count+1)]
     for topic_name in actual_topics:
         kafka.create_topic(service, topic_name)
         kafka.create_acl(service, topic_name, USER_NAME, ACCESS_LEVEL)
