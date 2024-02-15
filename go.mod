@@ -1,8 +1,7 @@
 module github.com/nais/kafkarator
 
 go 1.21
-
-toolchain go1.21.6
+toolchain go1.22.0
 
 require (
 	github.com/Shopify/sarama v1.38.1
@@ -15,7 +14,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
-	github.com/vektra/mockery/v2 v2.40.3
+	github.com/vektra/mockery/v2 v2.41.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
