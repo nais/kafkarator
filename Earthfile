@@ -1,8 +1,8 @@
-VERSION 0.6
+VERSION 0.8
 
 FROM gcr.io/distroless/static-debian11
 
-ARG REGISTRY=europe-north1-docker.pkg.dev
+ARG --global REGISTRY=europe-north1-docker.pkg.dev
 
 kubebuilder:
     FROM golang:1.22
