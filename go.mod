@@ -1,8 +1,8 @@
 module github.com/nais/kafkarator
 
-go 1.21
+go 1.22
 
-toolchain go1.21.6
+toolchain go1.22.0
 
 require (
 	github.com/Shopify/sarama v1.38.1
