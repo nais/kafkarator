@@ -75,7 +75,7 @@ jobs:
           username: "oauth2accesstoken"
           password: "${{ steps.auth.outputs.access_token }}"
       - name: Install earthly
-        uses: earthly/actions-setup@b61ca413d8100e151c4e517e433a617a402f5051 # ratchet:earthly/actions-setup@v1
+        uses: earthly/actions-setup@0fc4fe565de4471e8c18da4a2c11fbd6a40c8238 # ratchet:earthly/actions-setup@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and possibly push ${{ matrix.target }}
