@@ -5,7 +5,7 @@ kind: ClusterPolicy
 metadata:
   name: validate-kafkarator
   annotations:
-    policies.kyverno.io/title: Validate fields for Kafka resources.
+    policies.kyverno.io/title: 011 - Validate fields for Kafka resources.
     policies.kyverno.io/category: Nais
     policies.kyverno.io/severity: medium
     policies.kyverno.io/subject: Topic, Stream
