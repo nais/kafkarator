@@ -34,7 +34,7 @@ spec:
           Kafka pool {{ "{{ request.object.spec.pool }}" | quote }} is not supported in this cluster.
           Allowed values: [{{ $valid | join ", " }}]
 
-          See documentation: https://doc.nais.io/persistence/kafka/manage_topics/#creating-topics-and-defining-access
+          See documentation: https://docs.nais.io/how-to-guides/persistence/kafka/create/
         deny:
           conditions:
             all:
