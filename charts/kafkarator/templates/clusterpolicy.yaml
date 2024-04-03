@@ -10,7 +10,7 @@ metadata:
     policies.kyverno.io/severity: medium
     policies.kyverno.io/subject: Topic, Stream
     policies.kyverno.io/description: >-
-      Validates that the fields for the given resources has allowed values.
+      This policy validates that the fields for the given resources has allowed values.
       Currently only validates the pool field.
   labels:
     {{- include "kafkarator.labels" . | nindent 4 }}
