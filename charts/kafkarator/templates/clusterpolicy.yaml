@@ -5,12 +5,12 @@ kind: ClusterPolicy
 metadata:
   name: validate-kafkarator
   annotations:
-    policies.kyverno.io/title: Validate fields for Kafka resources.
+    policies.kyverno.io/title: 011 - Validate fields for Kafka resources.
     policies.kyverno.io/category: Nais
     policies.kyverno.io/severity: medium
     policies.kyverno.io/subject: Topic, Stream
     policies.kyverno.io/description: >-
-      Validates that the fields for the given resources has allowed values.
+      This policy validates that the fields for the given resources has allowed values.
       Currently only validates the pool field.
   labels:
     {{- include "kafkarator.labels" . | nindent 4 }}
@@ -34,7 +34,7 @@ spec:
           Kafka pool {{ "{{ request.object.spec.pool }}" | quote }} is not supported in this cluster.
           Allowed values: [{{ $valid | join ", " }}]
 
-          See documentation: https://doc.nais.io/persistence/kafka/manage_topics/#creating-topics-and-defining-access
+          Please see the documentation at https://docs.nais.io/how-to-guides/persistence/kafka/create/
         deny:
           conditions:
             all:
