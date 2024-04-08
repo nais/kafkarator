@@ -22,4 +22,4 @@ jobs:
         with:
           package-name: ${{ matrix.package-name }}
           package-type: container
-          min-versions-to-keep: 0
+          min-versions-to-keep: 1
