@@ -1,0 +1,25 @@
+name: Package cleanup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '48 4 * * 3'
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package-name:
+          - kafkarator/kafkarator
+          - kafkarator/canary
+          - kafkarator/canary-deployer
+          - kafkarator/cache
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.package-name }}
+          package-type: container
+          min-versions-to-keep: 0
