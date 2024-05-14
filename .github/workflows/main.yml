@@ -62,7 +62,7 @@ jobs:
       - id: "auth"
         if: github.ref == 'refs/heads/master'
         name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v2.1.2" # ratchet:google-github-actions/auth@v1.0.0
+        uses: "google-github-actions/auth@v2.1.3" # ratchet:google-github-actions/auth@v1.0.0
         with:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
@@ -118,7 +118,7 @@ jobs:
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         if: github.ref == 'refs/heads/master'
-        uses: 'google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c' # ratchet:google-github-actions/auth@v2.1.2
+        uses: 'google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa' # ratchet:google-github-actions/auth@v2.1.3
         with:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: 'gh-kafkarator@nais-io.iam.gserviceaccount.com'
