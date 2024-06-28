@@ -1,7 +1,7 @@
 config:
   description: topic configuration updates are propagated
   projects:
-    - nav-integration-test
+    - some-pool
 
 aiven:
   existing:
@@ -62,7 +62,7 @@ topic:
     labels:
       team: myteam
   spec:
-    pool: nav-integration-test
+    pool: some-pool
     config:
       maxMessageBytes: 2048
       retentionHours: 12

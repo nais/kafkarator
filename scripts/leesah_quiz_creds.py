@@ -177,7 +177,7 @@ class Packet(BaseModel):
 def main(event, count):
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    kafka = AivenKafka("nav-integration-test")
+    kafka = AivenKafka("leesah")  # TODO: Update with the name of the new leesah project when ready
     service = kafka.get_service()
     actual_topics = [TOPIC_NAME_FORMAT.format(event=event, i=i) for i in range(1, count+1)]
     for topic_name in actual_topics:

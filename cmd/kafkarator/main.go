@@ -71,7 +71,7 @@ func init() {
 	flag.Duration(TopicReportInterval, time.Minute*5, "The interval for topic metrics reporting")
 	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
-	flag.StringSlice(Projects, []string{"nav-integration-test"}, "List of projects allowed to operate on")
+	flag.StringSlice(Projects, []string{"dev-nais-dev"}, "List of projects allowed to operate on")
 
 	flag.Parse()
 

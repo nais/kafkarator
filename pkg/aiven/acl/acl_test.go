@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	TestPool    = "nav-integration-test"
-	TestService = "nav-integration-test-kafka"
+	TestPool    = "some-pool"
+	TestService = "kafka"
 	Team        = "test"
 	Topic       = "topic"
 	FullTopic   = "test.topic"

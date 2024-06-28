@@ -9,7 +9,7 @@ metadata:
   labels:
     team: default
 spec:
-  pool: nav-integration-test
+  pool: some-pool
   config:
     retentionHours: 900
   acl:

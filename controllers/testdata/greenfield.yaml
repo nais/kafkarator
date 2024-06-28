@@ -1,7 +1,7 @@
 config:
   description: creation of topics, users, and acls in a clean environment
   projects:
-    - nav-integration-test
+    - some-pool
 
 aiven:
   existing:
@@ -46,7 +46,7 @@ topic:
     labels:
       team: myteam
   spec:
-    pool: nav-integration-test
+    pool: some-pool
     config:
       retentionHours: 900
     acl:

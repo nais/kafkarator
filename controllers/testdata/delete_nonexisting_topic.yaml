@@ -1,7 +1,7 @@
 config:
   description: topic is permanently deleted when annotation is set
   projects:
-    - nav-integration-test
+    - some-pool
 
 aiven:
   existing:
@@ -28,7 +28,7 @@ topic:
     labels:
       team: myteam
   spec:
-    pool: nav-integration-test
+    pool: some-pool
     config:
       retentionHours: 12
       partitions: 2
