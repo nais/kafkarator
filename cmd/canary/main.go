@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"github.com/nais/kafkarator/pkg/canary/certificates"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,7 +15,6 @@ import (
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
-	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -62,8 +61,6 @@ func (c *Message) String() string {
 }
 
 var (
-	deployStartTime time.Time
-
 	LeadTime = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "lead_time",
 		Namespace: Namespace,
@@ -205,45 +202,24 @@ func main() {
 
 	logger.Infof("kafkarator-canary starting up...")
 
-	deployStartTime, err := time.Parse(time.RFC3339, viper.GetString(DeployStartTime))
+	err = recordStartupTimes()
 	if err != nil {
 		logger.Error(err)
 		os.Exit(ExitConfig)
 	}
-
-	StartTimestamp.SetToCurrentTime()
-	DeployTimestamp.Set(float64(deployStartTime.Unix()))
-	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
 
 	go func() {
 		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
 		cancel()
 	}()
 
-	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
+	certBundle, err := certificates.New(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
 		logger.Errorf("unable to read TLS config: %s", err)
 		os.Exit(ExitConfig)
 	}
 
-	lastCert := cert
-	diffSecret := func() {
-		cert, _, _, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
-		if err != nil {
-			logger.Errorf("unable to read TLS config for diffing: %s", err)
-			return
-		}
-
-		if bytes.Compare(lastCert, cert) == 0 {
-			logger.Debug("certificate on disk matches last read certificate")
-			return
-		}
-
-		lastCert = cert
-		logger.Warnf("certificate changed on disk since last time it was read")
-	}
-
-	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
+	tlsConfig, err := kafka.TLSConfig(certBundle.Cert, certBundle.Key, certBundle.Ca)
 	if err != nil {
 		logger.Errorf("unable to set up Kafka TLS config: %s", err)
 		os.Exit(ExitConfig)
@@ -329,7 +305,7 @@ func main() {
 	for ctx.Err() == nil {
 		select {
 		case <-produceTicker.C:
-			diffSecret()
+			certBundle.DiffAndUpdate(logger)
 			produce(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
@@ -345,4 +321,16 @@ func main() {
 	cancel()
 	logger.Errorf("quit: %s", ctx.Err())
 	os.Exit(ExitRuntime)
+}
+
+func recordStartupTimes() error {
+	deployStartTime, err := time.Parse(time.RFC3339, viper.GetString(DeployStartTime))
+	if err != nil {
+		return err
+	}
+
+	StartTimestamp.SetToCurrentTime()
+	DeployTimestamp.Set(float64(deployStartTime.Unix()))
+	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
+	return nil
 }
