@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nais/kafkarator/pkg/canary/certificates"
+	canarykafka "github.com/nais/kafkarator/pkg/canary/kafka"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
@@ -49,16 +49,6 @@ const (
 	LogFormatJSON = "json"
 	LogFormatText = "text"
 )
-
-type Message struct {
-	offset    int64
-	timeStamp time.Time
-	partition int32
-}
-
-func (c *Message) String() string {
-	return fmt.Sprintf("offset=%d, partition=%d, timestamp=%s", c.offset, c.partition, c.timeStamp.Format(time.RFC3339Nano))
-}
 
 var (
 	LeadTime = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -189,7 +179,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	signals := make(chan os.Signal, 1)
-	cons := make(chan Message, 32)
+	cons := make(chan canarykafka.Message, 32)
 
 	logger := log.New()
 	logfmt, err := formatter(viper.GetString(LogFormat))
@@ -233,34 +223,14 @@ func main() {
 
 	logger.Infof("Started message producer.")
 
-	slowConsumer := viper.GetBool(SlowConsumer)
-	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
-		t, err := time.Parse(time.RFC3339Nano, string(msg.Value))
-		if err != nil {
-			return false, fmt.Errorf("converting string to timestamp: %s", err)
-		}
-		c := Message{
-			offset:    msg.Offset,
-			timeStamp: t,
-			partition: msg.Partition,
-		}
-		if slowConsumer {
-			logger.Infof("Slow consumer is sleepy...")
-			time.Sleep(time.Second * 10)
-		}
-		logger.Infof("Consumed message: %s", c.String())
-		cons <- c
-
-		return false, nil
-	}
-
+	callback := canarykafka.NewCallback(viper.GetBool(SlowConsumer), cons)
 	err = consumer.New(ctx, cancel, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
 		GroupID:           viper.GetString(KafkaGroupID),
 		MaxProcessingTime: time.Second * 1,
 		RetryInterval:     time.Second * 10,
 		Topic:             viper.GetString(KafkaTopic),
-		Callback:          callback,
+		Callback:          callback.Callback,
 		Logger:            logger,
 		TlsConfig:         tlsConfig,
 	})
@@ -282,10 +252,10 @@ func main() {
 		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
-			message := Message{
-				offset:    offset,
-				timeStamp: timer,
-				partition: partition,
+			message := canarykafka.Message{
+				Offset:    offset,
+				TimeStamp: timer,
+				Partition: partition,
 			}
 			logger.Infof("Produced message: %s", message.String())
 			LastProducedTimestamp.SetToCurrentTime()
@@ -309,8 +279,8 @@ func main() {
 			produce(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
-			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
-			LastConsumedOffset.Set(float64(msg.offset))
+			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			LastConsumedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
