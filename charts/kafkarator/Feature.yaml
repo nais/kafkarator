@@ -11,6 +11,8 @@ values:
   aiven.token:
     description: An API-token with full access to the relevant projects
     displayName: Aiven API-token
+    computed:
+      template: '"{{ .Env.aiven_application_token_kafkarator }}"'
     config:
       type: string
       secret: true
