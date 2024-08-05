@@ -25,7 +25,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
       - name: "Set image version"
         id: constants
         run: |
@@ -52,9 +52,9 @@ jobs:
     env:
       VERSION: "${{ needs.version.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@v4 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
       - name: Install cosign
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # ratchet:sigstore/cosign-installer@main
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # ratchet:sigstore/cosign-installer@v3.5.0
         with:
           cosign-release: 'v2.2.3'
       - name: Verify runner image
@@ -62,7 +62,7 @@ jobs:
       - id: "auth"
         if: github.ref == 'refs/heads/master'
         name: "Authenticate to Google Cloud"
-        uses: "google-github-actions/auth@v2.1.3" # ratchet:google-github-actions/auth@v1.0.0
+        uses: "google-github-actions/auth@71fee32a0bb7e97b4d33d548e7d957010649d8fa" # ratchet:google-github-actions/auth@v2.1.3
         with:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
@@ -95,7 +95,7 @@ jobs:
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
       - name: Create SBOM
         if: github.ref == 'refs/heads/master'
-        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # ratchet:aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # ratchet:aquasecurity/trivy-action@0.24.0
         with:
           scan-type: 'image'
           format: 'cyclonedx'
@@ -114,7 +114,7 @@ jobs:
     needs:
       - version
     steps:
-      - uses: actions/checkout@v4 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         if: github.ref == 'refs/heads/master'
@@ -171,7 +171,7 @@ jobs:
           - kafka-canary
           - kafka-canary-alert
     steps:
-      - uses: nais/fasit-deploy@badff0705af8a57bcf0ab172895273da09ae5959 # ratchet:nais/fasit-deploy@v2
+      - uses: nais/fasit-deploy@v2 # ratchet:exclude
         with:
           chart: oci://${{ env.GOOGLE_REGISTRY }}/nais-io/nais/feature/${{ matrix.feature }}
           version: ${{ needs.version.outputs.VERSION }}
