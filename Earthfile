@@ -68,10 +68,10 @@ docker-canary:
 
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
-    COPY canary-deployer/requirements.lock /canary/
+    COPY canary-deployer/requirements.txt /canary/
     RUN apk add python3 && \
         python3 -m ensurepip && \
-        pip3 install -r /canary/requirements.lock
+        pip3 install -r /canary/requirements.txt
     COPY canary-deployer/*.yaml /canary/
     COPY canary-deployer/deployer.py /canary/
     CMD ["python3", "/canary/deployer.py"]
