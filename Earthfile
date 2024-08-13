@@ -68,12 +68,14 @@ docker-canary:
 
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
+    WORKDIR /canary/
     COPY canary-deployer/requirements.txt /canary/
     RUN apk add python3 && \
         python3 -m ensurepip && \
         pip3 install -r /canary/requirements.txt
     COPY canary-deployer/*.yaml /canary/
     COPY canary-deployer/deployer.py /canary/
+    RUN python3 -c "import deployer" ## Minimal testing that imports actually work
     CMD ["python3", "/canary/deployer.py"]
 
     # builtins must be declared
