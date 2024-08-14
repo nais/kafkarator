@@ -9,7 +9,8 @@ from pathlib import Path
 from subprocess import CalledProcessError
 
 import trio
-from pydantic import BaseSettings, BaseModel
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 
 class DeployConfig(BaseModel):
