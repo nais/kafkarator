@@ -1,2 +1,2 @@
 trio==0.26.2
-pydantic==1.10.13
+pydantic==2.8.2
