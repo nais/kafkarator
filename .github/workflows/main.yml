@@ -175,4 +175,3 @@ jobs:
         with:
           chart: oci://${{ env.GOOGLE_REGISTRY }}/nais-io/nais/feature/${{ matrix.feature }}
           version: ${{ needs.version.outputs.VERSION }}
-          feature_name: ${{ matrix.feature }}
