@@ -1131,8 +1131,8 @@
             "selected": false
           },
           {
-            "text": "mtpilot",
-            "value": "mtpilot",
+            "text": "ci-nais",
+            "value": "ci-nais",
             "selected": false
           },
           {
@@ -1146,7 +1146,7 @@
         "allValue": "",
         "multi": false,
         "multiFormat": "",
-        "query": "dev-nais,mtpilot,nav,ssb",
+        "query": "ci-nais,dev-nais,nav,ssb",
         "regex": "",
         "current": {
           "text": [

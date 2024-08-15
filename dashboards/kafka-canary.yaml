@@ -22,7 +22,7 @@ variables:
       values_map:
         nav: nav
         dev-nais: dev-nais
-        mtpilot: mtpilot
+        ci-nais: ci-nais
         ssb: ssb
   - datasource:
       name: ds
