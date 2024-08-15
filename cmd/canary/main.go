@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"github.com/nais/kafkarator/pkg/canary/certificates"
+	canarykafka "github.com/nais/kafkarator/pkg/canary/kafka"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,11 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"
-	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -51,19 +50,7 @@ const (
 	LogFormatText = "text"
 )
 
-type Message struct {
-	offset    int64
-	timeStamp time.Time
-	partition int32
-}
-
-func (c *Message) String() string {
-	return fmt.Sprintf("offset=%d, partition=%d, timestamp=%s", c.offset, c.partition, c.timeStamp.Format(time.RFC3339Nano))
-}
-
 var (
-	deployStartTime time.Time
-
 	LeadTime = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "lead_time",
 		Namespace: Namespace,
@@ -192,7 +179,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	signals := make(chan os.Signal, 1)
-	cons := make(chan Message, 32)
+	cons := make(chan canarykafka.Message, 32)
 
 	logger := log.New()
 	logfmt, err := formatter(viper.GetString(LogFormat))
@@ -205,45 +192,24 @@ func main() {
 
 	logger.Infof("kafkarator-canary starting up...")
 
-	deployStartTime, err := time.Parse(time.RFC3339, viper.GetString(DeployStartTime))
+	err = recordStartupTimes()
 	if err != nil {
 		logger.Error(err)
 		os.Exit(ExitConfig)
 	}
-
-	StartTimestamp.SetToCurrentTime()
-	DeployTimestamp.Set(float64(deployStartTime.Unix()))
-	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
 
 	go func() {
 		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
 		cancel()
 	}()
 
-	cert, key, ca, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
+	certBundle, err := certificates.New(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
 	if err != nil {
 		logger.Errorf("unable to read TLS config: %s", err)
 		os.Exit(ExitConfig)
 	}
 
-	lastCert := cert
-	diffSecret := func() {
-		cert, _, _, err := utils.TlsFromFiles(viper.GetString(KafkaCertificatePath), viper.GetString(KafkaKeyPath), viper.GetString(KafkaCAPath))
-		if err != nil {
-			logger.Errorf("unable to read TLS config for diffing: %s", err)
-			return
-		}
-
-		if bytes.Compare(lastCert, cert) == 0 {
-			logger.Debug("certificate on disk matches last read certificate")
-			return
-		}
-
-		lastCert = cert
-		logger.Warnf("certificate changed on disk since last time it was read")
-	}
-
-	tlsConfig, err := kafka.TLSConfig(cert, key, ca)
+	tlsConfig, err := kafka.TLSConfig(certBundle.Cert, certBundle.Key, certBundle.Ca)
 	if err != nil {
 		logger.Errorf("unable to set up Kafka TLS config: %s", err)
 		os.Exit(ExitConfig)
@@ -257,34 +223,14 @@ func main() {
 
 	logger.Infof("Started message producer.")
 
-	slowConsumer := viper.GetBool(SlowConsumer)
-	callback := func(msg *sarama.ConsumerMessage, logger *log.Entry) (bool, error) {
-		t, err := time.Parse(time.RFC3339Nano, string(msg.Value))
-		if err != nil {
-			return false, fmt.Errorf("converting string to timestamp: %s", err)
-		}
-		c := Message{
-			offset:    msg.Offset,
-			timeStamp: t,
-			partition: msg.Partition,
-		}
-		if slowConsumer {
-			logger.Infof("Slow consumer is sleepy...")
-			time.Sleep(time.Second * 10)
-		}
-		logger.Infof("Consumed message: %s", c.String())
-		cons <- c
-
-		return false, nil
-	}
-
+	callback := canarykafka.NewCallback(viper.GetBool(SlowConsumer), cons)
 	err = consumer.New(ctx, cancel, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
 		GroupID:           viper.GetString(KafkaGroupID),
 		MaxProcessingTime: time.Second * 1,
 		RetryInterval:     time.Second * 10,
 		Topic:             viper.GetString(KafkaTopic),
-		Callback:          callback,
+		Callback:          callback.Callback,
 		Logger:            logger,
 		TlsConfig:         tlsConfig,
 	})
@@ -306,10 +252,10 @@ func main() {
 		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
 		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
-			message := Message{
-				offset:    offset,
-				timeStamp: timer,
-				partition: partition,
+			message := canarykafka.Message{
+				Offset:    offset,
+				TimeStamp: timer,
+				Partition: partition,
 			}
 			logger.Infof("Produced message: %s", message.String())
 			LastProducedTimestamp.SetToCurrentTime()
@@ -329,12 +275,12 @@ func main() {
 	for ctx.Err() == nil {
 		select {
 		case <-produceTicker.C:
-			diffSecret()
+			certBundle.DiffAndUpdate(logger)
 			produce(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
-			ConsumeLatency.Observe(time.Now().Sub(msg.timeStamp).Seconds())
-			LastConsumedOffset.Set(float64(msg.offset))
+			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			LastConsumedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
@@ -345,4 +291,16 @@ func main() {
 	cancel()
 	logger.Errorf("quit: %s", ctx.Err())
 	os.Exit(ExitRuntime)
+}
+
+func recordStartupTimes() error {
+	deployStartTime, err := time.Parse(time.RFC3339, viper.GetString(DeployStartTime))
+	if err != nil {
+		return err
+	}
+
+	StartTimestamp.SetToCurrentTime()
+	DeployTimestamp.Set(float64(deployStartTime.Unix()))
+	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
+	return nil
 }
