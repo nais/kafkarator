@@ -17,3 +17,5 @@ bin/
 /canary-deployer/test_deploy_configs.json
 __pycache__
 *.iml
+
+.direnv
