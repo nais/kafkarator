@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/nais/kafkarator/pkg/canary/certificates"
-	canarykafka "github.com/nais/kafkarator/pkg/canary/kafka"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nais/kafkarator/pkg/canary/certificates"
+	canarykafka "github.com/nais/kafkarator/pkg/canary/kafka"
 	"github.com/nais/kafkarator/pkg/kafka"
 	"github.com/nais/kafkarator/pkg/kafka/consumer"
 	"github.com/nais/kafkarator/pkg/kafka/producer"

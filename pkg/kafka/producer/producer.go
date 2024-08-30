@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/nais/kafkarator/pkg/kafka"
 	log "github.com/sirupsen/logrus"
 )

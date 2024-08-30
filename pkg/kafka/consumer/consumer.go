@@ -3,11 +3,12 @@ package consumer
 import (
 	"context"
 	"crypto/tls"
-	"github.com/nais/kafkarator/pkg/kafka"
 	"os"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/nais/kafkarator/pkg/kafka"
+
+	"github.com/IBM/sarama"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -47,7 +48,7 @@ func (c *Consumer) Cleanup(_ sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	var retry = true
+	retry := true
 	var err error
 
 	report := func(add int) {

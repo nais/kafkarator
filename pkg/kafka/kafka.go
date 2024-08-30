@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"k8s.io/client-go/util/keyutil"
 )
 

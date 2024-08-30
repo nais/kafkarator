@@ -2,9 +2,10 @@ package kafka
 
 import (
 	"fmt"
-	"github.com/Shopify/sarama"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/IBM/sarama"
+	log "github.com/sirupsen/logrus"
 )
 
 type Callback struct {
