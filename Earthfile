@@ -66,13 +66,17 @@ docker-canary:
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_image}:${VERSION} ${canary_image}:latest
 
+uv-provider:
+    FROM ghcr.io/astral-sh/uv:latest
+    SAVE ARTIFACT /uv
+
 docker-canary-deployer:
     FROM ghcr.io/nais/deploy/deploy:latest
     WORKDIR /canary/
+    COPY +uv-provider/uv /usr/local/bin/
     COPY canary-deployer/requirements.txt /canary/
     RUN apk add python3 && \
-        python3 -m ensurepip && \
-        pip3 install -r /canary/requirements.txt
+        /usr/local/bin/uv pip install --system --requirement /canary/requirements.txt
     COPY canary-deployer/*.yaml /canary/
     COPY canary-deployer/deployer.py /canary/
     RUN python3 -c "import deployer" ## Minimal testing that imports actually work
