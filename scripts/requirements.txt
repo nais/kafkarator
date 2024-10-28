@@ -1,5 +1,0 @@
-requests
-pyaml
-pydantic
-requests-toolbelt
-rich
