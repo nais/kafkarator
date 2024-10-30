@@ -1,3 +1,7 @@
+dependencies:
+  - allOf:
+    - nais-crds
+    - kyverno
 environmentKinds:
   - tenant
   - legacy
