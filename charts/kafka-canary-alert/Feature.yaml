@@ -1,6 +1,7 @@
 dependencies:
   - allOf:
-      - aivenator
+    - monitoring-crds
+    # - kafka-canary ## We can't express this dependency here
 environmentKinds:
   - tenant
   - legacy
