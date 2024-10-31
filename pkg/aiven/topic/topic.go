@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"net/http"
@@ -8,17 +9,17 @@ import (
 
 	"github.com/nais/kafkarator/pkg/metrics"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 )
 
 type Interface interface {
-	Get(project, service, topic string) (*aiven.KafkaTopic, error)
-	List(project, service string) ([]*aiven.KafkaListTopic, error)
-	Create(project, service string, req aiven.CreateKafkaTopicRequest) error
-	Update(project, service, topic string, req aiven.UpdateKafkaTopicRequest) error
-	Delete(project, service, topic string) error
+	Get(ctx context.Context, project, service, topic string) (*aiven.KafkaTopic, error)
+	List(ctx context.Context, project, service string) ([]*aiven.KafkaListTopic, error)
+	Create(ctx context.Context, project, service string, req aiven.CreateKafkaTopicRequest) error
+	Update(ctx context.Context, project, service, topic string, req aiven.UpdateKafkaTopicRequest) error
+	Delete(ctx context.Context, project, service, topic string) error
 }
 
 type Manager struct {
@@ -37,18 +38,18 @@ func aivenError(err error) *aiven.Error {
 	return nil
 }
 
-func (r *Manager) Synchronize() error {
+func (r *Manager) Synchronize(ctx context.Context) error {
 	var topic *aiven.KafkaTopic
 	err := metrics.ObserveAivenLatency("Topic_Get", r.Project, func() error {
 		var err error
-		topic, err = r.AivenTopics.Get(r.Project, r.Service, r.Topic.FullName())
+		topic, err = r.AivenTopics.Get(ctx, r.Project, r.Service, r.Topic.FullName())
 		return err
 	})
 	if err != nil {
 		aivenErr := aivenError(err)
 		if aivenErr != nil && aivenErr.Status == http.StatusNotFound {
 			r.Logger.Infof("Topic does not exist")
-			return r.create()
+			return r.create(ctx)
 		}
 		return err
 	}
@@ -56,23 +57,23 @@ func (r *Manager) Synchronize() error {
 	// topic already exists
 	if topicConfigChanged(topic, r.Topic.Spec.Config) {
 		r.Logger.Infof("Topic already exists")
-		return r.update()
+		return r.update(ctx)
 	}
 
 	return nil
 }
 
-func (r *Manager) List() ([]*aiven.KafkaListTopic, error) {
+func (r *Manager) List(ctx context.Context) ([]*aiven.KafkaListTopic, error) {
 	var list []*aiven.KafkaListTopic
 	err := metrics.ObserveAivenLatency("Topic_List", r.Project, func() error {
 		var err error
-		list, err = r.AivenTopics.List(r.Project, r.Service)
+		list, err = r.AivenTopics.List(ctx, r.Project, r.Service)
 		return err
 	})
 	return list, err
 }
 
-func (r *Manager) create() error {
+func (r *Manager) create(ctx context.Context) error {
 	r.Logger.Infof("Creating topic")
 
 	cfg := r.Topic.Spec.Config
@@ -110,11 +111,11 @@ func (r *Manager) create() error {
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
-		return r.AivenTopics.Create(r.Project, r.Service, req)
+		return r.AivenTopics.Create(ctx, r.Project, r.Service, req)
 	})
 }
 
-func (r *Manager) update() error {
+func (r *Manager) update(ctx context.Context) error {
 	r.Logger.Infof("Updating topic")
 
 	cfg := r.Topic.Spec.Config
@@ -152,7 +153,7 @@ func (r *Manager) update() error {
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
-		return r.AivenTopics.Update(r.Project, r.Service, r.Topic.FullName(), req)
+		return r.AivenTopics.Update(ctx, r.Project, r.Service, r.Topic.FullName(), req)
 	})
 }
 
@@ -215,7 +216,7 @@ func percentToRatio(percent *intstr.IntOrString) (*float64, error) {
 	return &ratio, nil
 }
 
-func intPToValueChanged(cfg *int, tcfg aiven.KafkaTopicConfigResponseInt) bool {
+func intPToValueChanged(cfg *int, tcfg *aiven.KafkaTopicConfigResponseInt) bool {
 	return cfg != nil && tcfg.Value != int64(*cfg)
 }
 

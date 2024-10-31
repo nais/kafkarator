@@ -3,7 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/aiven/service"
@@ -94,7 +94,7 @@ func (t *Topic) aivenTopics(ctx context.Context) (map[string][]*aiven.KafkaListT
 
 	// fetch existing topics
 	for pool := range existing {
-		serviceName, err := t.nameResolver.ResolveKafkaServiceName(pool)
+		serviceName, err := t.nameResolver.ResolveKafkaServiceName(ctx, pool)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +104,7 @@ func (t *Topic) aivenTopics(ctx context.Context) (map[string][]*aiven.KafkaListT
 			Service:     serviceName,
 			Logger:      t.logger.WithContext(ctx),
 		}
-		existing[pool], err = topicManager.List()
+		existing[pool], err = topicManager.List(ctx)
 		if err != nil {
 			return nil, err
 		}

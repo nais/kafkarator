@@ -1,17 +1,18 @@
 package acl
 
 import (
+	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 )
 
 type Interface interface {
-	List(project, serviceName string) ([]*aiven.KafkaACL, error)
-	Create(project, service string, req aiven.CreateKafkaACLRequest) (*aiven.KafkaACL, error)
-	Delete(project, service, aclID string) error
+	List(ctx context.Context, project, serviceName string) ([]*aiven.KafkaACL, error)
+	Create(ctx context.Context, project, service string, req aiven.CreateKafkaACLRequest) (*aiven.KafkaACL, error)
+	Delete(ctx context.Context, project, service, aclID string) error
 }
 
 type Source interface {
@@ -31,8 +32,8 @@ type Manager struct {
 // Synchronize Syncs the ACL spec in the Source resource with Aiven.
 //
 //	Missing ACL definitions are created, unnecessary definitions are deleted.
-func (r *Manager) Synchronize() error {
-	existingAcls, err := r.getExistingAcls()
+func (r *Manager) Synchronize(ctx context.Context) error {
+	existingAcls, err := r.getExistingAcls(ctx)
 	if err != nil {
 		return err
 	}
@@ -45,12 +46,12 @@ func (r *Manager) Synchronize() error {
 	toAdd := NewACLs(existingAcls, wantedAcls)
 	toDelete := DeleteACLs(existingAcls, wantedAcls)
 
-	err = r.add(toAdd)
+	err = r.add(ctx, toAdd)
 	if err != nil {
 		return err
 	}
 
-	err = r.delete(toDelete)
+	err = r.delete(ctx, toDelete)
 	if err != nil {
 		return err
 	}
@@ -58,11 +59,11 @@ func (r *Manager) Synchronize() error {
 	return nil
 }
 
-func (r *Manager) getExistingAcls() ([]Acl, error) {
+func (r *Manager) getExistingAcls(ctx context.Context) ([]Acl, error) {
 	var kafkaAcls []*aiven.KafkaACL
 	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
 		var err error
-		kafkaAcls, err = r.AivenACLs.List(r.Project, r.Service)
+		kafkaAcls, err = r.AivenACLs.List(ctx, r.Project, r.Service)
 		return err
 	})
 	if err != nil {
@@ -87,7 +88,7 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 	return wantedAcls, nil
 }
 
-func (r *Manager) add(toAdd []Acl) error {
+func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 	for _, acl := range toAdd {
 		req := aiven.CreateKafkaACLRequest{
 			Permission: acl.Permission,
@@ -97,7 +98,7 @@ func (r *Manager) add(toAdd []Acl) error {
 
 		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
 			var err error
-			_, err = r.AivenACLs.Create(r.Project, r.Service, req)
+			_, err = r.AivenACLs.Create(ctx, r.Project, r.Service, req)
 			return err
 		})
 		if err != nil {
@@ -112,13 +113,13 @@ func (r *Manager) add(toAdd []Acl) error {
 	return nil
 }
 
-func (r *Manager) delete(toDelete []Acl) error {
+func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
 	for _, acl := range toDelete {
 		if len(acl.ID) == 0 {
 			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
 		}
 		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
-			return r.AivenACLs.Delete(r.Project, r.Service, acl.ID)
+			return r.AivenACLs.Delete(ctx, r.Project, r.Service, acl.ID)
 		})
 		if err != nil {
 			return err

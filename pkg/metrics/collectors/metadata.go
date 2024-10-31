@@ -3,7 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,14 +27,14 @@ func (m *Metadata) Logger() log.FieldLogger {
 
 func (m *Metadata) Report(ctx context.Context) error {
 	for _, project := range m.projects {
-		serviceName, err := m.nameResolver.ResolveKafkaServiceName(project)
+		serviceName, err := m.nameResolver.ResolveKafkaServiceName(ctx, project)
 		if err != nil {
 			m.logger.Errorf(formatError(err))
 		}
 		var svc *aiven.Service
 		err = metrics.ObserveAivenLatency("Service_Get", project, func() error {
 			var err error
-			svc, err = m.aiven.Services.Get(project, serviceName)
+			svc, err = m.aiven.Services.Get(ctx, project, serviceName)
 			return err
 		})
 		if err != nil {

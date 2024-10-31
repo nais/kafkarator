@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
@@ -87,7 +87,7 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Sync to Aiven; retry if necessary
-	result := r.Process(stream, logger)
+	result := r.Process(ctx, stream, logger)
 
 	if result.Skipped {
 		return ctrl.Result{}, nil
@@ -133,7 +133,7 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.FieldLogger) StreamReconcileResult {
+func (r *StreamReconciler) Process(ctx context.Context, stream kafka_nais_io_v1.Stream, logger log.FieldLogger) StreamReconcileResult {
 	var err error
 	var hash string
 	var status kafka_nais_io_v1.StreamStatus
@@ -168,7 +168,7 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 
 	// Process or delete?
 	if stream.ObjectMeta.DeletionTimestamp != nil {
-		return r.handleDelete(stream, logger, status, fail)
+		return r.handleDelete(ctx, stream, logger, status, fail)
 	}
 
 	hash, err = stream.Hash()
@@ -188,7 +188,7 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(ctx, projectName)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
@@ -199,7 +199,7 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 		Source:    acl.StreamAdapter{Stream: &stream},
 		Logger:    logger,
 	}
-	err = aclManager.Synchronize()
+	err = aclManager.Synchronize(ctx)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
@@ -215,7 +215,7 @@ func (r *StreamReconciler) Process(stream kafka_nais_io_v1.Stream, logger log.Fi
 	}
 }
 
-func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger log.FieldLogger, status kafka_nais_io_v1.StreamStatus, fail func(err error, state string, retry bool) StreamReconcileResult) StreamReconcileResult {
+func (r *StreamReconciler) handleDelete(ctx context.Context, stream kafka_nais_io_v1.Stream, logger log.FieldLogger, status kafka_nais_io_v1.StreamStatus, fail func(err error, state string, retry bool) StreamReconcileResult) StreamReconcileResult {
 	logger.Infof("Permanently deleting Aiven stream topics, ACLs and its data")
 
 	projectName := stream.Spec.Pool
@@ -223,7 +223,7 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(ctx, projectName)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
@@ -235,17 +235,17 @@ func (r *StreamReconciler) handleDelete(stream kafka_nais_io_v1.Stream, logger l
 		Source:    acl.StreamAdapter{Stream: &stream, Delete: true},
 		Logger:    logger,
 	}
-	err = aclManager.Synchronize()
+	err = aclManager.Synchronize(ctx)
 	if err != nil {
 		return fail(fmt.Errorf("failed to delete ACL %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 	status.Message = "Deleted Stream ACL"
 
 	logger.Infof("Permanently deleting Aiven stream and its data")
-	topics, err := r.Aiven.Topics.List(projectName, serviceName)
+	topics, err := r.Aiven.Topics.List(ctx, projectName, serviceName)
 	for _, topic := range topics {
 		if strings.HasPrefix(topic.TopicName, stream.TopicPrefix()) {
-			err = r.Aiven.Topics.Delete(projectName, serviceName, topic.TopicName)
+			err = r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.TopicName)
 			if err != nil {
 				return fail(fmt.Errorf("failed to delete topic '%s' on Aiven: %s", topic.TopicName, err), kafka_nais_io_v1.EventFailedSynchronization, true)
 			}

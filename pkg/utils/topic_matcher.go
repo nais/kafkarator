@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"reflect"
 )
 

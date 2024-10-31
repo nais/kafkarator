@@ -1,11 +1,12 @@
 package topic_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -121,22 +122,22 @@ var tests = []topicTest{
 			Partitions:  []*aiven.Partition{{}, {}},
 			Replication: 3,
 			Config: aiven.KafkaTopicConfigResponse{
-				CleanupPolicy: aiven.KafkaTopicConfigResponseString{
+				CleanupPolicy: &aiven.KafkaTopicConfigResponseString{
 					Value: "compact",
 				},
-				MaxMessageBytes: aiven.KafkaTopicConfigResponseInt{
+				MaxMessageBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 2048,
 				},
-				MinInsyncReplicas: aiven.KafkaTopicConfigResponseInt{
+				MinInsyncReplicas: &aiven.KafkaTopicConfigResponseInt{
 					Value: 3,
 				},
-				RetentionBytes: aiven.KafkaTopicConfigResponseInt{
+				RetentionBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 1024,
 				},
-				RetentionMs: aiven.KafkaTopicConfigResponseInt{
+				RetentionMs: &aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
-				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+				SegmentMs: &aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(24) * time.Hour).Milliseconds(),
 				},
 			},
@@ -163,22 +164,22 @@ var tests = []topicTest{
 			Partitions:  []*aiven.Partition{{}, {}},
 			Replication: 3,
 			Config: aiven.KafkaTopicConfigResponse{
-				CleanupPolicy: aiven.KafkaTopicConfigResponseString{
+				CleanupPolicy: &aiven.KafkaTopicConfigResponseString{
 					Value: "compact",
 				},
-				MaxMessageBytes: aiven.KafkaTopicConfigResponseInt{
+				MaxMessageBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 2048,
 				},
-				MinInsyncReplicas: aiven.KafkaTopicConfigResponseInt{
+				MinInsyncReplicas: &aiven.KafkaTopicConfigResponseInt{
 					Value: 3,
 				},
-				RetentionBytes: aiven.KafkaTopicConfigResponseInt{
+				RetentionBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 1024,
 				},
-				RetentionMs: aiven.KafkaTopicConfigResponseInt{
+				RetentionMs: &aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
-				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+				SegmentMs: &aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(24) * time.Hour).Milliseconds(),
 				},
 			},
@@ -215,16 +216,16 @@ var tests = []topicTest{
 			Partitions:  []*aiven.Partition{{}, {}},
 			Replication: 3,
 			Config: aiven.KafkaTopicConfigResponse{
-				CleanupPolicy: aiven.KafkaTopicConfigResponseString{
+				CleanupPolicy: &aiven.KafkaTopicConfigResponseString{
 					Value: "compact",
 				},
-				MinInsyncReplicas: aiven.KafkaTopicConfigResponseInt{
+				MinInsyncReplicas: &aiven.KafkaTopicConfigResponseInt{
 					Value: 3,
 				},
-				RetentionBytes: aiven.KafkaTopicConfigResponseInt{
+				RetentionBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 1024,
 				},
-				RetentionMs: aiven.KafkaTopicConfigResponseInt{
+				RetentionMs: &aiven.KafkaTopicConfigResponseInt{
 					Value: (time.Duration(36) * time.Hour).Milliseconds(),
 				},
 			},
@@ -254,7 +255,7 @@ var tests = []topicTest{
 		existing: &aiven.KafkaTopic{
 			Replication: 2,
 			Config: aiven.KafkaTopicConfigResponse{
-				RetentionMs: aiven.KafkaTopicConfigResponseInt{
+				RetentionMs: &aiven.KafkaTopicConfigResponseInt{
 					Source: "topic_config",
 					Value:  -1,
 				},
@@ -289,7 +290,7 @@ var tests = []topicTest{
 		service: "mypool-kafka",
 		existing: &aiven.KafkaTopic{
 			Config: aiven.KafkaTopicConfigResponse{
-				SegmentMs: aiven.KafkaTopicConfigResponseInt{
+				SegmentMs: &aiven.KafkaTopicConfigResponseInt{
 					Source: "topic_config",
 					Value:  (time.Duration(168) * time.Hour).Milliseconds(),
 				},
@@ -371,7 +372,7 @@ var tests = []topicTest{
 		service: "mypool-kafka",
 		existing: &aiven.KafkaTopic{
 			Config: aiven.KafkaTopicConfigResponse{
-				RetentionBytes: aiven.KafkaTopicConfigResponseInt{
+				RetentionBytes: &aiven.KafkaTopicConfigResponseInt{
 					Value: 2,
 				},
 			},
@@ -391,14 +392,15 @@ var tests = []topicTest{
 }
 
 func TestManager_Synchronize(t *testing.T) {
+	ctx := context.Background()
 	for _, test := range tests {
 		t.Run(test.name, func(tt *testing.T) {
-			subTest(tt, test)
+			subTest(ctx, tt, test)
 		})
 	}
 }
 
-func subTest(t *testing.T, test topicTest) {
+func subTest(ctx context.Context, t *testing.T, test topicTest) {
 	if test.error == nil {
 		test.error = map[string]bool{}
 	}
@@ -407,36 +409,36 @@ func subTest(t *testing.T, test topicTest) {
 	m.Test(t)
 
 	if test.error["get"] {
-		m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
+		m.On("Get", ctx, test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
 			Status: http.StatusInternalServerError,
 		})
 	} else if test.existing == nil {
-		m.On("Get", test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
+		m.On("Get", ctx, test.project, test.service, test.topic.FullName()).Return(nil, aiven.Error{
 			Status: http.StatusNotFound,
 		})
 	} else {
-		m.On("Get", test.project, test.service, test.topic.FullName()).Return(test.existing, nil)
+		m.On("Get", ctx, test.project, test.service, test.topic.FullName()).Return(test.existing, nil)
 	}
 
 	if test.create != nil && !test.error["get"] {
 		if test.error["create"] {
-			m.On("Create", test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(aiven.Error{
+			m.On("Create", ctx, test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(aiven.Error{
 				Message: "failed create",
 				Status:  http.StatusInternalServerError,
 			})
 		} else {
-			m.On("Create", test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(nil)
+			m.On("Create", ctx, test.project, test.service, mock.MatchedBy(utils.TopicCreateReqComp(*test.create))).Return(nil)
 		}
 	}
 
 	if test.update != nil && !test.error["get"] {
 		if test.error["update"] {
-			m.On("Update", test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(aiven.Error{
+			m.On("Update", ctx, test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(aiven.Error{
 				Message: "failed create",
 				Status:  http.StatusInternalServerError,
 			})
 		} else {
-			m.On("Update", test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(nil)
+			m.On("Update", ctx, test.project, test.service, test.topic.FullName(), mock.MatchedBy(utils.TopicUpdateReqComp(*test.update))).Return(nil)
 		}
 	}
 
@@ -448,7 +450,7 @@ func subTest(t *testing.T, test topicTest) {
 		Logger:      log.NewEntry(log.StandardLogger()),
 	}
 
-	err := manager.Synchronize()
+	err := manager.Synchronize(ctx)
 
 	if len(test.error) > 0 {
 		assert.Error(t, err)

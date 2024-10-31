@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
@@ -21,9 +22,9 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
+func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
 	projectName := t.Spec.Pool
-	serviceName, err := a.NameResolver.ResolveKafkaServiceName(projectName)
+	serviceName, err := a.NameResolver.ResolveKafkaServiceName(ctx, projectName)
 	if err != nil {
 		return nil, err
 	}
@@ -47,15 +48,15 @@ func NewSynchronizer(a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, lo
 	}, nil
 }
 
-func (c *Synchronizer) Synchronize() error {
+func (c *Synchronizer) Synchronize(ctx context.Context) error {
 	c.Logger.Infof("Synchronizing access control lists")
-	err := c.ACLs.Synchronize()
+	err := c.ACLs.Synchronize(ctx)
 	if err != nil {
 		return err
 	}
 
 	c.Logger.Infof("Synchronizing topic")
-	err = c.Topics.Synchronize()
+	err = c.Topics.Synchronize(ctx)
 	if err != nil {
 		return err
 	}

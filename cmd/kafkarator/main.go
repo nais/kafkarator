@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"

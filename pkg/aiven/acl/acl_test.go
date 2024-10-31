@@ -1,7 +1,8 @@
 package acl_test
 
 import (
-	"github.com/aiven/aiven-go-client"
+	"context"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -195,6 +196,7 @@ func (suite *ACLFilterTestSuite) TestDeleteACLs() {
 }
 
 func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
+	ctx := context.Background()
 	source := kafka_nais_io_v1.Topic{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      Topic,
@@ -207,13 +209,13 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 	}
 
 	m := &acl.MockInterface{}
-	m.On("List", TestPool, TestService).
+	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, mock.Anything).
 		Times(2).
 		Return(nil, nil)
-	m.On("Delete", TestPool, TestService, mock.Anything).
+	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
 		Times(4).
 		Return(nil)
 
@@ -225,13 +227,14 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 		Logger:    log.New(),
 	}
 
-	err := aclManager.Synchronize()
+	err := aclManager.Synchronize(ctx)
 	suite.NoError(err)
 
 	m.AssertExpectations(suite.T())
 }
 
 func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
+	ctx := context.Background()
 	source := kafka_nais_io_v1.Stream{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      Topic,
@@ -243,10 +246,10 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	}
 
 	m := &acl.MockInterface{}
-	m.On("List", TestPool, TestService).
+	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, mock.Anything).
 		Times(1).
 		Return(nil, nil)
 
@@ -258,7 +261,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 		Logger:    log.New(),
 	}
 
-	err := aclManager.Synchronize()
+	err := aclManager.Synchronize(ctx)
 	suite.NoError(err)
 
 	m.AssertExpectations(suite.T())

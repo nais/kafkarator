@@ -1,6 +1,7 @@
 package controllers_test
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/nais/liberator/pkg/aiven/service"
@@ -13,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/ghodss/yaml"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
@@ -85,7 +86,7 @@ func fileReader(file string) io.Reader {
 	return f
 }
 
-func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
+func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
 	notFoundError := aiven.Error{
 		Message:  "Not Found",
 		MoreInfo: "",
@@ -93,7 +94,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 	}
 
 	mockNameResolver := service.NewMockNameResolver(t)
-	mockNameResolver.On("ResolveKafkaServiceName", mock.Anything).Return("kafka", nil)
+	mockNameResolver.On("ResolveKafkaServiceName", ctx, mock.Anything).Return("kafka", nil)
 
 	aclMock := &acl.MockInterface{}
 	aclMock.Test(t)
@@ -101,45 +102,45 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 	topicMock.Test(t)
 
 	for _, project := range test.Config.Projects {
-		svc, _ := mockNameResolver.ResolveKafkaServiceName(project)
+		svc, _ := mockNameResolver.ResolveKafkaServiceName(ctx, project)
 		aclMock.
-			On("List", project, svc).
+			On("List", ctx, project, svc).
 			Maybe().
 			Return(test.Aiven.Existing.Acls, nil)
 
 		for _, topic := range test.Aiven.Missing.Topics {
 			topicMock.
-				On("Get", project, svc, topic).
+				On("Get", ctx, project, svc, topic).
 				Maybe().
 				Return(nil, notFoundError)
 			topicMock.
-				On("Delete", project, svc, topic).
+				On("Delete", ctx, project, svc, topic).
 				Maybe().
 				Return(notFoundError)
 		}
 
 		for _, topic := range test.Aiven.Existing.Topics {
 			topicMock.
-				On("Get", project, svc, topic.TopicName).
+				On("Get", ctx, project, svc, topic.TopicName).
 				Maybe().
 				Return(topic, nil)
 		}
 
 		for _, topic := range test.Aiven.Created.Topics {
 			topicMock.
-				On("Get", project, svc, topic.TopicName).
+				On("Get", ctx, project, svc, topic.TopicName).
 				Maybe().
 				Return(nil, aiven.Error{
 					Status: http.StatusNotFound,
 				})
 			topicMock.
-				On("Create", project, svc, mock.MatchedBy(utils.TopicCreateReqComp(topic))).
+				On("Create", ctx, project, svc, mock.MatchedBy(utils.TopicCreateReqComp(topic))).
 				Return(nil)
 		}
 
 		for _, a := range test.Aiven.Created.Acls {
 			aclMock.
-				On("Create", project, svc, a).
+				On("Create", ctx, project, svc, a).
 				Return(
 					&aiven.KafkaACL{
 						ID:         wellKnownID,
@@ -153,19 +154,19 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 
 		for topicName, topic := range test.Aiven.Updated.Topics {
 			topicMock.
-				On("Update", project, svc, topicName, mock.MatchedBy(utils.TopicUpdateReqComp(topic))).
+				On("Update", ctx, project, svc, topicName, mock.MatchedBy(utils.TopicUpdateReqComp(topic))).
 				Return(nil)
 		}
 
 		for _, topicName := range test.Aiven.Deleted.Topics {
 			topicMock.
-				On("Delete", project, svc, topicName).
+				On("Delete", ctx, project, svc, topicName).
 				Return(nil)
 		}
 
 		for _, a := range test.Aiven.Deleted.Acls {
 			aclMock.
-				On("Delete", project, svc, a).
+				On("Delete", ctx, project, svc, a).
 				Return(nil)
 		}
 	}
@@ -188,7 +189,7 @@ func aivenMockInterfaces(t *testing.T, test testCase) (kafkarator_aiven.Interfac
 		}
 }
 
-func yamlSubTest(t *testing.T, path string) {
+func yamlSubTest(ctx context.Context, t *testing.T, path string) {
 	fixture := fileReader(path)
 	data, err := ioutil.ReadAll(fixture)
 	if err != nil {
@@ -213,7 +214,7 @@ func yamlSubTest(t *testing.T, path string) {
 		return
 	}
 
-	aivenMocks, assertMocks := aivenMockInterfaces(t, test)
+	aivenMocks, assertMocks := aivenMockInterfaces(ctx, t, test)
 
 	reconciler := controllers.TopicReconciler{
 		Aiven:    aivenMocks,
@@ -221,7 +222,7 @@ func yamlSubTest(t *testing.T, path string) {
 		Projects: test.Config.Projects,
 	}
 
-	result := reconciler.Process(*topic, log.NewEntry(log.StandardLogger()))
+	result := reconciler.Process(ctx, *topic, log.NewEntry(log.StandardLogger()))
 	if test.Error != nil {
 		assert.Equal(t, result.Error, *test.Error)
 		return
@@ -238,6 +239,7 @@ func yamlSubTest(t *testing.T, path string) {
 
 func TestGoldenFile(t *testing.T) {
 	kafkaratormetrics.Register(prometheus.DefaultRegisterer)
+	ctx := context.Background()
 
 	files, err := ioutil.ReadDir(testDataDirectory)
 	if err != nil {
@@ -255,7 +257,7 @@ func TestGoldenFile(t *testing.T) {
 		}
 		path := filepath.Join(testDataDirectory, name)
 		t.Run(name, func(t *testing.T) {
-			yamlSubTest(t, path)
+			yamlSubTest(ctx, t, path)
 		})
 	}
 }

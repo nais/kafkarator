@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

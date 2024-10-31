@@ -3,7 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/aiven/service"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -40,17 +40,17 @@ func (a *Acls) Report(ctx context.Context) error {
 		return err
 	}
 
-	return a.reportFromAivenProjects()
+	return a.reportFromAivenProjects(ctx)
 }
 
-func (a *Acls) reportFromAivenProjects() error {
+func (a *Acls) reportFromAivenProjects(ctx context.Context) error {
 	for _, project := range a.projects {
-		svcName, err := a.nameResolver.ResolveKafkaServiceName(project)
+		svcName, err := a.nameResolver.ResolveKafkaServiceName(ctx, project)
 		if err != nil {
 			return fmt.Errorf("resolve kafka service name in project %s: %s", project, err)
 		}
 
-		acls, err := a.aiven.KafkaACLs.List(project, svcName)
+		acls, err := a.aiven.KafkaACLs.List(ctx, project, svcName)
 		if err != nil {
 			return fmt.Errorf("list acls in in project %s: %s", project, err)
 		}

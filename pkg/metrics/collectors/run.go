@@ -2,7 +2,7 @@ package collectors
 
 import (
 	"context"
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"

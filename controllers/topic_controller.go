@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aiven/aiven-go-client"
+	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
@@ -49,7 +49,7 @@ func (r *TopicReconciler) projectWhitelisted(project string) bool {
 }
 
 // Process changes in Aiven and return a topic processing status
-func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entry) TopicReconcileResult {
+func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.Topic, logger *log.Entry) TopicReconcileResult {
 	var err error
 	var hash string
 	var status kafka_nais_io_v1.TopicStatus
@@ -87,7 +87,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 	// Process or delete?
 	projectName := topic.Spec.Pool
-	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(projectName)
+	serviceName, err := r.Aiven.NameResolver.ResolveKafkaServiceName(ctx, projectName)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
@@ -103,7 +103,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 			Source:    acl.TopicAdapter{Topic: strippedTopic},
 			Logger:    logger,
 		}
-		err = aclManager.Synchronize()
+		err = aclManager.Synchronize(ctx)
 		if err != nil {
 			return fail(fmt.Errorf("failed to delete ACLs on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
 		}
@@ -111,7 +111,7 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 
 		if topic.RemoveDataWhenDeleted() {
 			logger.Info("Permanently deleting Aiven topic and its data")
-			err = r.Aiven.Topics.Delete(projectName, serviceName, topic.FullName())
+			err = r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.FullName())
 			if err != nil {
 				if aiven.IsNotFound(err) {
 					logger.Info("Topic already removed from Aiven")
@@ -152,8 +152,8 @@ func (r *TopicReconciler) Process(topic kafka_nais_io_v1.Topic, logger *log.Entr
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer, _ := NewSynchronizer(r.Aiven, topic, logger)
-	err = synchronizer.Synchronize()
+	synchronizer, _ := NewSynchronizer(ctx, r.Aiven, topic, logger)
+	err = synchronizer.Synchronize(ctx)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
@@ -221,7 +221,7 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	controllerutil.AddFinalizer(&topic, Finalizer)
 
 	// Sync to Aiven; retry if necessary
-	result := r.Process(topic, logger)
+	result := r.Process(ctx, topic, logger)
 
 	if result.Skipped {
 		return ctrl.Result{}, nil
