@@ -3,15 +3,20 @@ package topic
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"net/http"
 	"time"
 
 	"github.com/nais/kafkarator/pkg/metrics"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	retentionHourDefault      = -1
+	localRetentionHourDefault = -2
 )
 
 type Interface interface {
@@ -98,7 +103,9 @@ func (r *Manager) create(ctx context.Context) error {
 			MaxMessageBytes:        intpToInt64p(cfg.MaxMessageBytes),
 			MinInsyncReplicas:      intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:         intpToInt64p(cfg.RetentionBytes),
-			RetentionMs:            retentionMs(cfg),
+			RetentionMs:            retentionMs(cfg.RetentionHours, retentionHourDefault),
+			LocalRetentionBytes:    intpToInt64p(cfg.LocalRetentionBytes),
+			LocalRetentionMs:       retentionMs(cfg.LocalRetentionHours, localRetentionHourDefault),
 			SegmentMs:              segmentMs(cfg),
 			MinCleanableDirtyRatio: minCleanableDirtyRatio,
 			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
@@ -140,7 +147,9 @@ func (r *Manager) update(ctx context.Context) error {
 			MaxMessageBytes:        intpToInt64p(cfg.MaxMessageBytes),
 			MinInsyncReplicas:      intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:         intpToInt64p(cfg.RetentionBytes),
-			RetentionMs:            retentionMs(cfg),
+			RetentionMs:            retentionMs(cfg.RetentionHours, retentionHourDefault),
+			LocalRetentionBytes:    intpToInt64p(cfg.LocalRetentionBytes),
+			LocalRetentionMs:       retentionMs(cfg.LocalRetentionHours, localRetentionHourDefault),
 			SegmentMs:              segmentMs(cfg),
 			MinCleanableDirtyRatio: minCleanableDirtyRatio,
 			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
@@ -169,10 +178,16 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 		return true
 	}
 
-	if config.RetentionHours != nil && topic.Config.RetentionMs.Value != *retentionMs(config) {
+	if config.RetentionHours != nil && topic.Config.RetentionMs.Value != *retentionMs(config.RetentionHours, retentionHourDefault) {
 		return true
 	}
 	if intPToValueChanged(config.RetentionBytes, topic.Config.RetentionBytes) {
+		return true
+	}
+	if config.LocalRetentionHours != nil && topic.Config.LocalRetentionMs.Value != *retentionMs(config.LocalRetentionHours, localRetentionHourDefault) {
+		return true
+	}
+	if intPToValueChanged(config.LocalRetentionBytes, topic.Config.LocalRetentionBytes) {
 		return true
 	}
 	if intPToValueChanged(config.MinimumInSyncReplicas, topic.Config.MinInsyncReplicas) {
@@ -220,19 +235,17 @@ func intPToValueChanged(cfg *int, tcfg *aiven.KafkaTopicConfigResponseInt) bool 
 	return cfg != nil && tcfg.Value != int64(*cfg)
 }
 
-func retentionMs(cfg *kafka_nais_io_v1.Config) *int64 {
-	var ret *int64
-	if cfg.RetentionHours != nil {
-		var ms int64
-		if *cfg.RetentionHours < 0 {
-			ms = -1
-		} else {
-			retentionDuration := time.Duration(*cfg.RetentionHours) * time.Hour
-			ms = retentionDuration.Milliseconds()
-		}
-		ret = &ms
+func retentionMs(hours *int, dflt int) *int64 {
+	if hours == nil {
+		return nil
 	}
-	return ret
+
+	ms := int64(dflt)
+	if *hours >= 0 {
+		retentionDuration := time.Duration(*hours) * time.Hour
+		ms = retentionDuration.Milliseconds()
+	}
+	return &ms
 }
 
 func segmentMs(cfg *kafka_nais_io_v1.Config) *int64 {
