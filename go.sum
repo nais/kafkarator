@@ -162,6 +162,8 @@ github.com/nais/liberator v0.0.0-20241031091052-c83ba9534a49 h1:b4wE5QJ1LMz63csd
 github.com/nais/liberator v0.0.0-20241031091052-c83ba9534a49/go.mod h1:1d4h64edIHLy3L0m7X4MrAR9a5lE7s85KwF6tjTKMUY=
 github.com/nais/liberator v0.0.0-20241031101407-7cdbc803c952 h1:OVo48Y/rwrcTYNQkp+08b75OmcSmZS9tYa8LutIEWXk=
 github.com/nais/liberator v0.0.0-20241031101407-7cdbc803c952/go.mod h1:gRUXR0S/Il3JnHlfc6ESLAih27Su+WFPm5aaXp/tHpE=
+github.com/nais/liberator v0.0.0-20241101125801-cc4bc469b422 h1:6aZLxhuAqLdPFkSN0hlPhiypCFhfV08yc6yj2/2AaHc=
+github.com/nais/liberator v0.0.0-20241101125801-cc4bc469b422/go.mod h1:gRUXR0S/Il3JnHlfc6ESLAih27Su+WFPm5aaXp/tHpE=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=

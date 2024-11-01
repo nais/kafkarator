@@ -18,6 +18,8 @@ aiven:
           min_insync_replicas: 2
           retention_bytes: -1
           retention_ms: 3240000000
+          local_retention_bytes: -2
+          local_retention_ms: -2
           segment_ms: 604800000
         tags:
           - key: created-by

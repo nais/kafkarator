@@ -43,6 +43,10 @@ aiven:
             value: 604800000
           segment_ms:
             value: 604800000
+          local_retention_bytes:
+            value: -2
+          local_retention_ms:
+            value: -2
   created:
     topics: []
     acls:

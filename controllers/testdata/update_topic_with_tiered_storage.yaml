@@ -1,5 +1,5 @@
 config:
-  description: topic configuration updates are propagated
+  description: adding tiered storage to topic configuration
   projects:
     - some-pool
 
@@ -19,15 +19,15 @@ aiven:
           cleanup_policy:
             value: delete
           max_message_bytes:
-            value: 1048588
+            value: 1_048_588
           min_insync_replicas:
             value: 2
           retention_bytes:
             value: -1
           retention_ms:
-            value: 3240000000
+            value: 3_240_000_000
           segment_ms:
-            value: 604800000
+            value: 604_800_000
           local_retention_bytes:
             value: -2
           local_retention_ms:
@@ -49,10 +49,10 @@ aiven:
           max_message_bytes: 2048
           min_insync_replicas: 2
           retention_bytes: -1
-          retention_ms: 43200000
+          retention_ms: 43_200_000
           local_retention_bytes: -2
-          local_retention_ms: -2
-          segment_ms: 86400000
+          local_retention_ms: 10_800_000
+          segment_ms: 86_400_000
         tags:
           - key: created-by
             value: Kafkarator
@@ -72,6 +72,7 @@ topic:
     config:
       maxMessageBytes: 2048
       retentionHours: 12
+      localRetentionHours: 3
       partitions: 2
       segmentHours: 24
     acl:
