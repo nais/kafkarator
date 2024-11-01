@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/nais/liberator/pkg/aiven/service"
+	"github.com/nais/liberator/pkg/logrus2logr"
 	"os"
 	"os/signal"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -25,6 +27,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrl_log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -110,14 +113,16 @@ func main() {
 
 	logger.SetFormatter(logfmt)
 
-	log.Infof("--- Current configuration ---")
+	logger.Infof("--- Current configuration ---")
 	for _, cfg := range conftools.Format([]string{
 		AivenToken,
 	}) {
-		log.Info(cfg)
+		logger.Info(cfg)
 	}
-	log.Infof("--- End configuration ---")
+	logger.Infof("--- End configuration ---")
 
+	logrSink := (&logrus2logr.Logrus2Logr{Logger: logger}).WithName("controller-runtime")
+	ctrl_log.SetLogger(logr.New(logrSink))
 	syncPeriod := viper.GetDuration(SyncPeriod)
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Cache: cache.Options{
@@ -127,6 +132,7 @@ func main() {
 		Metrics: metricsserver.Options{
 			BindAddress: viper.GetString(MetricsAddress),
 		},
+		Logger: logr.New(logrSink.WithName("manager")),
 	})
 
 	if err != nil {
