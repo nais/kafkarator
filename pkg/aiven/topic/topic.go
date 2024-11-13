@@ -3,6 +3,7 @@ package topic
 import (
 	"context"
 	"fmt"
+	"k8s.io/utils/ptr"
 	"net/http"
 	"time"
 
@@ -106,6 +107,7 @@ func (r *Manager) create(ctx context.Context) error {
 			RetentionMs:            retentionMs(cfg.RetentionHours, retentionHourDefault),
 			LocalRetentionBytes:    intpToInt64p(cfg.LocalRetentionBytes),
 			LocalRetentionMs:       retentionMs(cfg.LocalRetentionHours, localRetentionHourDefault),
+			RemoteStorageEnable:    enableRemoteStorage(cfg),
 			SegmentMs:              segmentMs(cfg),
 			MinCleanableDirtyRatio: minCleanableDirtyRatio,
 			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
@@ -150,6 +152,7 @@ func (r *Manager) update(ctx context.Context) error {
 			RetentionMs:            retentionMs(cfg.RetentionHours, retentionHourDefault),
 			LocalRetentionBytes:    intpToInt64p(cfg.LocalRetentionBytes),
 			LocalRetentionMs:       retentionMs(cfg.LocalRetentionHours, localRetentionHourDefault),
+			RemoteStorageEnable:    enableRemoteStorage(cfg),
 			SegmentMs:              segmentMs(cfg),
 			MinCleanableDirtyRatio: minCleanableDirtyRatio,
 			MinCompactionLagMs:     intpToInt64p(cfg.MinCompactionLagMs),
@@ -164,6 +167,16 @@ func (r *Manager) update(ctx context.Context) error {
 	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
 		return r.AivenTopics.Update(ctx, r.Project, r.Service, r.Topic.FullName(), req)
 	})
+}
+
+func enableRemoteStorage(cfg *kafka_nais_io_v1.Config) *bool {
+	if cfg.LocalRetentionBytes != nil && *cfg.LocalRetentionBytes > 0 {
+		return ptr.To(true)
+	}
+	if cfg.LocalRetentionHours != nil && *cfg.LocalRetentionHours > 0 {
+		return ptr.To(true)
+	}
+	return nil
 }
 
 func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config) bool {

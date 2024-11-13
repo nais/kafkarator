@@ -32,6 +32,8 @@ aiven:
             value: -2
           local_retention_ms:
             value: -2
+          remote_storage_enable:
+            value: false
         tags:
           - key: created-by
             value: Kafkarator
@@ -53,6 +55,7 @@ aiven:
           local_retention_bytes: -2
           local_retention_ms: 10_800_000
           segment_ms: 86_400_000
+          remote_storage_enable: true
         tags:
           - key: created-by
             value: Kafkarator
