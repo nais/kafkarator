@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
@@ -81,6 +82,12 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 		status.SynchronizationState = state
 		if !retry {
 			status.LatestAivenSyncFailure = time.Now().Format(time.RFC3339)
+		}
+
+		// TODO: Remove this once we have figured out where the full dump of a 200 OK response is coming from
+		msg := err.Error()
+		if strings.HasSuffix(msg, "200") {
+			r.Logger.Errorf("Got error that starts with 200! This should not be happening! Namespace: %s, Topic: %s", topic.Namespace, topic.Name)
 		}
 
 		return TopicReconcileResult{
