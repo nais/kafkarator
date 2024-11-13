@@ -27,6 +27,7 @@ type Manager struct {
 	Service   string
 	Source    Source
 	Logger    log.FieldLogger
+	DryRun    bool
 }
 
 // Synchronize Syncs the ACL spec in the Source resource with Aiven.
@@ -98,6 +99,10 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 
 		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
 			var err error
+			if r.DryRun {
+				r.Logger.Infof("DRY RUN: Would create ACL entry: %v", req)
+				return nil
+			}
 			_, err = r.AivenACLs.Create(ctx, r.Project, r.Service, req)
 			return err
 		})
@@ -119,6 +124,10 @@ func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
 			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
 		}
 		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
+			if r.DryRun {
+				r.Logger.Infof("DRY RUN: Would delete ACL entry: %v", acl)
+				return nil
+			}
 			return r.AivenACLs.Delete(ctx, r.Project, r.Service, acl.ID)
 		})
 		if err != nil {

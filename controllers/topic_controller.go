@@ -40,6 +40,7 @@ type TopicReconciler struct {
 	Logger          *log.Logger
 	Projects        []string
 	RequeueInterval time.Duration
+	DryRun          bool
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
@@ -106,6 +107,7 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 			Service:   serviceName,
 			Source:    acl.TopicAdapter{Topic: strippedTopic},
 			Logger:    logger,
+			DryRun:    r.DryRun,
 		}
 		err = aclManager.Synchronize(ctx)
 		if err != nil {
@@ -115,7 +117,13 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 
 		if topic.RemoveDataWhenDeleted() {
 			logger.Info("Permanently deleting Aiven topic and its data")
-			err = r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.FullName())
+			err = metrics.ObserveAivenLatency("Topic_Delete", projectName, func() error {
+				if r.DryRun {
+					r.Logger.Infof("DRY RUN: Would delete Topic: %v", topic.FullName())
+					return nil
+				}
+				return r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.FullName())
+			})
 			if err != nil {
 				if aiven.IsNotFound(err) {
 					logger.Info("Topic already removed from Aiven")
@@ -156,7 +164,7 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer, _ := NewSynchronizer(ctx, r.Aiven, topic, logger)
+	synchronizer, _ := NewSynchronizer(ctx, r.Aiven, topic, logger, r.DryRun)
 	err = synchronizer.Synchronize(ctx)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)

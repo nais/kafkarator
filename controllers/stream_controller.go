@@ -32,6 +32,7 @@ type StreamReconciler struct {
 	Logger          log.FieldLogger
 	Projects        []string
 	RequeueInterval time.Duration
+	DryRun          bool
 }
 
 func (r *StreamReconciler) projectWhitelisted(project string) bool {
@@ -198,6 +199,7 @@ func (r *StreamReconciler) Process(ctx context.Context, stream kafka_nais_io_v1.
 		Service:   serviceName,
 		Source:    acl.StreamAdapter{Stream: &stream},
 		Logger:    logger,
+		DryRun:    r.DryRun,
 	}
 	err = aclManager.Synchronize(ctx)
 	if err != nil {
@@ -245,7 +247,13 @@ func (r *StreamReconciler) handleDelete(ctx context.Context, stream kafka_nais_i
 	topics, err := r.Aiven.Topics.List(ctx, projectName, serviceName)
 	for _, topic := range topics {
 		if strings.HasPrefix(topic.TopicName, stream.TopicPrefix()) {
-			err = r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.TopicName)
+			err = metrics.ObserveAivenLatency("Topic_Delete", projectName, func() error {
+				if r.DryRun {
+					r.Logger.Infof("DRY RUN: Would delete Topic: %v", topic.TopicName)
+					return nil
+				}
+				return r.Aiven.Topics.Delete(ctx, projectName, serviceName, topic.TopicName)
+			})
 			if err != nil {
 				return fail(fmt.Errorf("failed to delete topic '%s' on Aiven: %s", topic.TopicName, err), kafka_nais_io_v1.EventFailedSynchronization, true)
 			}

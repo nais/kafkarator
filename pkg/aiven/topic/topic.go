@@ -34,6 +34,7 @@ type Manager struct {
 	Service     string
 	Topic       kafka_nais_io_v1.Topic
 	Logger      *log.Entry
+	DryRun      bool
 }
 
 func aivenError(err error) *aiven.Error {
@@ -120,6 +121,10 @@ func (r *Manager) create(ctx context.Context) error {
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Create", r.Project, func() error {
+		if r.DryRun {
+			r.Logger.Infof("DRY RUN: Would create Topic: %v", req)
+			return nil
+		}
 		return r.AivenTopics.Create(ctx, r.Project, r.Service, req)
 	})
 }
@@ -165,6 +170,10 @@ func (r *Manager) update(ctx context.Context) error {
 	}
 
 	return metrics.ObserveAivenLatency("Topic_Update", r.Project, func() error {
+		if r.DryRun {
+			r.Logger.Infof("DRY RUN: Would update Topic: %v", req)
+			return nil
+		}
 		return r.AivenTopics.Update(ctx, r.Project, r.Service, r.Topic.FullName(), req)
 	})
 }

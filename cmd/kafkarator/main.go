@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/logrus2logr"
+	"k8s.io/utils/ptr"
 	"os"
 	"os/signal"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -27,6 +28,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrl_client "sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl_log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -53,6 +55,7 @@ const (
 	RequeueInterval     = "requeue-interval"
 	SyncPeriod          = "sync-period"
 	TopicReportInterval = "topic-report-interval"
+	DryRun              = "dry-run"
 )
 
 const (
@@ -75,6 +78,7 @@ func init() {
 	flag.Duration(RequeueInterval, time.Minute*5, "Requeueing interval when topic synchronization to Aiven fails")
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
 	flag.StringSlice(Projects, []string{"dev-nais-dev"}, "List of projects allowed to operate on")
+	flag.Bool(DryRun, false, "If true, do not make any changes")
 
 	flag.Parse()
 
@@ -127,6 +131,9 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Cache: cache.Options{
 			SyncPeriod: &syncPeriod,
+		},
+		Client: ctrl_client.Options{
+			DryRun: ptr.To(viper.GetBool(DryRun)),
 		},
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -189,6 +196,7 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 		Logger:          logger,
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(RequeueInterval),
+		DryRun:          viper.GetBool(DryRun),
 	}
 	if err = topicReconciler.SetupWithManager(mgr); err != nil {
 		quit <- fmt.Errorf("unable to set up topicReconciler: %s", err)
@@ -205,6 +213,7 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager)
 		Logger:          logger,
 		Projects:        viper.GetStringSlice(Projects),
 		RequeueInterval: viper.GetDuration(RequeueInterval),
+		DryRun:          viper.GetBool(DryRun),
 	}
 	if err = streamReconciler.SetupWithManager(mgr); err != nil {
 		quit <- fmt.Errorf("unable to set up streamReconciler: %s", err)

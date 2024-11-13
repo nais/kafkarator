@@ -22,7 +22,7 @@ type SyncResult struct {
 	topic    kafka_nais_io_v1.Topic
 }
 
-func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry) (*Synchronizer, error) {
+func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry, dryRun bool) (*Synchronizer, error) {
 	projectName := t.Spec.Pool
 	serviceName, err := a.NameResolver.ResolveKafkaServiceName(ctx, projectName)
 	if err != nil {
@@ -37,6 +37,7 @@ func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka
 			Service:     serviceName,
 			Topic:       t,
 			Logger:      logger,
+			DryRun:      dryRun,
 		},
 		ACLs: acl.Manager{
 			AivenACLs: a.ACLs,
@@ -44,6 +45,7 @@ func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka
 			Service:   serviceName,
 			Source:    acl.TopicAdapter{Topic: &t},
 			Logger:    logger,
+			DryRun:    dryRun,
 		},
 	}, nil
 }
