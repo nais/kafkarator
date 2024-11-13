@@ -7,17 +7,19 @@ import (
 	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
-	"github.com/nais/kafkarator/pkg/aiven"
+	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
+	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	apimachinery_errors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -201,7 +203,7 @@ func (r *TopicReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	err := r.Get(ctx, req.NamespacedName, &topic)
 	switch {
-	case errors.IsNotFound(err):
+	case apimachinery_errors.IsNotFound(err):
 		return fail(fmt.Errorf("resource deleted from cluster; noop"), false)
 	case err != nil:
 		return fail(fmt.Errorf("unable to retrieve resource from cluster: %s", err), true)
