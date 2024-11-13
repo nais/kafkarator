@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +62,8 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 	status.FullyQualifiedName = topic.FullName()
 
 	fail := func(err error, state string, retry bool) TopicReconcileResult {
-		aivenError, ok := err.(aiven.Error)
+		var aivenError aiven.Error
+		ok := errors.As(err, &aivenError)
 		if !ok {
 			status.Message = err.Error()
 			status.Errors = []string{
@@ -81,7 +83,7 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 		return TopicReconcileResult{
 			Requeue: retry,
 			Status:  status,
-			Error:   fmt.Errorf("%s: %s", state, err),
+			Error:   fmt.Errorf("TODO FIX THIS!"),
 		}
 	}
 
