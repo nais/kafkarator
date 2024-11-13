@@ -2,7 +2,7 @@ VERSION 0.8
 
 FROM gcr.io/distroless/static-debian11
 
-ARG --global REGISTRY=europe-north1-docker.pkg.dev
+ARG --global REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images
 
 kubebuilder:
     FROM golang:1.23
@@ -49,7 +49,7 @@ docker-kafkarator:
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG kafkarator_image=${REGISTRY}/nais-io/nais/images/kafkarator/kafkarator
+    ARG kafkarator_image=${REGISTRY}/kafkarator
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
@@ -62,7 +62,7 @@ docker-canary:
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG canary_image=${REGISTRY}/nais-io/nais/images/kafkarator/canary
+    ARG canary_image=${REGISTRY}/canary
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_image}:${VERSION} ${canary_image}:latest
 
@@ -85,7 +85,7 @@ docker-canary-deployer:
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG canary_deployer_image=${REGISTRY}/nais-io/nais/images/kafkarator/canary-deployer
+    ARG canary_deployer_image=${REGISTRY}/canary-deployer
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${canary_deployer_image}:${VERSION} ${canary_deployer_image}:latest
 

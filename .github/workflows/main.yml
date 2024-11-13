@@ -14,6 +14,8 @@ on:
 
 env:
   GOOGLE_REGISTRY: europe-north1-docker.pkg.dev
+  IMAGE_REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
+  FEATURE_REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/feature
   EARTHLY_USE_INLINE_CACHE: true
   EARTHLY_SAVE_INLINE_CACHE: true
   EARTHLY_VERBOSE: true
@@ -82,12 +84,12 @@ jobs:
         env:
           EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
         run: |
-          earthly +docker-${{ matrix.target }} --VERSION=${VERSION} --REGISTRY=${GOOGLE_REGISTRY}
+          earthly +docker-${{ matrix.target }} --VERSION=${VERSION}  --REGISTRY=${IMAGE_REGISTRY}
       - name: Retrieve image digest
         id: imgdigest
         if: github.ref == 'refs/heads/master'
         run: |
-          export IMAGE=${{ env.GOOGLE_REGISTRY }}/nais-io/nais/images/kafkarator/${{ matrix.target }}:${VERSION}
+          export IMAGE=${{ env.IMAGE_REGISTRY }}/kafkarator/${{ matrix.target }}:${VERSION}
           docker pull ${IMAGE}
           echo "digest=$(docker inspect ${IMAGE} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
@@ -150,7 +152,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |-
           for chart in *.tgz; do
-            helm push "$chart" oci://${{ env.GOOGLE_REGISTRY }}/nais-io/nais/feature
+            helm push "$chart" oci://${{ env.FEATURE_REGISTRY }}
           done
 
   rollout:
@@ -173,5 +175,5 @@ jobs:
     steps:
       - uses: nais/fasit-deploy@v2 # ratchet:exclude
         with:
-          chart: oci://${{ env.GOOGLE_REGISTRY }}/nais-io/nais/feature/${{ matrix.feature }}
+          chart: oci://${{ env.FEATURE_REGISTRY }}/kafkarator/${{ matrix.feature }}
           version: ${{ needs.version.outputs.VERSION }}

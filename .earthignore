@@ -6,17 +6,20 @@
 .AppleDouble
 atlassian-ide-plugin.xml
 bin
+charts
 cmake-build-*/
 .com.apple.timemachine.donotpresent
 com_crashlytics_export_strings.xml
 crashlytics-build.properties
 crashlytics.properties
+dashboards
 .directory
 *.dll
 doc
 .DocumentRevisions-V100
 .DS_Store
 *.dylib
+examples
 *.exe
 *.exe~
 fabric.properties
@@ -24,6 +27,7 @@ fabric.properties
 .fuse_hidden*
 gen
 .git*
+.github
 Icon
 .idea
 .idea_modules/
@@ -35,14 +39,13 @@ Network Trash Folder
 *.out
 out
 out/
+scripts
 *.so
 .Spotlight-V100
 .TemporaryItems
 Temporary Items
 *.test
+Tiltfile
 .Trash-*
 .Trashes
 .VolumeIcon.icns
-charts
-examples
-scripts
