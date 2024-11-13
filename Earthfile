@@ -2,7 +2,7 @@ VERSION 0.8
 
 FROM gcr.io/distroless/static-debian11
 
-ARG --global REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images
+ARG --global REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
 
 kubebuilder:
     FROM golang:1.23

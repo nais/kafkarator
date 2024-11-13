@@ -14,7 +14,7 @@ on:
 
 env:
   GOOGLE_REGISTRY: europe-north1-docker.pkg.dev
-  IMAGE_REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images
+  IMAGE_REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
   FEATURE_REGISTRY: europe-north1-docker.pkg.dev/nais-io/nais/feature
   EARTHLY_USE_INLINE_CACHE: true
   EARTHLY_SAVE_INLINE_CACHE: true
@@ -89,7 +89,7 @@ jobs:
         id: imgdigest
         if: github.ref == 'refs/heads/master'
         run: |
-          export IMAGE=${{ env.IMAGE_REGISTRY }}/kafkarator/${{ matrix.target }}:${VERSION}
+          export IMAGE=${{ env.IMAGE_REGISTRY }}/${{ matrix.target }}:${VERSION}
           docker pull ${IMAGE}
           echo "digest=$(docker inspect ${IMAGE} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
@@ -175,5 +175,5 @@ jobs:
     steps:
       - uses: nais/fasit-deploy@v2 # ratchet:exclude
         with:
-          chart: oci://${{ env.FEATURE_REGISTRY }}/kafkarator/${{ matrix.feature }}
+          chart: oci://${{ env.FEATURE_REGISTRY }}/${{ matrix.feature }}
           version: ${{ needs.version.outputs.VERSION }}
