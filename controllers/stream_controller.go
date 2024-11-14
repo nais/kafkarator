@@ -2,15 +2,18 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aiven/aiven-go-client/v2"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/kafkarator/pkg/utils"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -70,7 +73,7 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	err := r.Get(ctx, req.NamespacedName, &stream)
 	switch {
-	case errors.IsNotFound(err):
+	case k8s_errors.IsNotFound(err):
 		return fail(fmt.Errorf("resource deleted from cluster; noop"), false)
 	case err != nil:
 		return fail(fmt.Errorf("unable to retrieve resource from cluster: %s", err), true)
@@ -146,24 +149,40 @@ func (r *StreamReconciler) Process(ctx context.Context, stream kafka_nais_io_v1.
 	status.FullyQualifiedTopicPrefix = stream.TopicPrefix()
 
 	fail := func(err error, state string, retry bool) StreamReconcileResult {
-		aivenError, ok := err.(aiven.Error)
+		var aivenError aiven.Error
+		propagatedErr := err
+		ok := errors.As(err, &aivenError)
 		if !ok {
 			status.Message = err.Error()
 			status.Errors = []string{
 				err.Error(),
 			}
 		} else {
-			status.Message = aivenError.Message
-			status.Errors = []string{
-				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+			// In rare cases, the Aiven client can return an error with StatusOK.
+			// In these cases, the actual content of the error is not really relevant, because it is simply the response body
+			// while the error was something related to I/O.
+			// Since the response body may contain sensitive information, we do not want to log the message in this situation.
+			if aivenError.Status == http.StatusOK {
+				status.Message = "unknown error while calling Aiven API"
+				status.Errors = []string{
+					status.Message,
+				}
+				propagatedErr = errors.New(status.Message)
+			} else {
+				status.Message = aivenError.Message
+				status.Errors = []string{
+					fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+				}
 			}
 		}
 		status.SynchronizationState = state
 
+		propagatedErr = utils.CheckForPossibleCredentials(propagatedErr)
+
 		return StreamReconcileResult{
 			Requeue: retry,
 			Status:  status,
-			Error:   fmt.Errorf("%s: %s", state, err),
+			Error:   fmt.Errorf("%s: %s", state, propagatedErr),
 		}
 	}
 

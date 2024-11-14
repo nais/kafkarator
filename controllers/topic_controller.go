@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"github.com/nais/kafkarator/pkg/utils"
+	"net/http"
 	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
@@ -67,6 +68,7 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 
 	fail := func(err error, state string, retry bool) TopicReconcileResult {
 		var aivenError aiven.Error
+		propagatedErr := err
 		ok := errors.As(err, &aivenError)
 		if !ok {
 			status.Message = err.Error()
@@ -74,9 +76,21 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 				err.Error(),
 			}
 		} else {
-			status.Message = aivenError.Message
-			status.Errors = []string{
-				fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+			// In rare cases, the Aiven client can return an error with StatusOK.
+			// In these cases, the actual content of the error is not really relevant, because it is simply the response body
+			// while the error was something related to I/O.
+			// Since the response body may contain sensitive information, we do not want to log the message in this situation.
+			if aivenError.Status == http.StatusOK {
+				status.Message = "unknown error while calling Aiven API"
+				status.Errors = []string{
+					status.Message,
+				}
+				propagatedErr = errors.New(status.Message)
+			} else {
+				status.Message = aivenError.Message
+				status.Errors = []string{
+					fmt.Sprintf("%s: %s", aivenError.Message, aivenError.MoreInfo),
+				}
 			}
 		}
 		status.SynchronizationState = state
@@ -84,16 +98,12 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 			status.LatestAivenSyncFailure = time.Now().Format(time.RFC3339)
 		}
 
-		// TODO: Remove this once we have figured out where the full dump of a 200 OK response is coming from
-		msg := err.Error()
-		if strings.HasSuffix(msg, "200") {
-			r.Logger.Errorf("Got error that starts with 200! This should not be happening! Namespace: %s, Topic: %s", topic.Namespace, topic.Name)
-		}
+		propagatedErr = utils.CheckForPossibleCredentials(propagatedErr)
 
 		return TopicReconcileResult{
 			Requeue: retry,
 			Status:  status,
-			Error:   fmt.Errorf("TODO FIX THIS!"),
+			Error:   fmt.Errorf("%s: %s", state, propagatedErr),
 		}
 	}
 
@@ -171,7 +181,10 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 		return fail(fmt.Errorf("pool '%s' cannot be used in this cluster", projectName), kafka_nais_io_v1.EventFailedPrepare, false)
 	}
 
-	synchronizer, _ := NewSynchronizer(ctx, r.Aiven, topic, logger, r.DryRun)
+	synchronizer, err := NewSynchronizer(ctx, r.Aiven, topic, logger, r.DryRun)
+	if err != nil {
+		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
+	}
 	err = synchronizer.Synchronize(ctx)
 	if err != nil {
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, true)
