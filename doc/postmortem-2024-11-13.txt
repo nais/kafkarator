@@ -1,0 +1,55 @@
+Postmortem Kafkarator credentials logging 2024-11-13
+====================================================
+
+Hva har skjedd?
+---------------
+
+En intern systemapplikasjon i nais platformen, Kafkarator, har logget en feilmelding som inneholdt en komplett oversikt over alle tjenester som Nav kjører i produksjon hos den eksterne leverandøren Aiven.
+Loggmeldingen inneholdt informasjon om hvordan applikasjoner skulle koble til tjenestene, inkludert brukernavn, passord og sertifikater.
+
+Loggmeldingen var så stor (8.6MB) at den ble avvist av alle logginnsamlingsverktøy, og ble derfor ikke formidlet videre til andre systemer enn der den oppstod.
+Etter innledende undersøkelser ble det klart at loggmeldingen ikke har vært tilgjengelig for andre enn medlemmer i Nais-teamet, som allerede har tilgang til denne informasjonen pga. behov knyttet til drift av platformen.
+
+Det ble likevel levert avviksmelding, da det var mest flaks som gjorde at det ikke var mer alvorlig.
+
+
+
+Iverksatte strakstiltak
+-----------------------
+
+Umiddelbart etter at det ble oppdaget ble applikasjonen endret til å logge en placeholder i stedet for den faktiske feilmeldingen på stedet i applikasjonen denne loggmeldingen kom fra, for å unngå at det skjer igjen.
+
+
+
+Årsaksanalyse
+-------------
+
+Når et API-kall mot Aiven gjennomføres leses responsen inn i en buffer.
+Uavhengig av innholdet i responsen kan det oppstå feil i nettverket som gjør at lesingen inn i bufferet rapporterer en feil (Connection reset, read timeout o.l.).
+Dersom responsen er en 200 OK og inneholder alt den skal inneholde, men nettverket opplever en feil helt i slutten av responsen,
+så kan resultatet være at Aiven SDK returnerer en feilmelding med hele responsen som innhold.
+
+Siden feilmeldinger fra Aiven SDK ofte inneholder detaljer som er nødvendig for feilretting blir disse feilmeldingene som oftest propagert oppover callstack urørt inntil de "håndteres" ved å logge dem.
+
+Siden feilen ikke ser ut til å ha skjedd flere ganger er det nærliggende at det er noen underliggende effekter som har utløst feilen, som for eksempel en timeout i nettverket.
+
+
+
+Tiltak for å unngå at noe slikt skjer igjen
+-------------------------------------------
+
+* Legge inn en sjekk før vi logger feilmeldinger og droppe feilmeldinger som inneholder nøkkelfraser som "password", "private key" og "certificate".
+* Innføre mer detaljert feilhåndtering som prøver å trekke ut relevant informasjon fra feilmeldingen fra Aiven SDK, fremfor å sende hele feilmeldingen videre oppover.
+
+
+
+Tidslinje
+---------
+
+15:50 - Loggmeldingen blir oppdaget av en utvikler i Nais-teamet.
+15:55 - Ytterligere team-medlemmer innvolveres for å undersøke omfanget av problemet.
+15:58 - Første forsøk på å fjerne feilmeldingen blir lagt inn i koden, men rulles ikke ut pga. en feil i koden.
+16:05 - Det avklares at loggmeldingen ikke er å finne i loggsystemene til Nav.
+16:05 - Det avklares at loggmeldingen ikke har blitt formidlet videre til andre systemer enn der den oppstod.
+16:20 - Det oppdages at første forsøk på å fjerne feilmeldingen ikke har blitt rullet ut.
+16:23 - Fiks på feilen i koden (15:58) blir rullet ut, slik at feilmeldingen blir fjernet.
