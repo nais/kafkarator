@@ -16,7 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
-	github.com/vektra/mockery/v2 v2.47.0
+	github.com/vektra/mockery/v2 v2.48.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/apimachinery v0.31.0
 	k8s.io/client-go v0.31.0
