@@ -32,17 +32,19 @@ const (
 
 // Configuration options
 const (
-	KafkaBrokers         = "kafka-brokers"
-	KafkaCAPath          = "kafka-ca-path"
-	KafkaCertificatePath = "kafka-certificate-path"
-	KafkaGroupID         = "kafka-group-id"
-	KafkaKeyPath         = "kafka-key-path"
-	KafkaTopic           = "kafka-topic"
-	DeployStartTime      = "deploy-start-time"
-	LogFormat            = "log-format"
-	MessageInterval      = "message-interval"
-	MetricsAddress       = "metrics-address"
-	SlowConsumer         = "slow-consumer"
+	KafkaBrokers           = "kafka-brokers"
+	KafkaCAPath            = "kafka-ca-path"
+	KafkaCertificatePath   = "kafka-certificate-path"
+	KafkaGroupID           = "kafka-group-id"
+	KafkaKeyPath           = "kafka-key-path"
+	KafkaTopic             = "kafka-topic"
+	DeployStartTime        = "deploy-start-time"
+	LogFormat              = "log-format"
+	MessageInterval        = "message-interval"
+	MetricsAddress         = "metrics-address"
+	SlowConsumer           = "slow-consumer"
+	KafkaTransactionTopic  = "kafka-transaction-topic"
+	KafkaTransactionEnable = "enable-transaction-canary"
 )
 
 const (
@@ -106,6 +108,24 @@ var (
 		Help:      "latency in message consumption",
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
+
+	// - Gauges
+	// - `kafka_producer_transaction_creation_time_ms`: Time taken to create a transaction.
+	// - `kafka_producer_transaction_commit_time_ms`: Time taken to commit a transaction.
+	// - `kafka_producer_transaction_abort_time_ms`: Time taken to abort a transaction.
+
+	// counters
+	// - `kafka_producer_transaction_start_attempts_total`: Total number of attempts to start transactions.
+	// - `kafka_producer_transaction_commit_attempts_total`: Total number of commit attempts.
+	// - `kafka_producer_transaction_abort_attempts_total`: Total number of abort attempts.
+	// - `kafka_producer_transaction_start_failures_total`: Number of times starting a transaction failed.
+	// - `kafka_producer_transaction_commit_failures_total`: Number of times committing a transaction failed.
+	// - `kafka_producer_transaction_abort_failures_total`: Number of times aborting a transaction failed.
+
+	// histograms
+	// - `kafka_producer_transaction_enqueued_time_ms`: Time messages wait in the transaction before being sent.
+	// - `kafka_producer_transaction_commit_latency_ms`: Time taken to commit transactions.
+
 )
 
 func init() {
@@ -127,6 +147,9 @@ func init() {
 	hostname, _ := os.Hostname()
 	flag.StringSlice(KafkaBrokers, []string{"localhost:9092"}, "Broker addresses for Kafka support")
 	flag.String(KafkaTopic, "kafkarator-canary", "Topic where Kafkarator canary messages are produced")
+	// can we use the same topic for this??
+	flag.String(KafkaTransactionTopic, "kafkarator-transaction-canary", "Topic where Kafkarator canary messages are transcated between")
+	flag.String(KafkaTransactionEnable, "kafkarator-canary-transactions-enable", "Enable transactions canarying")
 	flag.String(KafkaGroupID, hostname, "Kafka group ID for storing consumed message positions")
 	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
 	flag.String(KafkaKeyPath, "kafka.key", "Path to Kafka client key")
@@ -222,6 +245,19 @@ func main() {
 	}
 
 	logger.Infof("Started message producer.")
+	//                        -->                    Transaction                   <--
+	// produce to kafkaTopic, consume from kafkatopic and put on kafkaTransactionTopic
+	txCallback := canarykafka.NewCallback(false, cons)
+	err = consumer.New(ctx, cancel, consumer.Config{
+		Brokers:           viper.GetStringSlice(KafkaBrokers),
+		GroupID:           viper.GetString(KafkaGroupID),
+		MaxProcessingTime: time.Second * 1,
+		RetryInterval:     time.Second * 10,
+		Topic:             viper.GetString(KafkaTransactionTopic),
+		Callback:          txCallback.Callback, // May or may not need to have special here
+		Logger:            logger,
+		TlsConfig:         tlsConfig,
+	})
 
 	callback := canarykafka.NewCallback(viper.GetBool(SlowConsumer), cons)
 	err = consumer.New(ctx, cancel, consumer.Config{
@@ -277,6 +313,7 @@ func main() {
 		case <-produceTicker.C:
 			certBundle.DiffAndUpdate(logger)
 			produce(ctx)
+			//			produce_tx(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
