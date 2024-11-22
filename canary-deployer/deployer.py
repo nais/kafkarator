@@ -40,7 +40,7 @@ async def pretend_run_process(cmd, logger):
 
 async def _execute_deploy(cluster, resource_name, vars_file_name, settings, logger):
     cmd = [
-        "/app/deploy",
+        "/app/deploy", # This is nais/deploy
         "--cluster", cluster,
         "--resource", resource_name,
         "--vars", vars_file_name,
@@ -76,24 +76,27 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
     logger.info("Completed deploying canary to %s", config.canary_cluster)
 
 
+# TODO: ADD TX TOPIC etc
 async def deploy_topic(config: DeployConfig, settings: Settings):
-    topic_name = f"kafka-canary-{config.canary_cluster}"
+    topics = [f"kafka-canary-{config.canary_cluster}",  f"kafka-canary-tx-{config.canary_cluster}"]
+
     logger = logging.getLogger(f"deploy-topic-{config.canary_cluster}")
-    logger.info("Deploying topic %s to %s", topic_name, config.topic_cluster)
-    with tempfile.NamedTemporaryFile("w", prefix=f"topic-vars-{config.canary_cluster}", suffix=".yaml") as vars_file:
-        data = {
-            "team": settings.team,
-            "pool": config.pool,
-            "topic_name": topic_name,
-        }
-        json.dump(data, vars_file)
-        vars_file.flush()
-        logger.debug(json.dumps(data, indent=2))
-        try:
-            await _execute_deploy(config.topic_cluster, "/canary/topic.yaml", vars_file.name, settings, logger)
-        except CalledProcessError:
-            raise RuntimeError(f"Error when deploying topic {topic_name} to {config.topic_cluster}") from None
-    logger.info("Completed deploying topic %s to %s", topic_name, config.topic_cluster)
+    logger.info("Deploying topics  %s and %s to %s", topic_name,  tx_topic_name, config.topic_cluster)
+
+    for topic in topics:
+        with tempfile.NamedTemporaryFile("w", prefix=f"topic-vars-{config.canary_cluster}-{topic}", suffix=".yaml") as vars_file:
+           data = {
+               "team": settings.team,
+               "pool": config.pool,
+               "topic_name": topic
+           }
+           json.dump(data, vars_file)
+           vars_file.flush()
+           logger.debug(json.dumps(data, indent=2))
+           try:
+               await _execute_deploy(config.topic_cluster, "/canary/topic.yaml", vars_file.name, settings, logger)
+           except CalledProcessError:
+               raise RuntimeError(f"Error when deploying topic {topic} to {config.topic_cluster}") from None
 
 
 def generate_topic_cluster_lookup_for_nav(data):
