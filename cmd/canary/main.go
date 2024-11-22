@@ -129,24 +129,6 @@ var (
 		Namespace: Namespace,
 		Help:      "transacted messages, transcations happen in units of 100 messages in the canary",
 	})
-
-	// - Gauges
-	// - `kafka_producer_transaction_creation_time_ms`: Time taken to create a transaction.
-	// - `kafka_producer_transaction_commit_time_ms`: Time taken to commit a transaction.
-	// - `kafka_producer_transaction_abort_time_ms`: Time taken to abort a transaction.
-
-	// counters
-	// - `kafka_producer_transaction_start_attempts_total`: Total number of attempts to start transactions.
-	// - `kafka_producer_transaction_commit_attempts_total`: Total number of commit attempts.
-	// - `kafka_producer_transaction_abort_attempts_total`: Total number of abort attempts.
-	// - `kafka_producer_transaction_start_failures_total`: Number of times starting a transaction failed.
-	// - `kafka_producer_transaction_commit_failures_total`: Number of times committing a transaction failed.
-	// - `kafka_producer_transaction_abort_failures_total`: Number of times aborting a transaction failed.
-
-	// histograms
-	// - `kafka_producer_transaction_enqueued_time_ms`: Time messages wait in the transaction before being sent.
-	// - `kafka_producer_transaction_commit_latency_ms`: Time taken to commit transactions.
-
 )
 
 func init() {
