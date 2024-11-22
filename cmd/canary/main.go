@@ -45,6 +45,14 @@ const (
 	SlowConsumer           = "slow-consumer"
 	KafkaTransactionTopic  = "kafka-transaction-topic"
 	KafkaTransactionEnable = "enable-transaction-canary"
+
+	// TODO: kafta-transaction-canary bits
+	// 	topic + enable,
+	//      consumer isolation level,
+	//      producer init-transaction,
+	//      producer transaction id,
+	//      consumer commit-offsets,
+	//      begin-tx, abort-tx, commit-tx flow
 )
 
 const (
@@ -107,6 +115,12 @@ var (
 		Namespace: Namespace,
 		Help:      "latency in message consumption",
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
+	TransactedNumbers = prometheus.NewCounter(prometheus.CounterOpts{
+		Name:      "transacted_messages_total",
+		Namespace: Namespace,
+		Help:      "transacted messages, transcations happen in units of 100 messages in the canary",
 	})
 
 	// - Gauges
@@ -245,6 +259,7 @@ func main() {
 	}
 
 	logger.Infof("Started message producer.")
+
 	//                        -->                    Transaction                   <--
 	// produce to kafkaTopic, consume from kafkatopic and put on kafkaTransactionTopic
 	txCallback := canarykafka.NewCallback(false, cons)
