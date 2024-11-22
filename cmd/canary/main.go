@@ -117,6 +117,13 @@ var (
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
+	TransactionLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "transaction_latency",
+		Namespace: Namespace,
+		Help:      "latency in transactional message consumption",
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
 	TransactedNumbers = prometheus.NewCounter(prometheus.CounterOpts{
 		Name:      "transacted_messages_total",
 		Namespace: Namespace,
@@ -193,6 +200,8 @@ func init() {
 		LeadTime,
 		ProduceLatency,
 		StartTimestamp,
+		TransactedNumbers,
+		TransactionLatency,
 	)
 }
 
