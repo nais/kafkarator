@@ -1,7 +1,7 @@
 #!/usr/bin/env uv run
 
 # To run this application, use:
-#   uv run broadband_invoices.py
+#   uv run acl_cleaner.py
 #
 # /// script
 # requires-python = ">=3.12"
