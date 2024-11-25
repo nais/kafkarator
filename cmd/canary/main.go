@@ -110,6 +110,13 @@ var (
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
+	ProduceTxLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "produce_tx_latency",
+		Namespace: Namespace,
+		Help:      "latency in message production",
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
 	ConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:      "consume_latency",
 		Namespace: Namespace,
@@ -117,14 +124,14 @@ var (
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
-	TransactionLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+	TransactionTxLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:      "transaction_latency",
 		Namespace: Namespace,
 		Help:      "latency in transactional message consumption",
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
-	TransactedNumbers = prometheus.NewCounter(prometheus.CounterOpts{
+	TransactedNumbers = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "transacted_messages_total",
 		Namespace: Namespace,
 		Help:      "transacted messages, transcations happen in units of 100 messages in the canary",
@@ -183,7 +190,7 @@ func init() {
 		ProduceLatency,
 		StartTimestamp,
 		TransactedNumbers,
-		TransactionLatency,
+		TransactionTxLatency,
 	)
 }
 
@@ -208,6 +215,7 @@ func main() {
 
 	signals := make(chan os.Signal, 1)
 	cons := make(chan canarykafka.Message, 32)
+	consTx := make(chan canarykafka.Message, 32)
 
 	logger := log.New()
 	logfmt, err := formatter(viper.GetString(LogFormat))
@@ -253,7 +261,7 @@ func main() {
 
 	//                        -->                    Transaction                   <--
 	// produce to kafkaTopic, consume from kafkatopic and put on kafkaTransactionTopic
-	txCallback := canarykafka.NewCallback(false, cons)
+	txCallback := canarykafka.NewCallback(false, consTx)
 	err = consumer.New(ctx, cancel, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
 		GroupID:           viper.GetString(KafkaGroupID),
@@ -310,20 +318,53 @@ func main() {
 		}
 	}
 
+	produceTx := func(ctx context.Context) {
+		if ctx.Err() != nil {
+			return
+		}
+		timer := time.Now()
+		var messages []kafka.Message
+		for i := 0; i < 100; i++ {
+			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
+		}
+		partition, offset, err := prod.ProduceTx(messages)
+		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
+		if err == nil {
+			message := canarykafka.Message{
+				Offset:    offset,
+				TimeStamp: timer,
+				Partition: partition,
+			}
+			logger.Infof("Produced message: %s", message.String())
+			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
+			TransactedNumbers.Set(float64(offset))
+		} else {
+			logger.Errorf("unable to produce canary message on Kafka: %s", err)
+			if kafka.IsErrUnauthorized(err) {
+				cancel()
+			}
+		}
+	}
+
 	logger.Infof("Ready.")
 
 	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
+	produceTxTicker := time.NewTicker(viper.GetDuration(MessageInterval) + time.Second*10)
 
 	for ctx.Err() == nil {
 		select {
 		case <-produceTicker.C:
 			certBundle.DiffAndUpdate(logger)
 			produce(ctx)
-			//			produce_tx(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
 			LastConsumedOffset.Set(float64(msg.Offset))
+		case <-produceTxTicker.C:
+			produceTx(ctx)
+		case msg := <-consTx:
+			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			TransactedNumbers.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
