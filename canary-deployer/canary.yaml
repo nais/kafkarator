@@ -27,8 +27,8 @@ spec:
       value: 1s
     - name: CANARY_KAFKA_TOPIC
       value: "{{ canary_kafka_topic }}"
-    - name: CANARY_KAFKA_TRANSACTION_TOPIC
-      value: "{{ canary_kafka_transaction_topic }}"
+    - name: CANARY_KAFKA_TX_TOPIC
+      value: "{{ canary_kafka_tx_topic }}"
     - name: CANARY_ENABLE_TRANSACTION
       value: "{{ canary_enable_transaction }}"
     - name: CANARY_KAFKA_GROUP_ID
