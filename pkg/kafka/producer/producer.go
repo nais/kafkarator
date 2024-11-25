@@ -17,6 +17,7 @@ type Producer struct {
 
 type Interface interface {
 	Produce(msg kafka.Message) (partition int32, offset int64, err error)
+	ProduceTx(msg []kafka.Message) (partition int32, offset int64, err error)
 }
 
 func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
@@ -24,9 +25,12 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
 	config.Version = sarama.V3_1_0_0
+	// V ????
+	config.Producer.Transaction.ID = "canary"
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
+	config.Producer.Idempotent = true
 	config.ClientID, _ = os.Hostname()
 	sarama.Logger = logger
 
@@ -48,4 +52,33 @@ func (p *Producer) Produce(msg kafka.Message) (int32, int64, error) {
 		Timestamp: time.Now(),
 	}
 	return p.producer.SendMessage(producerMessage)
+}
+
+func (p *Producer) Close() error {
+	return p.producer.Close()
+}
+
+func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
+	err := p.producer.BeginTxn()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var par int32
+	var off int64
+	for _, m := range msg {
+		par, off, err = p.Produce(m)
+		if err != nil {
+			err = p.producer.AbortTxn()
+			if err != nil {
+				return 0, 0, err
+			}
+		}
+	}
+
+	err = p.producer.CommitTxn()
+	if err != nil {
+		return 0, 0, err
+	}
+	return par, off, nil
 }

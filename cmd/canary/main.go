@@ -32,17 +32,27 @@ const (
 
 // Configuration options
 const (
-	KafkaBrokers         = "kafka-brokers"
-	KafkaCAPath          = "kafka-ca-path"
-	KafkaCertificatePath = "kafka-certificate-path"
-	KafkaGroupID         = "kafka-group-id"
-	KafkaKeyPath         = "kafka-key-path"
-	KafkaTopic           = "kafka-topic"
-	DeployStartTime      = "deploy-start-time"
-	LogFormat            = "log-format"
-	MessageInterval      = "message-interval"
-	MetricsAddress       = "metrics-address"
-	SlowConsumer         = "slow-consumer"
+	KafkaBrokers           = "kafka-brokers"
+	KafkaCAPath            = "kafka-ca-path"
+	KafkaCertificatePath   = "kafka-certificate-path"
+	KafkaGroupID           = "kafka-group-id"
+	KafkaKeyPath           = "kafka-key-path"
+	KafkaTopic             = "kafka-topic"
+	DeployStartTime        = "deploy-start-time"
+	LogFormat              = "log-format"
+	MessageInterval        = "message-interval"
+	MetricsAddress         = "metrics-address"
+	SlowConsumer           = "slow-consumer"
+	KafkaTransactionTopic  = "kafka-transaction-topic"
+	KafkaTransactionEnable = "enable-transaction"
+
+	// TODO: kafta-transaction-canary bits
+	// 	topic + enable,
+	//      consumer isolation level,
+	//      producer init-transaction,
+	//      producer transaction id,
+	//      consumer commit-offsets,
+	//      begin-tx, abort-tx, commit-tx flow
 )
 
 const (
@@ -100,11 +110,31 @@ var (
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
+	ProduceTxLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "produce_tx_latency",
+		Namespace: Namespace,
+		Help:      "latency in message production",
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
 	ConsumeLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:      "consume_latency",
 		Namespace: Namespace,
 		Help:      "latency in message consumption",
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
+	TransactionTxLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:      "transaction_latency",
+		Namespace: Namespace,
+		Help:      "latency in transactional message consumption",
+		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
+	})
+
+	TransactedNumbers = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "transacted_messages_total",
+		Namespace: Namespace,
+		Help:      "transacted messages, transcations happen in units of 100 messages in the canary",
 	})
 )
 
@@ -127,6 +157,9 @@ func init() {
 	hostname, _ := os.Hostname()
 	flag.StringSlice(KafkaBrokers, []string{"localhost:9092"}, "Broker addresses for Kafka support")
 	flag.String(KafkaTopic, "kafkarator-canary", "Topic where Kafkarator canary messages are produced")
+	// can we use the same topic for this??
+	flag.String(KafkaTransactionTopic, "kafkarator-transaction-canary", "Topic where Kafkarator canary messages are transcated between")
+	flag.String(KafkaTransactionEnable, "kafkarator-canary-transactions-enable", "Enable transactions canarying")
 	flag.String(KafkaGroupID, hostname, "Kafka group ID for storing consumed message positions")
 	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
 	flag.String(KafkaKeyPath, "kafka.key", "Path to Kafka client key")
@@ -156,6 +189,8 @@ func init() {
 		LeadTime,
 		ProduceLatency,
 		StartTimestamp,
+		TransactedNumbers,
+		TransactionTxLatency,
 	)
 }
 
@@ -180,6 +215,7 @@ func main() {
 
 	signals := make(chan os.Signal, 1)
 	cons := make(chan canarykafka.Message, 32)
+	consTx := make(chan canarykafka.Message, 32)
 
 	logger := log.New()
 	logfmt, err := formatter(viper.GetString(LogFormat))
@@ -222,6 +258,20 @@ func main() {
 	}
 
 	logger.Infof("Started message producer.")
+
+	//                        -->                    Transaction                   <--
+	// produce to kafkaTopic, consume from kafkatopic and put on kafkaTransactionTopic
+	txCallback := canarykafka.NewCallback(false, consTx)
+	err = consumer.New(ctx, cancel, consumer.Config{
+		Brokers:           viper.GetStringSlice(KafkaBrokers),
+		GroupID:           viper.GetString(KafkaGroupID),
+		MaxProcessingTime: time.Second * 1,
+		RetryInterval:     time.Second * 10,
+		Topic:             viper.GetString(KafkaTransactionTopic),
+		Callback:          txCallback.Callback, // May or may not need to have special here
+		Logger:            logger,
+		TlsConfig:         tlsConfig,
+	})
 
 	callback := canarykafka.NewCallback(viper.GetBool(SlowConsumer), cons)
 	err = consumer.New(ctx, cancel, consumer.Config{
@@ -268,9 +318,38 @@ func main() {
 		}
 	}
 
+	produceTx := func(ctx context.Context) {
+		if ctx.Err() != nil {
+			return
+		}
+		timer := time.Now()
+		var messages []kafka.Message
+		for i := 0; i < 100; i++ {
+			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
+		}
+		partition, offset, err := prod.ProduceTx(messages)
+		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
+		if err == nil {
+			message := canarykafka.Message{
+				Offset:    offset,
+				TimeStamp: timer,
+				Partition: partition,
+			}
+			logger.Infof("Produced message: %s", message.String())
+			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
+			TransactedNumbers.Set(float64(offset))
+		} else {
+			logger.Errorf("unable to produce canary message on Kafka: %s", err)
+			if kafka.IsErrUnauthorized(err) {
+				cancel()
+			}
+		}
+	}
+
 	logger.Infof("Ready.")
 
 	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
+	produceTxTicker := time.NewTicker(viper.GetDuration(MessageInterval) + time.Second*10)
 
 	for ctx.Err() == nil {
 		select {
@@ -281,6 +360,11 @@ func main() {
 			LastConsumedTimestamp.SetToCurrentTime()
 			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
 			LastConsumedOffset.Set(float64(msg.Offset))
+		case <-produceTxTicker.C:
+			produceTx(ctx)
+		case msg := <-consTx:
+			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			TransactedNumbers.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
