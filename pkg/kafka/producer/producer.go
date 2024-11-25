@@ -31,6 +31,7 @@ func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logg
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
 	config.Producer.Idempotent = true
+	config.Net.MaxOpenRequests = 1
 	config.ClientID, _ = os.Hostname()
 	sarama.Logger = logger
 
