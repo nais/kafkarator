@@ -81,9 +81,9 @@ async def deploy_topic(config: DeployConfig, settings: Settings):
     topics = [f"kafka-canary-{config.canary_cluster}",  f"kafka-canary-tx-{config.canary_cluster}"]
 
     logger = logging.getLogger(f"deploy-topic-{config.canary_cluster}")
-    logger.info("Deploying topics  %s and %s to %s", topic_name,  tx_topic_name, config.topic_cluster)
 
     for topic in topics:
+        logger.info("Deploying topic %s to %s", topic, config.topic_cluster)
         with tempfile.NamedTemporaryFile("w", prefix=f"topic-vars-{config.canary_cluster}-{topic}", suffix=".yaml") as vars_file:
            data = {
                "team": settings.team,
