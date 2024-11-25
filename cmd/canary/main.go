@@ -44,7 +44,7 @@ const (
 	MetricsAddress         = "metrics-address"
 	SlowConsumer           = "slow-consumer"
 	KafkaTransactionTopic  = "kafka-transaction-topic"
-	KafkaTransactionEnable = "enable-transaction-canary"
+	KafkaTransactionEnable = "enable-transaction"
 
 	// TODO: kafta-transaction-canary bits
 	// 	topic + enable,
