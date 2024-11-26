@@ -360,7 +360,7 @@ func main() {
 		case <-produceTxTicker.C:
 			produceTx(ctx)
 		case msg := <-consTx:
-			//		LastConsumedTxTimestamp.SetToCurrentTime()
+			LastConsumedTxTimestamp.SetToCurrentTime()
 			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
 			TransactedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
