@@ -329,12 +329,12 @@ func main() {
 		for i := 0; i < 5; i++ {
 			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
 		}
-		_, _, err := prodtx.ProduceTx(messages)
+		_, offset, err := prodtx.ProduceTx(messages)
 		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
 			logger.Infof("Produced transaction")
 			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
-			//	TransactedOffset.Set(float64(offset))
+			TransactedOffset.Set(float64(offset))
 		} else {
 			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
