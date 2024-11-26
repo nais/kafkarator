@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nais/kafkarator/pkg/canary/certificates"
 	canarykafka "github.com/nais/kafkarator/pkg/canary/kafka"
 	"github.com/nais/kafkarator/pkg/kafka"
@@ -251,7 +252,8 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
-	prodtx, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), "producertx", tlsConfig, logger)
+	uuidStr := uuid.NewString() // these need to be unique, in some sense
+	prodtx, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), uuidStr, tlsConfig, logger)
 	if err != nil {
 		logger.Errorf("unable to set up kafka producer: %s", err)
 		os.Exit(ExitConfig)
