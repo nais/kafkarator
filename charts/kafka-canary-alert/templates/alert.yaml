@@ -29,7 +29,7 @@ spec:
 
               Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
         - alert: AivenKafkaUnavailable
-          expr: '(time()-max(kafkarator_canary_last_consumed_tx) > 120) or absent(kafkarator_canary_last_consumed_tx)'
+          expr: '(kafkarator_canary_transacted_messages_total = 0) or absent(kafkarator_canary_transacted_messags_total)'
           for: 5m
           labels:
             severity: critical
