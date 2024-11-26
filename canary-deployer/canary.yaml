@@ -24,7 +24,7 @@ spec:
     - name: CANARY_DEPLOY_START_TIME
       value: "{{ now }}"
     - name: CANARY_MESSAGE_INTERVAL
-      value: 1s
+      value: 5s
     - name: CANARY_KAFKA_TOPIC
       value: "{{ canary_kafka_topic }}"
     - name: CANARY_KAFKA_TX_TOPIC
