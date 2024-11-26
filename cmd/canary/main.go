@@ -267,8 +267,6 @@ func main() {
 
 	logger.Infof("Started message producer.")
 
-	//                        -->                    Transaction                   <--
-	// produce to kafkaTopic, consume from kafkatopic and put on kafkaTransactionTopic
 	txCallback := canarykafka.NewCallback(false, consTx)
 	err = consumer.New(ctx, cancel, consumer.Config{
 		Brokers:           viper.GetStringSlice(KafkaBrokers),
@@ -338,16 +336,11 @@ func main() {
 		partition, offset, err := prodtx.ProduceTx(messages)
 		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
-			message := canarykafka.Message{
-				Offset:    offset,
-				TimeStamp: timer,
-				Partition: partition,
-			}
-			logger.Infof("Produced message: %s", message.String())
+			logger.Infof("Produced transaction")
 			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
 			TransactedNumbers.Set(float64(offset))
 		} else {
-			logger.Errorf("unable to produce canary message on Kafka: %s", err)
+			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
 				cancel()
 			}
