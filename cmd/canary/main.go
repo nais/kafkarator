@@ -334,7 +334,7 @@ func main() {
 		if err == nil {
 			logger.Infof("Produced transaction")
 			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
-			TransactedOffset.Set(float64(offset))
+			//	TransactedOffset.Set(float64(offset))
 		} else {
 			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
