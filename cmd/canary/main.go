@@ -362,7 +362,7 @@ func main() {
 		case msg := <-consTx:
 			LastConsumedTxTimestamp.SetToCurrentTime()
 			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
-			TransactedOffset.Set(float64(msg.Offset))
+		// 	TransactedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
