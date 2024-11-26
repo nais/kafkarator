@@ -63,7 +63,9 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
             "image": settings.image,
             "pool": config.pool,
             "now": datetime.now(timezone.utc).isoformat(),
+
             "canary_kafka_topic": f"{settings.team}.kafka-canary-{config.canary_cluster}",
+            #                        nais-verification.kafka-canary-tx-dev-gcp
             "canary_kafka_tx_topic": f"{settings.team}.kafka-canary-tx-{config.canary_cluster}",
             "groupid": config.canary_cluster,
         }

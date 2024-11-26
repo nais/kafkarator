@@ -43,7 +43,7 @@ const (
 	MessageInterval        = "message-interval"
 	MetricsAddress         = "metrics-address"
 	SlowConsumer           = "slow-consumer"
-	KafkaTransactionTopic  = "kafka-transaction-topic"
+	KafkaTransactionTopic  = "kafka-tx-topic"
 	KafkaTransactionEnable = "enable-transaction"
 
 	// TODO: kafta-transaction-canary bits
@@ -157,8 +157,7 @@ func init() {
 	hostname, _ := os.Hostname()
 	flag.StringSlice(KafkaBrokers, []string{"localhost:9092"}, "Broker addresses for Kafka support")
 	flag.String(KafkaTopic, "kafkarator-canary", "Topic where Kafkarator canary messages are produced")
-	// can we use the same topic for this??
-	flag.String(KafkaTransactionTopic, "kafkarator-transaction-canary", "Topic where Kafkarator canary messages are transcated between")
+	flag.String(KafkaTransactionTopic, "kafkarator-tx-canary", "Topic where Kafkarator canary messages are transcated between")
 	flag.String(KafkaTransactionEnable, "kafkarator-canary-transactions-enable", "Enable transactions canarying")
 	flag.String(KafkaGroupID, hostname, "Kafka group ID for storing consumed message positions")
 	flag.String(KafkaCertificatePath, "kafka.crt", "Path to Kafka client certificate")
@@ -188,6 +187,7 @@ func init() {
 		LastProducedTimestamp,
 		LeadTime,
 		ProduceLatency,
+		ProduceTxLatency,
 		StartTimestamp,
 		TransactedNumbers,
 		TransactionTxLatency,
