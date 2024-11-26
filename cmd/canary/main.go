@@ -333,7 +333,7 @@ func main() {
 		for i := 0; i < 100; i++ {
 			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
 		}
-		partition, offset, err := prodtx.ProduceTx(messages)
+		_, offset, err := prodtx.ProduceTx(messages)
 		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
 			logger.Infof("Produced transaction")
