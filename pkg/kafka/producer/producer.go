@@ -20,13 +20,13 @@ type Interface interface {
 	ProduceTx(msg []kafka.Message) (partition int32, offset int64, err error)
 }
 
-func New(brokers []string, topic string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
+func New(brokers []string, topic, producerId string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
 	config.Version = sarama.V3_1_0_0
 	// V ????
-	config.Producer.Transaction.ID = "canary"
+	config.Producer.Transaction.ID = producerId
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
@@ -60,6 +60,7 @@ func (p *Producer) Close() error {
 }
 
 func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
+	time.Sleep(time.Millisecond * 200)
 	err := p.producer.BeginTxn()
 	if err != nil {
 		return 0, 0, err

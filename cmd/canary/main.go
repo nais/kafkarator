@@ -251,7 +251,13 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
-	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), tlsConfig, logger)
+	prodtx, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), "producertx", tlsConfig, logger)
+	if err != nil {
+		logger.Errorf("unable to set up kafka producer: %s", err)
+		os.Exit(ExitConfig)
+	}
+
+	prod, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), "producer", tlsConfig, logger)
 	if err != nil {
 		logger.Errorf("unable to set up kafka producer: %s", err)
 		os.Exit(ExitConfig)
@@ -327,7 +333,7 @@ func main() {
 		for i := 0; i < 100; i++ {
 			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
 		}
-		partition, offset, err := prod.ProduceTx(messages)
+		partition, offset, err := prodtx.ProduceTx(messages)
 		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
 		if err == nil {
 			message := canarykafka.Message{
