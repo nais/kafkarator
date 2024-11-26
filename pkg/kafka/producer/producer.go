@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/google/uuid"
 	"github.com/nais/kafkarator/pkg/kafka"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,21 +23,23 @@ type Interface interface {
 	ProduceTx(msg []kafka.Message) (partition int32, offset int64, err error)
 }
 
-func New(brokers []string, topic, producerId string, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
+func New(brokers []string, topic string, txProducer bool, tlsConfig *tls.Config, logger *log.Logger) (*Producer, error) {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = tlsConfig
 	config.Version = sarama.V3_1_0_0
-	// V ????
-	config.Producer.Transaction.ID = producerId
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
-	config.Producer.Idempotent = true
-	config.Net.MaxOpenRequests = 1
 	config.ClientID, _ = os.Hostname()
 	sarama.Logger = logger
 
+	if txProducer {
+		uuidStr := uuid.NewString()
+		config.Producer.Transaction.ID = uuidStr // these need to be unique, in some sense
+		config.Producer.Idempotent = true
+		config.Net.MaxOpenRequests = 1
+	}
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
 		return nil, err
