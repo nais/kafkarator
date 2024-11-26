@@ -2,6 +2,7 @@ package producer
 
 import (
 	"crypto/tls"
+	"fmt"
 	"os"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 type Producer struct {
 	producer sarama.SyncProducer
 	topic    string
+	logger   *log.Logger
 }
 
 type Interface interface {
@@ -43,6 +45,7 @@ func New(brokers []string, topic, producerId string, tlsConfig *tls.Config, logg
 	return &Producer{
 		producer: producer,
 		topic:    topic,
+		logger:   logger,
 	}, nil
 }
 
