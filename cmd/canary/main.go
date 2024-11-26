@@ -328,7 +328,7 @@ func main() {
 		}
 		timer := time.Now()
 		var messages []kafka.Message
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 5; i++ {
 			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
 		}
 		_, offset, err := prodtx.ProduceTx(messages)
