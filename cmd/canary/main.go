@@ -45,14 +45,6 @@ const (
 	SlowConsumer           = "slow-consumer"
 	KafkaTransactionTopic  = "kafka-tx-topic"
 	KafkaTransactionEnable = "enable-transaction"
-
-	// TODO: kafta-transaction-canary bits
-	// 	topic + enable,
-	//      consumer isolation level,
-	//      producer init-transaction,
-	//      producer transaction id,
-	//      consumer commit-offsets,
-	//      begin-tx, abort-tx, commit-tx flow
 )
 
 const (
@@ -131,10 +123,15 @@ var (
 		Buckets:   prometheus.LinearBuckets(0.01, 0.01, 100),
 	})
 
-	TransactedNumbers = prometheus.NewGauge(prometheus.GaugeOpts{
+	TransactedOffset = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "transacted_messages_total",
 		Namespace: Namespace,
 		Help:      "transacted messages, transcations happen in units of 100 messages in the canary",
+	})
+	LastConsumedTxTimestamp = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "last_consumed_tx",
+		Help:      "timestamp of last consumed transaction",
 	})
 )
 
@@ -183,13 +180,14 @@ func init() {
 		DeployTimestamp,
 		LastConsumedOffset,
 		LastConsumedTimestamp,
+		LastConsumedTxTimestamp,
 		LastProducedOffset,
 		LastProducedTimestamp,
 		LeadTime,
 		ProduceLatency,
 		ProduceTxLatency,
 		StartTimestamp,
-		TransactedNumbers,
+		TransactedOffset,
 		TransactionTxLatency,
 	)
 }
@@ -336,7 +334,7 @@ func main() {
 		if err == nil {
 			logger.Infof("Produced transaction")
 			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
-			TransactedNumbers.Set(float64(offset))
+			TransactedOffset.Set(float64(offset))
 		} else {
 			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
@@ -362,8 +360,9 @@ func main() {
 		case <-produceTxTicker.C:
 			produceTx(ctx)
 		case msg := <-consTx:
+			LastConsumedTxTimestamp.SetToCurrentTime()
 			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
-			TransactedNumbers.Set(float64(msg.Offset))
+			TransactedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()

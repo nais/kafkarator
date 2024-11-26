@@ -28,6 +28,26 @@ spec:
               * Check canary logs: `kubectl logs --namespace nais-verification deploy/kafka-canary kafka-canary`
 
               Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
+        - alert: AivenKafkaUnavailable
+          expr: '(time()-max(kafkarator_canary_last_consumed_tx) > 120) or absent(kafkarator_canary_last_consumed_tx)'
+          for: 5m
+          labels:
+            severity: critical
+            feature: kafka-canary
+            cluster: "{{ .Values.cluster }}"
+            pool: "{{ .Values.pool }}"
+            tenant: "{{ .Values.tenant }}"
+            namespace: nais-system
+          annotations:
+            summary: Transactions in Aiven Kafka in {{ .Values.pool }} are unavailable for applications in {{ .Values.cluster }}
+            consequence: Transactions in Kafka are unavailable, probably for all applications
+            action: |
+              * Check that canary has valid Kafka credentials
+              * Check that Aiven Kafka in {{ .Values.pool }} is up and running
+              * Check canary logs: `kubectl logs --namespace nais-verification deploy/kafka-canary kafka-canary`
+
+              Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
+
         - alert: AivenKafkaCanaryNotDeployed
           expr: '(time() - max(kafkarator_canary_deploy_timestamp) > 3600)'
           for: 5m
