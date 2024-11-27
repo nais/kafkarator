@@ -346,7 +346,7 @@ func main() {
 	logger.Infof("Ready.")
 
 	produceTicker := time.NewTicker(viper.GetDuration(MessageInterval))
-	produceTxTicker := time.NewTicker(viper.GetDuration(MessageInterval) + time.Second*10)
+	produceTxTicker := time.NewTicker(viper.GetDuration(MessageInterval) + time.Second*2)
 
 	for ctx.Err() == nil {
 		select {
