@@ -65,7 +65,6 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
             "now": datetime.now(timezone.utc).isoformat(),
 
             "canary_kafka_topic": f"{settings.team}.kafka-canary-{config.canary_cluster}",
-            #                        nais-verification.kafka-canary-tx-dev-gcp
             "canary_kafka_tx_topic": f"{settings.team}.kafka-canary-tx-{config.canary_cluster}",
             "groupid": config.canary_cluster,
         }
@@ -79,7 +78,7 @@ async def deploy_canary(config: DeployConfig, settings: Settings):
     logger.info("Completed deploying canary to %s", config.canary_cluster)
 
 
-# TODO: ADD TX TOPIC etc
+
 async def deploy_topic(config: DeployConfig, settings: Settings):
     topics = [f"kafka-canary-{config.canary_cluster}",  f"kafka-canary-tx-{config.canary_cluster}"]
 

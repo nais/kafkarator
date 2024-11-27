@@ -270,7 +270,7 @@ func main() {
 		MaxProcessingTime: time.Second * 1,
 		RetryInterval:     time.Second * 10,
 		Topic:             viper.GetString(KafkaTransactionTopic),
-		Callback:          txCallback.Callback, // May or may not need to have special here
+		Callback:          txCallback.Callback,
 		Logger:            logger,
 		TlsConfig:         tlsConfig,
 	})
@@ -362,7 +362,6 @@ func main() {
 		case msg := <-consTx:
 			LastConsumedTxTimestamp.SetToCurrentTime()
 			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
-		// 	TransactedOffset.Set(float64(msg.Offset))
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
