@@ -5,17 +5,19 @@ metadata:
   annotations:
     kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
   name: mytopic
-  namespace: default
+  namespace: basseng
   labels:
-    team: default
+    team: basseng
 spec:
-  pool: some-pool
+  pool: dev-nais-dev
   config:
+    cleanupPolicy: delete
     retentionHours: 900
+    localRetentionHours: 100
   acl:
     - access: read
-      team: default
+      team: basseng
       application: myapplication
     - access: write
-      team: default
+      team: basseng
       application: otherapplication
