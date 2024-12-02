@@ -34,7 +34,7 @@ spec:
           Kafka pool {{ "{{ request.object.spec.pool }}" | quote }} is not supported in this cluster.
           Allowed values: [{{ $valid | join ", " }}]
 
-          Please see the documentation at https://docs.nais.io/how-to-guides/persistence/kafka/create/
+          Please see the documentation at https://docs.nais.io/persistence/kafka/how-to/create/
         deny:
           conditions:
             all:
@@ -44,4 +44,26 @@ spec:
                   {{- range $valid }}
                   - {{ . | quote }}
                   {{- end }}
+    - name: "validate-tiered-storage-not-compacted"
+      match:
+        all:
+          - resources:
+              kinds:
+                - kafka.nais.io/v1/Topic
+              operations:
+                - "CREATE"
+                - "UPDATE"
+      validate:
+        message: >-
+          Compacted topics can not use tiered storage with local retention.
+          Please remove the local retention configuration from the topic.
+
+          Please see the documentation at https://docs.nais.io/persistence/kafka/how-to/create/
+        cel:
+          expressions:
+            - expression: >-
+                object.spec.config.cleanupPolicy == 'compact' && (
+                    object.spec.config.localRetentionBytes > 0 ||
+                    object.spec.config.localRetentionHours > 0
+                )
 {{- end }}
