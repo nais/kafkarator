@@ -1,4 +1,6 @@
 title: Kafkarator
+slug: kafkarator
+uid: kafkarator
 editable: true
 tags: [generated, yaml]
 auto_refresh: 1m
@@ -9,26 +11,22 @@ timezone: default # valid values are: utc, browser, default
 # 1. Update list of tenants in first variable
 # 2. Render to JSON using https://github.com/K-Phoen/grabana v0.21.0 or newer
 #    $ grabana render --input kafkarator.yaml > kafkarator.json
-# 3. Reset slug, uid and maxDataPoints in kafkarator.json as needed (use git diff to find out where)
-# 4. Reset multi value for the datasource variable (use git diff)
-# 5. Delete existing Kafkarator dashboard in Grafana
-# 6. Import kafkarator.json to Grafana (remember to select correct folder)
-# 7. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
+# 3. Reset maxDataPoints in kafkarator.json as needed (use git diff to find out where)
+# 4. Import kafkarator.json to Grafana (remember to select correct folder)
+# 5. Verify that links in alerts etc. are still correct (should be if you remembered to set uid and slug)
 
 variables:
-  - custom:
+  - query:
       name: tenant
-      default: nav
-      values_map:
-        nav: nav
-        dev-nais: dev-nais
-        ci-nais: ci-nais
-        ssb: ssb
+      label: Tenant
+      datasource: nais-io
+      request: "label_values(cluster_info, tenant)"
   - datasource:
       name: ds
       type: prometheus
       regex: /$tenant-(?!management)/
       include_all: true
+      multiple: true
   - query:
       name: aiven_op
       label: Aiven Operation

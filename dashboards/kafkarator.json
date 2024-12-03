@@ -1,6 +1,6 @@
 {
-  "slug": "kafkarator",
   "uid": "kafkarator",
+  "slug": "kafkarator",
   "title": "Kafkarator",
   "originalTitle": "",
   "tags": [
@@ -1116,37 +1116,16 @@
     "list": [
       {
         "name": "tenant",
-        "type": "custom",
-        "datasource": null,
-        "refresh": false,
-        "options": [
-          {
-            "text": "nav",
-            "value": "nav",
-            "selected": false
-          },
-          {
-            "text": "dev-nais",
-            "value": "dev-nais",
-            "selected": false
-          },
-          {
-            "text": "ci-nais",
-            "value": "ci-nais",
-            "selected": false
-          },
-          {
-            "text": "ssb",
-            "value": "ssb",
-            "selected": false
-          }
-        ],
+        "type": "query",
+        "datasource": "nais-io",
+        "refresh": 1,
+        "options": [],
         "includeAll": false,
         "allFormat": "",
         "allValue": "",
         "multi": false,
         "multiFormat": "",
-        "query": "ci-nais,dev-nais,nav,ssb",
+        "query": "label_values(cluster_info, tenant)",
         "regex": "",
         "current": {
           "text": [
@@ -1154,7 +1133,7 @@
           ],
           "value": "nav"
         },
-        "label": "tenant",
+        "label": "Tenant",
         "hide": 0,
         "sort": 0
       },
