@@ -62,9 +62,10 @@ spec:
         cel:
           expressions:
             - expression: >-
+                (!has(object.spec.config)) ||
                 (!has(object.spec.config.cleanupPolicy) || object.spec.config.cleanupPolicy == 'delete') ||
-                  (
+                (
                     (!has(object.spec.config.localRetentionBytes) || object.spec.config.localRetentionBytes < 0) &&
                     (!has(object.spec.config.localRetentionHours) || object.spec.config.localRetentionHours < 0)
-                  )
+                )
 {{- end }}
