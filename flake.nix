@@ -34,7 +34,6 @@
             gnumake
             go
             golangci-lint-langserver
-            # go-dlv  # TODO: Add
             gopls
             python3
             python312Packages.python-lsp-server
