@@ -3,21 +3,21 @@ package topic
 import (
 	"context"
 	"fmt"
-	"k8s.io/utils/ptr"
 	"net/http"
 	"time"
 
-	"github.com/nais/kafkarator/pkg/metrics"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/aiven/aiven-go-client/v2"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
+	"github.com/nais/kafkarator/pkg/metrics"
+	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 const (
-	retentionHourDefault      = -1
-	localRetentionHourDefault = -2
+	deleteRetentionHourDefault = 0
+	retentionHourDefault       = -1
+	localRetentionHourDefault  = -2
 )
 
 type Interface interface {
@@ -102,6 +102,7 @@ func (r *Manager) create(ctx context.Context) error {
 		Replication: cfg.Replication,
 		Config: aiven.KafkaTopicConfig{
 			CleanupPolicy:          cleanupPolicy(cfg),
+			DeleteRetentionMs:      retentionMs(cfg.DeleteRetentionHours, deleteRetentionHourDefault),
 			MaxMessageBytes:        intpToInt64p(cfg.MaxMessageBytes),
 			MinInsyncReplicas:      intpToInt64p(cfg.MinimumInSyncReplicas),
 			RetentionBytes:         intpToInt64p(cfg.RetentionBytes),
@@ -196,6 +197,7 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config.Replication != nil && topic.Replication != *config.Replication {
 		return true
 	}
+
 	if config.Partitions != nil && len(topic.Partitions) != *config.Partitions {
 		return true
 	}
@@ -203,21 +205,31 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if config.RetentionHours != nil && topic.Config.RetentionMs.Value != *retentionMs(config.RetentionHours, retentionHourDefault) {
 		return true
 	}
+
 	if intPToValueChanged(config.RetentionBytes, topic.Config.RetentionBytes) {
 		return true
 	}
+
+	if config.DeleteRetentionHours != nil && topic.Config.DeleteRetentionMs.Value != *retentionMs(config.DeleteRetentionHours, deleteRetentionHourDefault) {
+		return true
+	}
+
 	if config.LocalRetentionHours != nil && topic.Config.LocalRetentionMs.Value != *retentionMs(config.LocalRetentionHours, localRetentionHourDefault) {
 		return true
 	}
+
 	if intPToValueChanged(config.LocalRetentionBytes, topic.Config.LocalRetentionBytes) {
 		return true
 	}
+
 	if intPToValueChanged(config.MinimumInSyncReplicas, topic.Config.MinInsyncReplicas) {
 		return true
 	}
+
 	if config.SegmentHours != nil && topic.Config.SegmentMs.Value != *segmentMs(config) {
 		return true
 	}
+
 	if intPToValueChanged(config.MaxMessageBytes, topic.Config.MaxMessageBytes) {
 		return true
 	}
@@ -225,9 +237,11 @@ func topicConfigChanged(topic *aiven.KafkaTopic, config *kafka_nais_io_v1.Config
 	if intPToValueChanged(config.MinCompactionLagMs, topic.Config.MinCompactionLagMs) {
 		return true
 	}
+
 	if intPToValueChanged(config.MaxCompactionLagMs, topic.Config.MaxCompactionLagMs) {
 		return true
 	}
+
 	if config.MinCleanableDirtyRatioPercent != nil {
 		ratio, err := percentToRatio(config.MinCleanableDirtyRatioPercent)
 		if err != nil || topic.Config.MinCleanableDirtyRatio.Value != *ratio {
