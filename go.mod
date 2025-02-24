@@ -7,7 +7,7 @@ require (
 	github.com/aiven/aiven-go-client/v2 v2.34.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/nais/liberator v0.0.0-20250210140717-70bb7da67963
 	github.com/prometheus/client_golang v1.21.0
