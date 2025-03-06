@@ -1,6 +1,6 @@
 VERSION 0.8
 
-FROM gcr.io/distroless/static-debian11
+FROM busybox
 
 ARG --global REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
 
@@ -41,7 +41,7 @@ build:
     SAVE IMAGE --cache-hint
 
 docker-kafkarator:
-    FROM gcr.io/distroless/static-debian11
+    FROM cgr.dev/chainguard/static:latest
     WORKDIR /
     COPY +build/kafkarator /
     CMD ["/kafkarator"]
@@ -54,7 +54,7 @@ docker-kafkarator:
     SAVE IMAGE --push ${kafkarator_image}:${VERSION} ${kafkarator_image}:latest
 
 docker-canary:
-    FROM gcr.io/distroless/static-debian11
+    FROM cgr.dev/chainguard/static:latest
     WORKDIR /
     COPY +build/canary /
     CMD ["/canary"]
