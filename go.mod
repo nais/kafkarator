@@ -1,6 +1,8 @@
 module github.com/nais/kafkarator
 
-go 1.23.6
+go 1.24
+
+toolchain go1.24.1
 
 require (
 	github.com/IBM/sarama v1.45.1
