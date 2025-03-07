@@ -23,7 +23,7 @@ values:
         [
           {{ $tenant_name := .Tenant.Name }}
           {{ range .Envs }}
-          {{ if or (ne $tenant_name "nav") (and (ne .name "ci-fss") (ne .name "ci-gcp") (ne .name "ci") (ne .name "dev") (ne .name "prod")) }}
+          {{ if or (ne $tenant_name "nav") (and (ne .name "ci-fss") (ne .name "prod-gcp")) }}
           {
             "kind": "{{ .kind }}",
             "cluster_name": "{{ .name }}",
