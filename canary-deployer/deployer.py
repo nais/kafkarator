@@ -104,7 +104,7 @@ async def deploy_topic(config: DeployConfig, settings: Settings):
 def generate_topic_cluster_lookup_for_nav(data):
     result = {}
     for entry in data:
-        if entry["kind"] == "legacy" and entry.get("aiven_project"):
+        if entry["kind"] == "tenant" and entry.get("aiven_project"):
             result[entry["aiven_project"]] = entry["cluster_name"]
     return result
 
