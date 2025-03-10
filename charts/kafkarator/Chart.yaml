@@ -2,7 +2,7 @@ apiVersion: v2
 name: kafkarator
 description: Manage Kafka topics for Aiven Kafka
 sources:
-  - https://github.com/nais/kafkarator/tree/main/charts/kafkarator
+  - https://github.com/nais/kafkarator/tree/master/charts/kafkarator
 
 # A chart can be either an 'application' or a 'library' chart.
 #
