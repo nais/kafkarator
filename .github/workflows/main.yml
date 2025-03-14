@@ -97,7 +97,7 @@ jobs:
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
       - name: Create SBOM
         if: github.ref == 'refs/heads/master'
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # ratchet:aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # ratchet:aquasecurity/trivy-action@0.30.0
         with:
           scan-type: 'image'
           format: 'cyclonedx'
