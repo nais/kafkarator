@@ -9,6 +9,9 @@ import requests
 from rich import print, get_console
 from rich.progress import track
 
+TEAM_NAME_MAX_LENGTH = 20
+TEAM_NAME_PREFIX = "team"
+
 OPERATOR_PATTERNS = (
     re.compile(r"[^_]+_[^_]+_[^_]+_.+"),
     re.compile(r".*\..*"),
@@ -68,6 +71,7 @@ class AivenKafka(object):
         return [t["topic_name"] for t in data["topics"]]
 
     def get_service(self, team=None):
+        team = self.clean_team_name(team)
         with get_console().status("Getting service"):
             resp = self.session.get(self.base_url)
         resp.raise_for_status()
@@ -111,6 +115,18 @@ class AivenKafka(object):
             else:
                 print(f"Ignoring {u['username']}, since it did not match any pattern")
 
+    @staticmethod
+    def clean_team_name(team):
+        if "*" in team and len(team) <= TEAM_NAME_MAX_LENGTH:
+            return team
+        if team.startswith(TEAM_NAME_PREFIX) and team != TEAM_NAME_PREFIX:
+            team = team[len(TEAM_NAME_PREFIX):]
+        team = team.lstrip("-")
+        if len(team) > TEAM_NAME_MAX_LENGTH:
+            team = team[:TEAM_NAME_MAX_LENGTH]
+        team = team.rstrip("-")
+        return team
+
 
 @dataclass(frozen=True)
 class Secret:
@@ -121,13 +137,15 @@ class Secret:
     data: Optional[dict] = field(default_factory=dict, repr=False, compare=False)
 
 
-def get_secrets_in(context, team=None, project=None):
+def get_secrets_in(context, team=None, project=None, selector=None):
+    selectors = ["type=aivenator.aiven.nais.io"]
+    if selector:
+        selectors.append(selector)
     cmd = [
         "kubectl",
         "get", "secret",
-        "--context", context,
         "--output", "json",
-        "--selector", "type=aivenator.aiven.nais.io"
+        "--selector", ",".join(selectors),
     ]
     if team:
         cmd.extend(("--namespace", team))
