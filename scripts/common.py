@@ -144,6 +144,7 @@ def get_secrets_in(context, team=None, project=None, selector=None):
     cmd = [
         "kubectl",
         "get", "secret",
+        "--context", context,
         "--output", "json",
         "--selector", ",".join(selectors),
     ]
