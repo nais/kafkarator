@@ -1,4 +1,4 @@
-#!/usr/bin/env uv run
+#!/usr/bin/env -S uv run
 
 # To run this application, use:
 #   uv run user_cleaner.py
