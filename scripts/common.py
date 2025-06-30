@@ -117,6 +117,8 @@ class AivenKafka(object):
 
     @staticmethod
     def clean_team_name(team):
+        if not team:
+            return team
         if "*" in team and len(team) <= TEAM_NAME_MAX_LENGTH:
             return team
         if team.startswith(TEAM_NAME_PREFIX) and team != TEAM_NAME_PREFIX:
