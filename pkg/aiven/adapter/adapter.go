@@ -18,7 +18,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		return nil, err
 	}
 
-	acls := make([]*aiven.KafkaACL, len(out.Acl))
+	acls := make([]*aiven.KafkaACL, 0, len(out.Acl))
 	for _, aclOut := range out.Acl {
 		acls = append(acls, makeKafkaACL(&aclOut))
 	}
