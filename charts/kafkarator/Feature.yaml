@@ -10,7 +10,7 @@ values:
     description: Use generated client for ACLs
     displayName: "Feature: generated client"
     config:
-      type: boolean
+      type: bool
       default: false
   aiven.projects:
     description: Aiven projects (space separated) with Kafka enabled for this instance of kafkarator
