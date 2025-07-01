@@ -7,10 +7,12 @@ toolchain go1.24.1
 require (
 	github.com/IBM/sarama v1.45.2
 	github.com/aiven/aiven-go-client/v2 v2.34.0
+	github.com/aiven/go-client-codegen v0.113.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nais/liberator v0.0.0-20250210140717-70bb7da67963
 	github.com/prometheus/client_golang v1.22.0
 	github.com/sirupsen/logrus v1.9.3
@@ -82,7 +84,7 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rs/zerolog v1.33.0 // indirect
+	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect

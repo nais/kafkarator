@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/adapter"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/logrus2logr"
 	"k8s.io/utils/ptr"
@@ -15,6 +17,7 @@ import (
 	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
+	generated_client "github.com/aiven/go-client-codegen"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
@@ -115,6 +118,12 @@ func main() {
 		os.Exit(ExitConfig)
 	}
 
+	featureFlags, err := GetFeatureFlags()
+	if err != nil {
+		logger.Error(err)
+		os.Exit(ExitConfig)
+	}
+
 	logger.SetFormatter(logfmt)
 
 	logger.Infof("--- Current configuration ---")
@@ -123,6 +132,10 @@ func main() {
 	}) {
 		logger.Info(cfg)
 	}
+
+	logger.Infof("--- Feature flags ---")
+	featureFlags.Log(logger)
+
 	logger.Infof("--- End configuration ---")
 
 	logrSink := (&logrus2logr.Logrus2Logr{Logger: logger}).WithName("controller-runtime")
@@ -150,7 +163,7 @@ func main() {
 	terminator, cancel := context.WithCancel(context.Background())
 	logger.Info("Kafkarator running")
 
-	go startReconcilers(quit, logger, mgr)
+	go startReconcilers(quit, logger, featureFlags, mgr)
 
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 
@@ -177,18 +190,32 @@ func main() {
 	quit <- fmt.Errorf("manager has stopped")
 }
 
-func startReconcilers(quit QuitChannel, logger *log.Logger, mgr manager.Manager) {
+func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *FeatureFlags, mgr manager.Manager) {
 	aivenClient, err := aiven.NewTokenClient(viper.GetString(AivenToken), "")
 	if err != nil {
 		quit <- fmt.Errorf("unable to set up aiven client: %s", err)
 		return
 	}
 
+	var aclClient acl.Interface
+	if featureFlags.GeneratedClient {
+		generatedClient, err := generated_client.NewClient(generated_client.TokenOpt(viper.GetString(AivenToken)))
+		if err != nil {
+			quit <- fmt.Errorf("unable to set up aiven client: %s", err)
+			return
+		}
+		aclClient = &adapter.AclClient{
+			Client: generatedClient,
+		}
+	} else {
+		aclClient = aivenClient.KafkaACLs
+	}
+
 	nameResolver := service.NewCachedNameResolver(aivenClient.Services)
 
 	topicReconciler := &controllers.TopicReconciler{
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:         aivenClient.KafkaACLs,
+			ACLs:         aclClient,
 			Topics:       aivenClient.KafkaTopics,
 			NameResolver: nameResolver,
 		},

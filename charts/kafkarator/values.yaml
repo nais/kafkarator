@@ -18,6 +18,9 @@ caBundle: false
 
 extraEnv: {}
 
+featureFlags:
+  generated_client: false
+
 aiven:
   projects: # Space separated list of Aiven projects with Kafka clusters available for this kafkarator instance
   token: "" # API token for Aiven with access to above mentioned projects

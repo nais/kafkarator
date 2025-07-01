@@ -48,6 +48,10 @@ spec:
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
+          {{- range $key, $value := .Values.featureFlags }}
+          - name: FEATURE_{{ $key | upper }}
+            value: {{ $value | quote }}
+          {{- end }}
           envFrom:
             - secretRef:
                 name: {{ include "kafkarator.fullname" . }}

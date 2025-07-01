@@ -6,6 +6,12 @@ environmentKinds:
   - tenant
   - legacy
 values:
+  featureFlags.generated_client:
+    description: Use generated client for ACLs
+    displayName: "Feature: generated client"
+    config:
+      type: boolean
+      default: false
   aiven.projects:
     description: Aiven projects (space separated) with Kafka enabled for this instance of kafkarator
     computed:
