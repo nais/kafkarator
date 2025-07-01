@@ -11,7 +11,6 @@ values:
     displayName: "Feature: generated client"
     config:
       type: bool
-      default: false
   aiven.projects:
     description: Aiven projects (space separated) with Kafka enabled for this instance of kafkarator
     computed:
