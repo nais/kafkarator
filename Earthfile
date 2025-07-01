@@ -33,8 +33,8 @@ build:
     COPY --dir +kubebuilder/ /usr/local/kubebuilder/
     COPY . /workspace
     RUN echo ${GOARCH} && make test
-    RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/main.go
-    RUN go build -installsuffix cgo -o canary cmd/canary/main.go
+    RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/*.go
+    RUN go build -installsuffix cgo -o canary cmd/canary/*.go
 
     SAVE ARTIFACT kafkarator
     SAVE ARTIFACT canary
