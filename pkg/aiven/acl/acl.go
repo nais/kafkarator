@@ -3,15 +3,14 @@ package acl
 import (
 	"context"
 	"fmt"
-	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 )
 
 type Interface interface {
-	List(ctx context.Context, project, serviceName string) ([]*aiven.KafkaACL, error)
-	Create(ctx context.Context, project, service string, req aiven.CreateKafkaACLRequest) (*aiven.KafkaACL, error)
+	List(ctx context.Context, project, serviceName string) ([]*Acl, error)
+	Create(ctx context.Context, project, service string, req CreateKafkaACLRequest) (*Acl, error)
 	Delete(ctx context.Context, project, service, aclID string) error
 }
 
@@ -61,7 +60,7 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 }
 
 func (r *Manager) getExistingAcls(ctx context.Context) ([]Acl, error) {
-	var kafkaAcls []*aiven.KafkaACL
+	var kafkaAcls []*Acl
 	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
 		var err error
 		kafkaAcls, err = r.AivenACLs.List(ctx, r.Project, r.Service)
@@ -91,7 +90,7 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 
 func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 	for _, acl := range toAdd {
-		req := aiven.CreateKafkaACLRequest{
+		req := CreateKafkaACLRequest{
 			Permission: acl.Permission,
 			Topic:      acl.Topic,
 			Username:   acl.Username,
@@ -166,11 +165,11 @@ func DeleteACLs(existingAcls, wantedAcls Acls) []Acl {
 }
 
 // filter out ACLs not matching the topic name
-func topicACLs(acls []*aiven.KafkaACL, topic string) []Acl {
+func topicACLs(acls []*Acl, topic string) []Acl {
 	result := make([]Acl, 0, len(acls))
 	for _, acl := range acls {
 		if acl.Topic == topic {
-			result = append(result, FromKafkaACL(acl))
+			result = append(result, *acl)
 		}
 	}
 	return result

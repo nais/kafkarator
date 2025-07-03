@@ -51,3 +51,9 @@ func (a Acl) String() string {
 	return fmt.Sprintf("Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s'}",
 		a.Username, a.Permission, a.Topic, a.ID)
 }
+
+type CreateKafkaACLRequest struct {
+	Permission string `json:"permission"`
+	Topic      string `json:"topic"`
+	Username   string `json:"username"`
+}

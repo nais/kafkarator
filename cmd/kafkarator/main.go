@@ -236,7 +236,7 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *Featur
 	streamReconciler := &controllers.StreamReconciler{
 		Client: mgr.GetClient(),
 		Aiven: kafkarator_aiven.Interfaces{
-			ACLs:         aivenClient.KafkaACLs,
+			ACLs:         aclClient,
 			Topics:       aivenClient.KafkaTopics,
 			NameResolver: nameResolver,
 		},

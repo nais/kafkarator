@@ -52,7 +52,7 @@ type aivenSpec struct {
 
 type aivenCreated struct {
 	Topics []aiven.CreateKafkaTopicRequest
-	Acls   []aiven.CreateKafkaACLRequest
+	Acls   []acl.CreateKafkaACLRequest
 }
 
 type aivenUpdated struct {
@@ -70,7 +70,7 @@ type aivenMissing struct {
 
 type aivenData struct {
 	Topics []*aiven.KafkaTopic
-	Acls   []*aiven.KafkaACL
+	Acls   []*acl.Acl
 }
 
 type testCaseConfig struct {
@@ -142,7 +142,7 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 			aclMock.
 				On("Create", ctx, project, svc, a).
 				Return(
-					&aiven.KafkaACL{
+					&acl.Acl{
 						ID:         wellKnownID,
 						Permission: a.Permission,
 						Topic:      a.Topic,

@@ -2,7 +2,6 @@ package acl_test
 
 import (
 	"context"
-	"github.com/aiven/aiven-go-client/v2"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
@@ -31,7 +30,7 @@ type ACLFilterTestSuite struct {
 	shouldAdd    []acl.Acl
 	shouldRemove []acl.Acl
 
-	kafkaAcls []*aiven.KafkaACL
+	kafkaAcls []*acl.Acl
 	topicAcls []kafka_nais_io_v1.TopicACL
 }
 
@@ -127,7 +126,7 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 		},
 	}
 
-	suite.kafkaAcls = []*aiven.KafkaACL{
+	suite.kafkaAcls = []*acl.Acl{
 		{ // Delete because of username
 			ID:         "abc",
 			Permission: "read",
