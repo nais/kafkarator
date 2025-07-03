@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/adapter"
+	"github.com/nais/kafkarator/pkg/aiven/adapter/aivengoclient"
+	"github.com/nais/kafkarator/pkg/aiven/adapter/goclientcodegen"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/logrus2logr"
 	"k8s.io/utils/ptr"
@@ -204,11 +205,13 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *Featur
 			quit <- fmt.Errorf("unable to set up aiven client: %s", err)
 			return
 		}
-		aclClient = &adapter.AclClient{
+		aclClient = &goclientcodegen.AclClient{
 			Client: generatedClient,
 		}
 	} else {
-		aclClient = aivenClient.KafkaACLs
+		aclClient = &aivengoclient.AclClient{
+			KafkaACLHandler: aivenClient.KafkaACLs,
+		}
 	}
 
 	nameResolver := service.NewCachedNameResolver(aivenClient.Services)
