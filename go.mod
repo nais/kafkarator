@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/IBM/sarama v1.45.2
 	github.com/aiven/aiven-go-client/v2 v2.34.0
-	github.com/aiven/go-client-codegen v0.113.3
+	github.com/aiven/go-client-codegen v0.113.4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
