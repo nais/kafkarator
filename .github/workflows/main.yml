@@ -131,7 +131,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
-      - uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # ratchet:azure/setup-helm@v3
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v3
         name: 'Setup Helm'
         with:
           version: '3.8.0'
