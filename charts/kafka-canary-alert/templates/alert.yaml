@@ -28,7 +28,7 @@ spec:
               * Check canary logs: `kubectl logs --namespace nais-verification deploy/kafka-canary kafka-canary`
 
               Instrumentation: https://monitoring.nais.io/d/kafka-canary/kafka-canary?orgId=1&refresh=1m&var-ds=All&var-tenant={{ .Values.tenant }}
-        - alert: AivenKafkaUnavailable
+        - alert: AivenKafkaTransactionsUnavailable
           expr: '(kafkarator_canary_transacted_messages_total == 0) or absent(kafkarator_canary_transacted_messages_total)'
           for: 5m
           labels:
