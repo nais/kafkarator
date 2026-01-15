@@ -4,8 +4,8 @@ github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/aiven/aiven-go-client/v2 v2.36.0 h1:yhJe0mNF5Bqi8wEXbNx/k5s35B4sftURkxVHboxsT3Q=
 github.com/aiven/aiven-go-client/v2 v2.36.0/go.mod h1:tQh+7sk0at5xy6lSnb23OBkwMDnaTMg7ilEVZ6ZdDYY=
-github.com/aiven/go-client-codegen v0.129.0 h1:CPEP6N+KG27D7usixb/cY3vMmXKK+16gIgKHUl7TyHI=
-github.com/aiven/go-client-codegen v0.129.0/go.mod h1:BQ95aO4sb/RboX81pu0d5JN7MwVlLDN3lrV7YDVWkTI=
+github.com/aiven/go-client-codegen v0.144.0 h1:Cye5doUbu9gCLPWdy/pdJIuLLcZvOBoSWAGvTcWc2JY=
+github.com/aiven/go-client-codegen v0.144.0/go.mod h1:+6eIsNIBB4KHMBTzy7maVAyoIZUyscTsL8ssHxrZZrU=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
