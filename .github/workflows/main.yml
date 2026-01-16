@@ -63,7 +63,7 @@ jobs:
       - name: Verify runner image
         run: cosign verify --certificate-identity keyless@distroless.iam.gserviceaccount.com --certificate-oidc-issuer https://accounts.google.com gcr.io/distroless/static-debian11
       - id: "auth"
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5" # ratchet:google-github-actions/auth@v2.1.12
         with:
@@ -71,7 +71,7 @@ jobs:
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
           token_format: "access_token"
       - name: Login to Google Artifact Registry
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # ratchet:docker/login-action@v2
         with:
           registry: ${{ env.GOOGLE_REGISTRY }}
@@ -83,21 +83,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and possibly push ${{ matrix.target }}
         env:
-          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
+          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/native_kafka_acl' }}"
         run: |
           earthly +docker-${{ matrix.target }} --VERSION=${VERSION}  --REGISTRY=${IMAGE_REGISTRY}
       - name: Retrieve image digest
         id: imgdigest
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |
           export IMAGE=${{ env.IMAGE_REGISTRY }}/${{ matrix.target }}:${VERSION}
           docker pull ${IMAGE}
           echo "digest=$(docker inspect ${IMAGE} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
       - name: Create SBOM
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # ratchet:aquasecurity/trivy-action@0.33.1
         with:
           scan-type: 'image'
@@ -105,7 +105,7 @@ jobs:
           output: 'cyclone.sbom.json'
           image-ref: ${{ steps.imgdigest.outputs.digest }}
       - name: Attest image
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: cosign attest --yes --predicate cyclone.sbom.json --type cyclonedx ${{ steps.imgdigest.outputs.digest }}
 
   chart:
