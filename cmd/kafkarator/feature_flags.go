@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 type FeatureFlags struct {
 	GeneratedClient bool `split_words:"true"`
+	NativeKafkaAcl  bool `split_words:"true"`
 }
 
 func GetFeatureFlags() (*FeatureFlags, error) {

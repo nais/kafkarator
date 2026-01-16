@@ -20,6 +20,7 @@ extraEnv: {}
 
 featureFlags:
   generated_client: false
+  native_kafka_acl: false
 
 aiven:
   projects: # Space separated list of Aiven projects with Kafka clusters available for this kafkarator instance
