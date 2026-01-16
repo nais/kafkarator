@@ -39,12 +39,12 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		ResourceName:   req.Topic,
 		ResourceType:   kafka.ResourceTypeTopic,
 	}
-	log.Debug("Creating Kafka NativeAclAddIn  %v", in)
+	log.Debug("Creating Kafka NativeAclAddIn ", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Creating Kafka NativeAclAddOut  %v", out)
+	log.Debug("Creating Kafka NativeAclAddOut ", out)
 	return &acl.Acl{
 		ID:         out.Id,
 		Permission: MapKafkaNativePermissionToAivenPermission(string(out.Operation)),
