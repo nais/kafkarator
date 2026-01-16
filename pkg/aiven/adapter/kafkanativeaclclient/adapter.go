@@ -7,6 +7,7 @@ import (
 	nativekafkaclient "github.com/aiven/go-client-codegen"
 	"github.com/aiven/go-client-codegen/handler/kafka"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	log "github.com/sirupsen/logrus"
 )
 
 type AclClient struct {
@@ -38,13 +39,12 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		ResourceName:   req.Topic,
 		ResourceType:   kafka.ResourceTypeTopic,
 	}
+	log.Debug("Creating Kafka NativeAclAddIn  %v", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
 		return nil, err
 	}
-
-	MapKafkaNativePermissionToAivenPermission(string(out.Operation))
-	// Construct *acl.Acl from the out object fields directly
+	log.Debug("Creating Kafka NativeAclAddOut  %v", out)
 	return &acl.Acl{
 		ID:         out.Id,
 		Permission: MapKafkaNativePermissionToAivenPermission(string(out.Operation)),
@@ -74,32 +74,32 @@ func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
 	}
 }
 
-// MapPermissionToKafkaNativePermission maps custom permission strings to OperationType and PermissionType
+// MapPermissionToKafkaNativePermission maps custom permission strings to Aiven API operation/permission_type (capitalized operation, uppercase permType)
 func MapPermissionToKafkaNativePermission(permission string) (operation, permType string) {
 	switch permission {
 	case "write":
-		return "WRITE", "ALLOW"
+		return "Write", "ALLOW"
 	case "read":
-		return "READ", "ALLOW"
+		return "Read", "ALLOW"
 	case "admin":
-		return "ALL", "ALLOW"
+		return "All", "ALLOW"
 	case "readwrite":
-		return "ALTER", "ALLOW"
+		return "Alter", "ALLOW"
 	default:
-		return "READ", "ALLOW" // fallback
+		return "Read", "ALLOW" // fallback
 	}
 }
 
-// MapKafkaNativePermissionToAivenPermission maps Kafka-native OperationType to custom Aiven permission string
+// MapKafkaNativePermissionToAivenPermission maps Aiven API operation (capitalized) to custom permission string
 func MapKafkaNativePermissionToAivenPermission(operation string) string {
 	switch operation {
-	case "WRITE":
+	case "Write":
 		return "write"
-	case "READ":
+	case "Read":
 		return "read"
-	case "ALL":
+	case "All":
 		return "admin"
-	case "ALTER":
+	case "Alter":
 		return "readwrite"
 	default:
 		return "read" // fallback

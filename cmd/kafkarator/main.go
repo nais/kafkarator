@@ -219,6 +219,7 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *Featur
 			return
 		}
 		if featureFlags.NativeKafkaAcl {
+			logger.Debug("Using native Kafka ACLs")
 			aclClient = &kafkanativeaclclient.AclClient{
 				Client: generatedClient,
 			}
