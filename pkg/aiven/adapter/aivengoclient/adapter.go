@@ -2,6 +2,7 @@ package aivengoclient
 
 import (
 	"context"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"k8s.io/utils/ptr"
@@ -24,7 +25,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) (*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
 	in := aiven.CreateKafkaACLRequest{
 		Permission: req.Permission,
 		Topic:      req.Topic,
@@ -35,7 +36,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		return nil, err
 	}
 
-	return ptr.To(acl.FromKafkaACL(out)), nil
+	return []*acl.Acl{ptr.To(acl.FromKafkaACL(out))}, nil
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {

@@ -3,6 +3,7 @@ package acl
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
@@ -10,7 +11,7 @@ import (
 
 type Interface interface {
 	List(ctx context.Context, project, serviceName string) ([]*Acl, error)
-	Create(ctx context.Context, project, service string, req CreateKafkaACLRequest) (*Acl, error)
+	Create(ctx context.Context, project, service string, req CreateKafkaACLRequest) ([]*Acl, error)
 	Delete(ctx context.Context, project, service, aclID string) error
 }
 

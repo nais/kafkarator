@@ -10,8 +10,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	NATIVE_ACL_ALLOW = "ALLOW"
+
+	NATIVE_ACL_READ  = "Read"
+	NATIVE_ACL_WRITE = "Write"
+	NATIVE_ACL_ALL   = "All"
+)
+
 type AclClient struct {
 	nativekafkaclient.Client
+}
+
+type nativeAcl struct {
+	Operation      kafka.OperationType
+	PermissionType kafka.PermissionType
 }
 
 func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*acl.Acl, error) {
@@ -27,30 +40,41 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) (*acl.Acl, error) {
-	operation, permType := MapPermissionToKafkaNativePermission(req.Permission)
+func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
 	host := "*"
-	in := &kafka.ServiceKafkaNativeAclAddIn{
-		Host:           &host,
-		Operation:      kafka.OperationType(operation),
-		PatternType:    kafka.PatternTypeLiteral,
-		PermissionType: kafka.ServiceKafkaNativeAclPermissionType(permType),
-		Principal:      "User:" + req.Username,
-		ResourceName:   req.Topic,
-		ResourceType:   kafka.ResourceTypeTopic,
+
+	kafkaNativeAcls := MapPermissionToKafkaNativePermission(req.Permission)
+	aivenAcls := make([]kafka.ServiceKafkaNativeAclAddOut, 0, len(kafkaNativeAcls))
+	for _, nativeAcl := range kafkaNativeAcls {
+		in := &kafka.ServiceKafkaNativeAclAddIn{
+			Host:           &host,
+			Operation:      kafka.OperationType(nativeAcl.Operation),
+			PatternType:    kafka.PatternTypeLiteral,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionType(nativeAcl.PermissionType),
+			Principal:      "User:" + req.Username,
+			ResourceName:   req.Topic,
+			ResourceType:   kafka.ResourceTypeTopic,
+		}
+		log.Debug("Creating Kafka NativeAclAddIn ", in)
+		out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
+		if err != nil {
+			return nil, err
+		}
+		log.Debug("Creating Kafka NativeAclAddOut ", out)
+		aivenAcls = append(aivenAcls, *out)
 	}
-	log.Debug("Creating Kafka NativeAclAddIn ", in)
-	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
-	if err != nil {
-		return nil, err
+
+	kafkaratorAcls := make([]*acl.Acl, 0, len(aivenAcls))
+	for _, nativeAcl := range aivenAcls {
+		aivenAcl := &acl.Acl{
+			ID:         nativeAcl.Id,
+			Permission: MapKafkaNativePermissionToAivenPermission(string(nativeAcl.Operation)),
+			Topic:      nativeAcl.ResourceName,
+			Username:   strings.TrimPrefix(nativeAcl.Principal, "User:"),
+		}
+		kafkaratorAcls = append(kafkaratorAcls, aivenAcl)
 	}
-	log.Debug("Creating Kafka NativeAclAddOut ", out)
-	return &acl.Acl{
-		ID:         out.Id,
-		Permission: MapKafkaNativePermissionToAivenPermission(string(out.Operation)),
-		Topic:      out.ResourceName,
-		Username:   strings.TrimPrefix(out.Principal, "User:"),
-	}, nil
+	return kafkaratorAcls, nil
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
@@ -74,32 +98,50 @@ func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
 }
 
 // MapPermissionToKafkaNativePermission maps custom permission strings to Aiven API operation/permission_type (capitalized operation, uppercase permType)
-func MapPermissionToKafkaNativePermission(permission string) (operation, permType string) {
+func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 	switch permission {
 	case "write":
-		return "Write", "ALLOW"
+		return []nativeAcl{{
+			Operation:      NATIVE_ACL_WRITE,
+			PermissionType: NATIVE_ACL_ALLOW,
+		}}
 	case "read":
-		return "Read", "ALLOW"
+		return []nativeAcl{{
+			Operation:      NATIVE_ACL_READ,
+			PermissionType: NATIVE_ACL_ALLOW,
+		}}
 	case "admin":
-		return "All", "ALLOW"
+		return []nativeAcl{{
+			Operation:      NATIVE_ACL_ALL,
+			PermissionType: NATIVE_ACL_ALLOW,
+		}}
 	case "readwrite":
-		return "Alter", "ALLOW"
+		return []nativeAcl{
+			{
+				Operation:      NATIVE_ACL_READ,
+				PermissionType: NATIVE_ACL_ALLOW,
+			},
+			{
+				Operation:      NATIVE_ACL_WRITE,
+				PermissionType: NATIVE_ACL_ALLOW,
+			},
+		}
 	default:
-		return "Read", "ALLOW" // fallback
+		return []nativeAcl{} // fallback
 	}
 }
 
 // MapKafkaNativePermissionToAivenPermission maps Aiven API operation (capitalized) to custom permission string
 func MapKafkaNativePermissionToAivenPermission(operation string) string {
 	switch operation {
-	case "Write":
+	case NATIVE_ACL_WRITE:
 		return "write"
-	case "Read":
+	case NATIVE_ACL_READ:
 		return "read"
-	case "All":
+	case NATIVE_ACL_ALL:
 		return "admin"
-	case "Alter":
-		return "readwrite"
+	// case "Alter":	// TODO
+	// 	return "readwrite"
 	default:
 		return "read" // fallback
 	}
