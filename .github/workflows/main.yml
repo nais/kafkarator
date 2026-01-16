@@ -39,6 +39,7 @@ jobs:
   build:
     name: Build and push
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/native_kafka_acl'
     permissions:
       contents: read
       id-token: write
