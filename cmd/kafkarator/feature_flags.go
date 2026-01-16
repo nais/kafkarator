@@ -10,6 +10,7 @@ import (
 
 type FeatureFlags struct {
 	GeneratedClient bool `split_words:"true"`
+	NativeKafkaAcl  bool `split_words:"true"`
 }
 
 func GetFeatureFlags() (*FeatureFlags, error) {

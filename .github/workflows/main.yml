@@ -68,6 +68,7 @@ jobs:
   build:
     name: Build and push
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/native_kafka_acl'
     permissions:
       contents: read
       id-token: write
@@ -90,7 +91,7 @@ jobs:
       - name: Verify runner image
         run: cosign verify --certificate-identity keyless@distroless.iam.gserviceaccount.com --certificate-oidc-issuer https://accounts.google.com gcr.io/distroless/static-debian11
       - id: "auth"
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         name: "Authenticate to Google Cloud"
         uses: "google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093" # ratchet:google-github-actions/auth@v3
         with:
@@ -98,7 +99,7 @@ jobs:
           service_account: "gh-kafkarator@nais-io.iam.gserviceaccount.com"
           token_format: "access_token"
       - name: Login to Google Artifact Registry
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # ratchet:docker/login-action@v3
         with:
           registry: ${{ env.GOOGLE_REGISTRY }}
@@ -110,21 +111,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and possibly push ${{ matrix.target }}
         env:
-          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/master' }}"
+          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/native_kafka_acl' }}"
         run: |
           earthly +docker-${{ matrix.target }} --VERSION=${VERSION}  --REGISTRY=${IMAGE_REGISTRY}
       - name: Retrieve image digest
         id: imgdigest
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |
           export IMAGE=${{ env.IMAGE_REGISTRY }}/${{ matrix.target }}:${VERSION}
           docker pull ${IMAGE}
           echo "digest=$(docker inspect ${IMAGE} | jq -r '.[].RepoDigests[0]')" >> $GITHUB_OUTPUT
       - name: Sign the container image
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: cosign sign --yes ${{ steps.imgdigest.outputs.digest }}
       - name: Create SBOM
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: aquasecurity/trivy-action@e368e328979b113139d6f9068e03accaed98a518 # ratchet:aquasecurity/trivy-action@0.34.1
         with:
           scan-type: 'image'
@@ -132,7 +133,7 @@ jobs:
           output: 'cyclone.sbom.json'
           image-ref: ${{ steps.imgdigest.outputs.digest }}
       - name: Attest image
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: cosign attest --yes --predicate cyclone.sbom.json --type cyclonedx ${{ steps.imgdigest.outputs.digest }}
 
   chart:
@@ -148,7 +149,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' # ratchet:google-github-actions/auth@v3.0.0
         with:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
@@ -157,7 +158,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db' # ratchet:google-github-actions/setup-gcloud@v3
       - name: 'Log in to Google Artifact Registry'
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v4
@@ -176,7 +177,7 @@ jobs:
             helm package "$chart"
           done
       - name: Push Chart
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |-
           for chart in *.tgz; do
             helm push "$chart" oci://${{ env.FEATURE_REGISTRY }}
@@ -184,7 +185,7 @@ jobs:
 
   rollout:
     name: Rollout
-    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/master'
+    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/native_kafka_acl'
     needs:
       - build
       - chart
