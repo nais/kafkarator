@@ -11,6 +11,11 @@ values:
     displayName: "Feature: generated client"
     config:
       type: bool
+  featureFlags.native_kafka_acl:
+    description: Use native Kafka ACLs instead of Aiven ACLs
+    displayName: "Feature: native Kafka ACL"
+    config:
+      type: bool
   aiven.projects:
     description: Aiven projects (space separated) with Kafka enabled for this instance of kafkarator
     computed:

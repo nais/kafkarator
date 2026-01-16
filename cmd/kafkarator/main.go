@@ -3,41 +3,41 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/kafkarator/pkg/aiven/adapter/aivengoclient"
-	"github.com/nais/kafkarator/pkg/aiven/adapter/goclientcodegen"
-	"github.com/nais/liberator/pkg/aiven/service"
-	"github.com/nais/liberator/pkg/logrus2logr"
-	"k8s.io/utils/ptr"
 	"os"
 	"os/signal"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
 	generated_client "github.com/aiven/go-client-codegen"
+	"github.com/go-logr/logr"
 	"github.com/nais/kafkarator/controllers"
 	"github.com/nais/kafkarator/pkg/aiven"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/kafkarator/pkg/aiven/adapter/aivengoclient"
+	"github.com/nais/kafkarator/pkg/aiven/adapter/goclientcodegen"
+	"github.com/nais/kafkarator/pkg/aiven/adapter/kafkanativeaclclient"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/kafkarator/pkg/metrics/collectors"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/nais/liberator/pkg/conftools"
+	"github.com/nais/liberator/pkg/logrus2logr"
 	log "github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrl_client "sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl_log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	// +kubebuilder:scaffold:imports
 )
 
 var scheme = runtime.NewScheme()
@@ -204,6 +204,11 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *Featur
 		if err != nil {
 			quit <- fmt.Errorf("unable to set up aiven client: %s", err)
 			return
+		}
+		if featureFlags.NativeKafkaAcl {
+			aclClient = &kafkanativeaclclient.AclClient{
+				Client: generatedClient,
+			}
 		}
 		aclClient = &goclientcodegen.AclClient{
 			Client: generatedClient,
