@@ -209,9 +209,10 @@ func startReconcilers(quit QuitChannel, logger *log.Logger, featureFlags *Featur
 			aclClient = &kafkanativeaclclient.AclClient{
 				Client: generatedClient,
 			}
-		}
-		aclClient = &goclientcodegen.AclClient{
-			Client: generatedClient,
+		} else {
+			aclClient = &goclientcodegen.AclClient{
+				Client: generatedClient,
+			}
 		}
 	} else {
 		aclClient = &aivengoclient.AclClient{
