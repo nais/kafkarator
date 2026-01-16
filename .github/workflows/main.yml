@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         uses: 'google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5' # ratchet:google-github-actions/auth@v2.1.12
         with:
           workload_identity_provider: ${{ secrets.NAIS_IO_WORKLOAD_IDENTITY_PROVIDER }}
@@ -129,7 +129,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@cb1e50a9932213ecece00a606661ae9ca44f3397' # ratchet:google-github-actions/setup-gcloud@v1
       - name: 'Log in to Google Artifact Registry'
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v3
@@ -150,7 +150,7 @@ jobs:
             helm package "$chart"
           done
       - name: Push Chart
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/native_kafka_acl'
         run: |-
           for chart in *.tgz; do
             helm push "$chart" oci://${{ env.FEATURE_REGISTRY }}
@@ -158,7 +158,7 @@ jobs:
 
   rollout:
     name: Rollout
-    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/master'
+    if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/native_kafka_acl'
     needs:
       - version
       - build
