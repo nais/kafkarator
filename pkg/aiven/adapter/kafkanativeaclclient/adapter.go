@@ -54,8 +54,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	_, err := c.ServiceKafkaAclDelete(ctx, project, service, aclID)
-	return err
+	return c.ServiceKafkaNativeAclDelete(ctx, project, service, aclID)
 }
 
 func valueOrEmpty(in *string) string {
