@@ -50,10 +50,18 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
 		log.Errorf("Create ACL error: %T: %+v", err, err)
-		var aivenErr *aiven.Error
-		if errors.As(err, &aivenErr) {
-			log.Errorf("aivenErr fields: Status=%v, Message=%v", aivenErr.Status, aivenErr.Message)
-			if aivenErr.Status == 409 && strings.Contains(aivenErr.Message, "Identical ACL entry already exists") {
+		var aivenErrPtr *aiven.Error
+		if errors.As(err, &aivenErrPtr) {
+			log.Errorf("aivenErrPtr fields: Status=%v, Message=%v", aivenErrPtr.Status, aivenErrPtr.Message)
+			if aivenErrPtr.Status == 409 && strings.Contains(aivenErrPtr.Message, "Identical ACL entry already exists") {
+				log.Info("ACL already exists, skipping creation")
+				return nil, nil
+			}
+		}
+		var aivenErrVal aiven.Error
+		if errors.As(err, &aivenErrVal) {
+			log.Errorf("aivenErrVal fields: Status=%v, Message=%v", aivenErrVal.Status, aivenErrVal.Message)
+			if aivenErrVal.Status == 409 && strings.Contains(aivenErrVal.Message, "Identical ACL entry already exists") {
 				log.Info("ACL already exists, skipping creation")
 				return nil, nil
 			}
