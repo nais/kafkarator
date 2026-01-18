@@ -7,6 +7,7 @@ import (
 	generatedclient "github.com/aiven/go-client-codegen"
 	"github.com/aiven/go-client-codegen/handler/kafka"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	log "github.com/sirupsen/logrus"
 )
 
 type AclClient struct {
@@ -55,6 +56,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
+	log.Info("Deleting Aiven Acl with ID (goclientcodegen)", aclID, " from service ", service, " in project ", project)
 	_, err := c.ServiceKafkaAclDelete(ctx, project, service, aclID)
 	return err
 }
