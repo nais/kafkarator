@@ -3,6 +3,7 @@ package acl
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
@@ -71,6 +72,7 @@ func (r *Manager) getExistingAcls(ctx context.Context) ([]Acl, error) {
 	}
 
 	acls := topicACLs(kafkaAcls, r.Source.TopicName())
+	log.Info("Existing ACLs: ", acls)
 	return acls, nil
 }
 
@@ -85,6 +87,7 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 		}
 		wantedAcls = append(wantedAcls, newNameAcl)
 	}
+	log.Info("Wanted ACLs: ", wantedAcls)
 	return wantedAcls, nil
 }
 
