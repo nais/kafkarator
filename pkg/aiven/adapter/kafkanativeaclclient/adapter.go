@@ -2,6 +2,7 @@ package kafkanativeaclclient
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	nativekafkaclient "github.com/aiven/go-client-codegen"
@@ -47,6 +48,11 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	log.Info("Creating Kafka NativeAclAddIn ", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
+		var apiErr *nativekafkaclient.Error
+		if errors.As(err, &apiErr) && apiErr.Status == 409 && strings.Contains(apiErr.Message, "Identical ACL entry already exists") {
+			log.Info("ACL already exists, skipping creation")
+			return nil, nil
+		}
 		return nil, err
 	}
 	log.Info("Creating Kafka NativeAclAddOut ", out)
