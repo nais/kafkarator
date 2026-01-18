@@ -74,6 +74,11 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 				return nil, nil
 			}
 		}
+		// Fallback: string match on error message
+		if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
+			log.Info("ACL already exists (string match fallback), skipping creation")
+			return nil, nil
+		}
 		return nil, err
 	}
 	log.Info("Creating Kafka NativeAclAddOut ", out)
