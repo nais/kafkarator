@@ -24,9 +24,9 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	for _, aclOut := range out.Acl {
 		acls = append(acls, makeAcl(&aclOut))
 		if aclOut.Id != nil {
-			log.Debug("Appending Kafka NativeAcl ", *aclOut.Id)
+			log.Info("Appending Kafka NativeAcl ", *aclOut.Id)
 		} else {
-			log.Debug("Appending Kafka NativeAcl with nil ID")
+			log.Info("Appending Kafka NativeAcl with nil ID")
 		}
 	}
 	return acls, nil
@@ -44,12 +44,12 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		ResourceName:   req.Topic,
 		ResourceType:   kafka.ResourceTypeTopic,
 	}
-	log.Debug("Creating Kafka NativeAclAddIn ", in)
+	log.Info("Creating Kafka NativeAclAddIn ", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Creating Kafka NativeAclAddOut ", out)
+	log.Info("Creating Kafka NativeAclAddOut ", out)
 	return &acl.Acl{
 		ID:         out.Id,
 		Permission: MapKafkaNativePermissionToAivenPermission(string(out.Operation)),
@@ -59,7 +59,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	log.Debug("Deleting Kafka NativeAcl with ID ", aclID, " from service ", service, " in project ", project)
+	log.Info("Deleting Kafka NativeAcl with ID ", aclID, " from service ", service, " in project ", project)
 	return c.ServiceKafkaNativeAclDelete(ctx, project, service, aclID)
 }
 
