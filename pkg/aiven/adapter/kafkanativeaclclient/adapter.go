@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	aiven "github.com/aiven/aiven-go-client/v2"
 	nativekafkaclient "github.com/aiven/go-client-codegen"
 	"github.com/aiven/go-client-codegen/handler/kafka"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
@@ -49,6 +50,14 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
 		log.Errorf("Create ACL error: %T: %+v", err, err)
+		var aivenErr *aiven.Error
+		if errors.As(err, &aivenErr) {
+			log.Errorf("aivenErr fields: Status=%v, Message=%v", aivenErr.Status, aivenErr.Message)
+			if aivenErr.Status == 409 && strings.Contains(aivenErr.Message, "Identical ACL entry already exists") {
+				log.Info("ACL already exists, skipping creation")
+				return nil, nil
+			}
+		}
 		var apiErr *nativekafkaclient.Error
 		if errors.As(err, &apiErr) {
 			log.Errorf("apiErr fields: Status=%v, Message=%v", apiErr.Status, apiErr.Message)
