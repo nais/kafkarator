@@ -20,11 +20,22 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		return nil, err
 	}
 
-	acls := make([]*acl.Acl, 0, len(out.Acl))
-	for _, aclOut := range out.Acl {
-		acls = append(acls, makeAcl(&aclOut))
-		if aclOut.Id != nil {
-			log.Info("Appending Kafka NativeAcl ", *aclOut.Id)
+	acls := make([]*acl.Acl, 0, len(out.KafkaAcl))
+	for _, aclOut := range out.KafkaAcl {
+		var idPtr *string
+		if aclOut.Id != "" {
+			idPtr = &aclOut.Id
+		}
+
+		converted := &kafka.AclOut{
+			Id:         idPtr,
+			Permission: kafka.PermissionType(aclOut.PermissionType),
+			Topic:      aclOut.ResourceName,
+			Username:   strings.TrimPrefix(aclOut.Principal, "User:"),
+		}
+		acls = append(acls, makeAcl(converted))
+		if idPtr != nil {
+			log.Info("Appending Kafka NativeAcl ", *idPtr)
 		} else {
 			log.Info("Appending Kafka NativeAcl with nil ID")
 		}
