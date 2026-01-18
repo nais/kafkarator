@@ -20,13 +20,24 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		return nil, err
 	}
 
-	acls := make([]*acl.Acl, 0, len(out.Acl))
-	for _, aclOut := range out.Acl {
-		acls = append(acls, makeAcl(&aclOut))
-		if aclOut.Id != nil {
-			log.Debug("Appending Kafka NativeAcl ", *aclOut.Id)
+	acls := make([]*acl.Acl, 0, len(out.KafkaAcl))
+	for _, aclOut := range out.KafkaAcl {
+		var idPtr *string
+		if aclOut.Id != "" {
+			idPtr = &aclOut.Id
+		}
+
+		converted := &kafka.AclOut{
+			Id:         idPtr,
+			Permission: kafka.PermissionType(MapKafkaNativePermissionToAivenPermission(string(aclOut.Operation))),
+			Topic:      aclOut.ResourceName,
+			Username:   strings.TrimPrefix(aclOut.Principal, "User:"),
+		}
+		acls = append(acls, makeAcl(converted))
+		if idPtr != nil {
+			log.Info("Appending Kafka NativeAcl ", *idPtr)
 		} else {
-			log.Debug("Appending Kafka NativeAcl with nil ID")
+			log.Info("Appending Kafka NativeAcl with nil ID")
 		}
 	}
 	return acls, nil
@@ -44,12 +55,16 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		ResourceName:   req.Topic,
 		ResourceType:   kafka.ResourceTypeTopic,
 	}
-	log.Debug("Creating Kafka NativeAclAddIn ", in)
+	log.Info("Creating Kafka NativeAclAddIn ", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
+		if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
+			log.Info("ACL already exists (string match fallback), skipping creation")
+			return nil, nil
+		}
 		return nil, err
 	}
-	log.Debug("Creating Kafka NativeAclAddOut ", out)
+	log.Info("Creating Kafka NativeAclAddOut ", out)
 	return &acl.Acl{
 		ID:         out.Id,
 		Permission: MapKafkaNativePermissionToAivenPermission(string(out.Operation)),
@@ -59,7 +74,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	log.Debug("Deleting Kafka NativeAcl with ID ", aclID, " from service ", service, " in project ", project)
+	log.Info("Deleting Kafka NativeAcl with ID ", aclID, " from service ", service, " in project ", project)
 	return c.ServiceKafkaNativeAclDelete(ctx, project, service, aclID)
 }
 
