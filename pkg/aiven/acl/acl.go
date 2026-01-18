@@ -72,6 +72,7 @@ func (r *Manager) getExistingAcls(ctx context.Context) ([]Acl, error) {
 	}
 
 	acls := topicACLs(kafkaAcls, r.Source.TopicName())
+	log.Info("Existing ACLs: ", acls)
 	return acls, nil
 }
 
@@ -86,6 +87,7 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 		}
 		wantedAcls = append(wantedAcls, newNameAcl)
 	}
+	log.Info("Wanted ACLs: ", wantedAcls)
 	return wantedAcls, nil
 }
 
