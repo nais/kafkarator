@@ -48,10 +48,14 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	log.Info("Creating Kafka NativeAclAddIn ", in)
 	out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 	if err != nil {
+		log.Errorf("Create ACL error: %T: %+v", err, err)
 		var apiErr *nativekafkaclient.Error
-		if errors.As(err, &apiErr) && apiErr.Status == 409 && strings.Contains(apiErr.Message, "Identical ACL entry already exists") {
-			log.Info("ACL already exists, skipping creation")
-			return nil, nil
+		if errors.As(err, &apiErr) {
+			log.Errorf("apiErr fields: Status=%v, Message=%v", apiErr.Status, apiErr.Message)
+			if apiErr.Status == 409 && strings.Contains(apiErr.Message, "Identical ACL entry already exists") {
+				log.Info("ACL already exists, skipping creation")
+				return nil, nil
+			}
 		}
 		return nil, err
 	}
