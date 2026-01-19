@@ -2,8 +2,10 @@ package aivengoclient
 
 import (
 	"context"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 )
 
@@ -39,5 +41,6 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
+	log.Info("Deleting Aiven Acl with ID ", aclID, " from service ", service, " in project ", project)
 	return c.KafkaACLHandler.Delete(ctx, project, service, aclID)
 }
