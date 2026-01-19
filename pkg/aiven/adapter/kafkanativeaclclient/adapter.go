@@ -29,7 +29,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 
 		converted := &kafka.AclOut{
 			Id:         idPtr,
-			Permission: kafka.PermissionType(aclOut.PermissionType),
+			Permission: kafka.PermissionType(string(aclOut.Operation)),
 			Topic:      aclOut.ResourceName,
 			Username:   strings.TrimPrefix(aclOut.Principal, "User:"),
 		}
