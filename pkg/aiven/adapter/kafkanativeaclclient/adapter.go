@@ -2,6 +2,7 @@ package kafkanativeaclclient
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	nativekafkaclient "github.com/aiven/go-client-codegen"
@@ -40,9 +41,14 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 			idPtr = &aclOut.Id
 		}
 
+		permission, err := MapKafkaNativePermissionToAivenPermission(string(aclOut.Operation))
+		if err != nil {
+			return nil, err
+		}
+
 		converted := &kafka.AclOut{
 			Id:         idPtr,
-			Permission: kafka.PermissionType(MapKafkaNativePermissionToAivenPermission(string(aclOut.Operation))),
+			Permission: kafka.PermissionType(*permission),
 			Topic:      aclOut.ResourceName,
 			Username:   strings.TrimPrefix(aclOut.Principal, "User:"),
 		}
@@ -65,7 +71,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		in := &kafka.ServiceKafkaNativeAclAddIn{
 			Host:           &host,
 			Operation:      nativeAcl.Operation,
-			PatternType:    kafka.PatternTypeLiteral,
+			PatternType:    kafka.PatternTypePrefixed,
 			PermissionType: kafka.ServiceKafkaNativeAclPermissionType(nativeAcl.PermissionType),
 			Principal:      "User:" + req.Username,
 			ResourceName:   req.Topic,
@@ -87,9 +93,15 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	kafkaratorAcls := make([]*acl.Acl, 0, len(aivenAcls))
 	for _, nativeAcl := range aivenAcls {
 		log.Info("Creating Kafka NativeAclAddOut ", nativeAcl)
+
+		permission, err := MapKafkaNativePermissionToAivenPermission(string(nativeAcl.Operation))
+		if err != nil {
+			return nil, err
+		}
+
 		aivenAcl := &acl.Acl{
 			ID:         nativeAcl.Id,
-			Permission: MapKafkaNativePermissionToAivenPermission(string(nativeAcl.Operation)),
+			Permission: *permission,
 			Topic:      nativeAcl.ResourceName,
 			Username:   strings.TrimPrefix(nativeAcl.Principal, "User:"),
 		}
@@ -154,18 +166,21 @@ func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 	}
 }
 
-// MapKafkaNativePermissionToAivenPermission maps Aiven API operation (capitalized) to custom permission string
-func MapKafkaNativePermissionToAivenPermission(operation string) string {
+// MapKafkaNativePermissionToAivenPermission maps Aiven API operation to custom permission string
+func MapKafkaNativePermissionToAivenPermission(operation string) (*string, error) {
+	var aivenAcl string
+
 	switch operation {
 	case NativeAclWrite:
-		return "write"
+		aivenAcl = "write"
+		return &aivenAcl, nil
 	case NativeAclRead:
-		return "read"
+		aivenAcl = "read"
+		return &aivenAcl, nil
 	case NativeAclAll:
-		return "admin"
-	// case "Alter":	// TODO
-	// 	return "readwrite"
+		aivenAcl = "admin"
+		return &aivenAcl, nil
 	default:
-		return "read" // fallback
+		return nil, fmt.Errorf("Kafka Native ACL not mapped to Aiven ACL: %s", operation)
 	}
 }
