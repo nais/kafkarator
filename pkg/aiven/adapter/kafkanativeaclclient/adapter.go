@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	NATIVE_ACL_ALLOW = "ALLOW"
+	NativeAclAllow = "ALLOW"
 
-	NATIVE_ACL_READ  = "Read"
-	NATIVE_ACL_WRITE = "Write"
-	NATIVE_ACL_ALL   = "All"
+	NativeAclRead  = "Read"
+	NativeAclWrite = "Write"
+	NativeAclAll   = "All"
 )
 
 type AclClient struct {
@@ -64,7 +64,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	for _, nativeAcl := range kafkaNativeAcls {
 		in := &kafka.ServiceKafkaNativeAclAddIn{
 			Host:           &host,
-			Operation:      kafka.OperationType(nativeAcl.Operation),
+			Operation:      nativeAcl.Operation,
 			PatternType:    kafka.PatternTypeLiteral,
 			PermissionType: kafka.ServiceKafkaNativeAclPermissionType(nativeAcl.PermissionType),
 			Principal:      "User:" + req.Username,
@@ -125,28 +125,28 @@ func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 	switch permission {
 	case "write":
 		return []nativeAcl{{
-			Operation:      NATIVE_ACL_WRITE,
-			PermissionType: NATIVE_ACL_ALLOW,
+			Operation:      NativeAclWrite,
+			PermissionType: NativeAclAllow,
 		}}
 	case "read":
 		return []nativeAcl{{
-			Operation:      NATIVE_ACL_READ,
-			PermissionType: NATIVE_ACL_ALLOW,
+			Operation:      NativeAclRead,
+			PermissionType: NativeAclAllow,
 		}}
 	case "admin":
 		return []nativeAcl{{
-			Operation:      NATIVE_ACL_ALL,
-			PermissionType: NATIVE_ACL_ALLOW,
+			Operation:      NativeAclAll,
+			PermissionType: NativeAclAllow,
 		}}
 	case "readwrite":
 		return []nativeAcl{
 			{
-				Operation:      NATIVE_ACL_READ,
-				PermissionType: NATIVE_ACL_ALLOW,
+				Operation:      NativeAclRead,
+				PermissionType: NativeAclAllow,
 			},
 			{
-				Operation:      NATIVE_ACL_WRITE,
-				PermissionType: NATIVE_ACL_ALLOW,
+				Operation:      NativeAclWrite,
+				PermissionType: NativeAclAllow,
 			},
 		}
 	default:
@@ -157,11 +157,11 @@ func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 // MapKafkaNativePermissionToAivenPermission maps Aiven API operation (capitalized) to custom permission string
 func MapKafkaNativePermissionToAivenPermission(operation string) string {
 	switch operation {
-	case NATIVE_ACL_WRITE:
+	case NativeAclWrite:
 		return "write"
-	case NATIVE_ACL_READ:
+	case NativeAclRead:
 		return "read"
-	case NATIVE_ACL_ALL:
+	case NativeAclAll:
 		return "admin"
 	// case "Alter":	// TODO
 	// 	return "readwrite"
