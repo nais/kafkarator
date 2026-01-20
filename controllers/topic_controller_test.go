@@ -9,11 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
 	"github.com/nais/kafkarator/pkg/utils"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/ghodss/yaml"
 	"github.com/nais/kafkarator/controllers"
@@ -142,12 +140,12 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 			aclMock.
 				On("Create", ctx, project, svc, a).
 				Return(
-					&acl.Acl{
+					[]*acl.Acl{{
 						ID:         wellKnownID,
 						Permission: a.Permission,
 						Topic:      a.Topic,
 						Username:   a.Username,
-					},
+					}},
 					nil,
 				)
 		}

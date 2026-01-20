@@ -38,23 +38,23 @@ func (_m *MockInterface) EXPECT() *MockInterface_Expecter {
 }
 
 // Create provides a mock function for the type MockInterface
-func (_mock *MockInterface) Create(ctx context.Context, project string, service string, req CreateKafkaACLRequest) (*Acl, error) {
+func (_mock *MockInterface) Create(ctx context.Context, project string, service string, req CreateKafkaACLRequest) ([]*Acl, error) {
 	ret := _mock.Called(ctx, project, service, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 *Acl
+	var r0 []*Acl
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) (*Acl, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) ([]*Acl, error)); ok {
 		return returnFunc(ctx, project, service, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) *Acl); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) []*Acl); ok {
 		r0 = returnFunc(ctx, project, service, req)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Acl)
+			r0 = ret.Get(0).([]*Acl)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, CreateKafkaACLRequest) error); ok {
@@ -107,12 +107,12 @@ func (_c *MockInterface_Create_Call) Run(run func(ctx context.Context, project s
 	return _c
 }
 
-func (_c *MockInterface_Create_Call) Return(acl *Acl, err error) *MockInterface_Create_Call {
-	_c.Call.Return(acl, err)
+func (_c *MockInterface_Create_Call) Return(acls []*Acl, err error) *MockInterface_Create_Call {
+	_c.Call.Return(acls, err)
 	return _c
 }
 
-func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, req CreateKafkaACLRequest) (*Acl, error)) *MockInterface_Create_Call {
+func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, req CreateKafkaACLRequest) ([]*Acl, error)) *MockInterface_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
