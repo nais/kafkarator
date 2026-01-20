@@ -14,9 +14,10 @@ import (
 const (
 	NativeAclAllow = "ALLOW"
 
-	NativeAclRead  = "Read"
-	NativeAclWrite = "Write"
-	NativeAclAll   = "All"
+	NativeAclAll      = "All"
+	NativeAclDescribe = "Describe"
+	NativeAclRead     = "Read"
+	NativeAclWrite    = "Write"
 )
 
 type AclClient struct {
@@ -136,22 +137,40 @@ func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
 func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 	switch permission {
 	case "write":
-		return []nativeAcl{{
-			Operation:      NativeAclWrite,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclWrite,
+				PermissionType: NativeAclAllow,
+			},
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "read":
-		return []nativeAcl{{
-			Operation:      NativeAclRead,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclRead,
+				PermissionType: NativeAclAllow,
+			},
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "admin":
-		return []nativeAcl{{
-			Operation:      NativeAclAll,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclAll,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "readwrite":
 		return []nativeAcl{
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
 			{
 				Operation:      NativeAclRead,
 				PermissionType: NativeAclAllow,
