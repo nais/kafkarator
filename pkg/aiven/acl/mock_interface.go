@@ -14,23 +14,23 @@ type MockInterface struct {
 }
 
 // Create provides a mock function with given fields: ctx, project, service, req
-func (_m *MockInterface) Create(ctx context.Context, project string, service string, req CreateKafkaACLRequest) (*Acl, error) {
+func (_m *MockInterface) Create(ctx context.Context, project string, service string, req CreateKafkaACLRequest) ([]*Acl, error) {
 	ret := _m.Called(ctx, project, service, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 *Acl
+	var r0 []*Acl
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) (*Acl, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) ([]*Acl, error)); ok {
 		return rf(ctx, project, service, req)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) *Acl); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) []*Acl); ok {
 		r0 = rf(ctx, project, service, req)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*Acl)
+			r0 = ret.Get(0).([]*Acl)
 		}
 	}
 
