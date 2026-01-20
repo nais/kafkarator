@@ -3,9 +3,6 @@ package controllers_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/nais/kafkarator/pkg/utils"
-	"github.com/nais/liberator/pkg/aiven/service"
-	"github.com/stretchr/testify/mock"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -21,9 +18,12 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	topic_package "github.com/nais/kafkarator/pkg/aiven/topic"
 	kafkaratormetrics "github.com/nais/kafkarator/pkg/metrics"
+	"github.com/nais/kafkarator/pkg/utils"
+	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 	"gotest.tools/assert"
 )
 
@@ -142,12 +142,12 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 			aclMock.
 				On("Create", ctx, project, svc, a).
 				Return(
-					&acl.Acl{
+					[]*acl.Acl{{
 						ID:         wellKnownID,
 						Permission: a.Permission,
 						Topic:      a.Topic,
 						Username:   a.Username,
-					},
+					}},
 					nil,
 				)
 		}

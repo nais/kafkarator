@@ -50,18 +50,18 @@ aiven:
   created:
     topics: []
     acls:
-      - username: very-much-too-long-t_very-much-too-long-application_ca5cb3d9_*
-        permission: read
-        topic: myteam.mytopic
-      - username: myteam_myapplication_1c62faf5_*
-        permission: readwrite
-        topic: myteam.mytopic
-      - username: myteam_no-wildcard_86f0c73b_*
-        permission: readwrite
-        topic: myteam.mytopic
-      - username: redundant-team_application_18515795_*
-        permission: read
-        topic: myteam.mytopic
+      - username: "very-much-too-long-t_very-much-too-long-application_ca5cb3d9_*"
+        permission: "read"
+        topic: "myteam.mytopic"
+      - username: "myteam_myapplication_1c62faf5_*"
+        permission: "readwrite"
+        topic: "myteam.mytopic"
+      - username: "myteam_no-wildcard_86f0c73b_*"
+        permission: "readwrite"
+        topic: "myteam.mytopic"
+      - username: "redundant-team_application_18515795_*"
+        permission: "read"
+        topic: "myteam.mytopic"
   updated:
     topics: {}
   deleted:
