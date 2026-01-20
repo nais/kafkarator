@@ -46,6 +46,10 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		if err != nil {
 			return nil, err
 		}
+		if permission == nil {
+			// `Describe` is only required when using `KafkaNative` ACLs
+			continue
+		}
 
 		converted := &kafka.AclOut{
 			Id:         idPtr,
@@ -98,6 +102,10 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		permission, err := MapKafkaNativePermissionToAivenPermission(string(nativeAcl.Operation))
 		if err != nil {
 			return nil, err
+		}
+		if permission == nil {
+			// `Describe` is only required when using `KafkaNative` ACLs
+			continue
 		}
 
 		aivenAcl := &acl.Acl{
@@ -190,14 +198,16 @@ func MapKafkaNativePermissionToAivenPermission(operation string) (*string, error
 	var aivenAcl string
 
 	switch operation {
-	case NativeAclWrite:
-		aivenAcl = "write"
+	case NativeAclAll:
+		aivenAcl = "admin"
 		return &aivenAcl, nil
+	case NativeAclDescribe:
+		return nil, nil
 	case NativeAclRead:
 		aivenAcl = "read"
 		return &aivenAcl, nil
-	case NativeAclAll:
-		aivenAcl = "admin"
+	case NativeAclWrite:
+		aivenAcl = "write"
 		return &aivenAcl, nil
 	default:
 		return nil, fmt.Errorf("Kafka Native ACL not mapped to Aiven ACL: %s", operation)
