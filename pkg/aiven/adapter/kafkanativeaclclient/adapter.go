@@ -14,9 +14,10 @@ import (
 const (
 	NativeAclAllow = "ALLOW"
 
-	NativeAclRead  = "Read"
-	NativeAclWrite = "Write"
-	NativeAclAll   = "All"
+	NativeAclAll      = "All"
+	NativeAclDescribe = "Describe"
+	NativeAclRead     = "Read"
+	NativeAclWrite    = "Write"
 )
 
 type AclClient struct {
@@ -44,6 +45,10 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		permission, err := MapKafkaNativePermissionToAivenPermission(string(aclOut.Operation))
 		if err != nil {
 			return nil, err
+		}
+		if permission == nil {
+			// `Describe` is only required when using `KafkaNative` ACLs
+			continue
 		}
 
 		converted := &kafka.AclOut{
@@ -98,6 +103,10 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		if err != nil {
 			return nil, err
 		}
+		if permission == nil {
+			// `Describe` is only required when using `KafkaNative` ACLs
+			continue
+		}
 
 		aivenAcl := &acl.Acl{
 			ID:         nativeAcl.Id,
@@ -136,22 +145,40 @@ func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
 func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 	switch permission {
 	case "write":
-		return []nativeAcl{{
-			Operation:      NativeAclWrite,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclWrite,
+				PermissionType: NativeAclAllow,
+			},
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "read":
-		return []nativeAcl{{
-			Operation:      NativeAclRead,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclRead,
+				PermissionType: NativeAclAllow,
+			},
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "admin":
-		return []nativeAcl{{
-			Operation:      NativeAclAll,
-			PermissionType: NativeAclAllow,
-		}}
+		return []nativeAcl{
+			{
+				Operation:      NativeAclAll,
+				PermissionType: NativeAclAllow,
+			},
+		}
 	case "readwrite":
 		return []nativeAcl{
+			{
+				Operation:      NativeAclDescribe,
+				PermissionType: NativeAclAllow,
+			},
 			{
 				Operation:      NativeAclRead,
 				PermissionType: NativeAclAllow,
@@ -171,14 +198,16 @@ func MapKafkaNativePermissionToAivenPermission(operation string) (*string, error
 	var aivenAcl string
 
 	switch operation {
-	case NativeAclWrite:
-		aivenAcl = "write"
+	case NativeAclAll:
+		aivenAcl = "admin"
 		return &aivenAcl, nil
+	case NativeAclDescribe:
+		return nil, nil
 	case NativeAclRead:
 		aivenAcl = "read"
 		return &aivenAcl, nil
-	case NativeAclAll:
-		aivenAcl = "admin"
+	case NativeAclWrite:
+		aivenAcl = "write"
 		return &aivenAcl, nil
 	default:
 		return nil, fmt.Errorf("Kafka Native ACL not mapped to Aiven ACL: %s", operation)
