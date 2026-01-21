@@ -140,7 +140,7 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 
 		for _, a := range test.Aiven.Created.Acls {
 			aclMock.
-				On("Create", ctx, project, svc, a).
+				On("Create", ctx, project, svc, false, a).
 				Return(
 					[]*acl.Acl{{
 						ID:         wellKnownID,
