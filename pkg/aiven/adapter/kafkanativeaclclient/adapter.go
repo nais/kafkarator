@@ -67,16 +67,22 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
 	host := "*"
 
 	kafkaNativeAcls := MapPermissionToKafkaNativePermission(req.Permission)
 	aivenAcls := make([]kafka.ServiceKafkaNativeAclAddOut, 0, len(kafkaNativeAcls))
+
+	patternType := kafka.PatternTypeLiteral
+	if isStream {
+		patternType = kafka.PatternTypePrefixed
+	}
+
 	for _, nativeAcl := range kafkaNativeAcls {
 		in := &kafka.ServiceKafkaNativeAclAddIn{
 			Host:           &host,
 			Operation:      nativeAcl.Operation,
-			PatternType:    kafka.PatternTypePrefixed,
+			PatternType:    patternType,
 			PermissionType: kafka.ServiceKafkaNativeAclPermissionType(nativeAcl.PermissionType),
 			Principal:      "User:" + req.Username,
 			ResourceName:   req.Topic,

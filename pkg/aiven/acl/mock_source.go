@@ -32,6 +32,24 @@ func (_m *MockSource) ACLs() kafka_nais_io_v1.TopicACLs {
 	return r0
 }
 
+// IsStream provides a mock function with no fields
+func (_m *MockSource) IsStream() bool {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsStream")
+	}
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // Pool provides a mock function with no fields
 func (_m *MockSource) Pool() string {
 	ret := _m.Called()
