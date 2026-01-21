@@ -189,7 +189,7 @@ func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
 			},
 		}
 	default:
-		return []nativeAcl{} // fallback
+		return []nativeAcl{}
 	}
 }
 
