@@ -82,6 +82,50 @@ func (_c *MockSource_ACLs_Call) RunAndReturn(run func() kafka_nais_io_v1.TopicAC
 	return _c
 }
 
+// IsStream provides a mock function for the type MockSource
+func (_mock *MockSource) IsStream() bool {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsStream")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func() bool); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// MockSource_IsStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsStream'
+type MockSource_IsStream_Call struct {
+	*mock.Call
+}
+
+// IsStream is a helper method to define mock.On call
+func (_e *MockSource_Expecter) IsStream() *MockSource_IsStream_Call {
+	return &MockSource_IsStream_Call{Call: _e.mock.On("IsStream")}
+}
+
+func (_c *MockSource_IsStream_Call) Run(run func()) *MockSource_IsStream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSource_IsStream_Call) Return(b bool) *MockSource_IsStream_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *MockSource_IsStream_Call) RunAndReturn(run func() bool) *MockSource_IsStream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Pool provides a mock function for the type MockSource
 func (_mock *MockSource) Pool() string {
 	ret := _mock.Called()

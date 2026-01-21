@@ -38,8 +38,8 @@ func (_m *MockInterface) EXPECT() *MockInterface_Expecter {
 }
 
 // Create provides a mock function for the type MockInterface
-func (_mock *MockInterface) Create(ctx context.Context, project string, service string, req CreateKafkaACLRequest) ([]*Acl, error) {
-	ret := _mock.Called(ctx, project, service, req)
+func (_mock *MockInterface) Create(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error) {
+	ret := _mock.Called(ctx, project, service, isStream, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -47,18 +47,18 @@ func (_mock *MockInterface) Create(ctx context.Context, project string, service 
 
 	var r0 []*Acl
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) ([]*Acl, error)); ok {
-		return returnFunc(ctx, project, service, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) ([]*Acl, error)); ok {
+		return returnFunc(ctx, project, service, isStream, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, CreateKafkaACLRequest) []*Acl); ok {
-		r0 = returnFunc(ctx, project, service, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) []*Acl); ok {
+		r0 = returnFunc(ctx, project, service, isStream, req)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*Acl)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, CreateKafkaACLRequest) error); ok {
-		r1 = returnFunc(ctx, project, service, req)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, bool, CreateKafkaACLRequest) error); ok {
+		r1 = returnFunc(ctx, project, service, isStream, req)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,12 +74,13 @@ type MockInterface_Create_Call struct {
 //   - ctx context.Context
 //   - project string
 //   - service string
+//   - isStream bool
 //   - req CreateKafkaACLRequest
-func (_e *MockInterface_Expecter) Create(ctx interface{}, project interface{}, service interface{}, req interface{}) *MockInterface_Create_Call {
-	return &MockInterface_Create_Call{Call: _e.mock.On("Create", ctx, project, service, req)}
+func (_e *MockInterface_Expecter) Create(ctx interface{}, project interface{}, service interface{}, isStream interface{}, req interface{}) *MockInterface_Create_Call {
+	return &MockInterface_Create_Call{Call: _e.mock.On("Create", ctx, project, service, isStream, req)}
 }
 
-func (_c *MockInterface_Create_Call) Run(run func(ctx context.Context, project string, service string, req CreateKafkaACLRequest)) *MockInterface_Create_Call {
+func (_c *MockInterface_Create_Call) Run(run func(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest)) *MockInterface_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -93,15 +94,20 @@ func (_c *MockInterface_Create_Call) Run(run func(ctx context.Context, project s
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 CreateKafkaACLRequest
+		var arg3 bool
 		if args[3] != nil {
-			arg3 = args[3].(CreateKafkaACLRequest)
+			arg3 = args[3].(bool)
+		}
+		var arg4 CreateKafkaACLRequest
+		if args[4] != nil {
+			arg4 = args[4].(CreateKafkaACLRequest)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -112,7 +118,7 @@ func (_c *MockInterface_Create_Call) Return(acls []*Acl, err error) *MockInterfa
 	return _c
 }
 
-func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, req CreateKafkaACLRequest) ([]*Acl, error)) *MockInterface_Create_Call {
+func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error)) *MockInterface_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

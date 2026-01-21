@@ -27,7 +27,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
 	in := &kafka.ServiceKafkaAclAddIn{
 		Permission: kafka.PermissionType(req.Permission),
 		Topic:      req.Topic,
