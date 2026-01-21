@@ -211,7 +211,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, false, mock.Anything).
 		Times(2).
 		Return(nil, nil)
 	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
@@ -248,7 +248,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, true, mock.Anything).
 		Times(1).
 		Return(nil, nil)
 

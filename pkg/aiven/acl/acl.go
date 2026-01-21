@@ -11,7 +11,7 @@ import (
 
 type Interface interface {
 	List(ctx context.Context, project, serviceName string) ([]*Acl, error)
-	Create(ctx context.Context, project, service string, req CreateKafkaACLRequest) ([]*Acl, error)
+	Create(ctx context.Context, project, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error)
 	Delete(ctx context.Context, project, service, aclID string) error
 }
 
@@ -19,6 +19,7 @@ type Source interface {
 	TopicName() string
 	Pool() string
 	ACLs() kafka_nais_io_v1.TopicACLs
+	IsStream() bool
 }
 
 type Manager struct {
@@ -105,7 +106,7 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 				r.Logger.Infof("DRY RUN: Would create ACL entry: %v", req)
 				return nil
 			}
-			_, err = r.AivenACLs.Create(ctx, r.Project, r.Service, req)
+			_, err = r.AivenACLs.Create(ctx, r.Project, r.Service, r.Source.IsStream(), req)
 			return err
 		})
 		if err != nil {
@@ -186,6 +187,10 @@ func (t TopicAdapter) TopicName() string {
 	return t.FullName()
 }
 
+func (t TopicAdapter) IsStream() bool {
+	return false
+}
+
 func (t TopicAdapter) Pool() string {
 	return t.Spec.Pool
 }
@@ -201,6 +206,10 @@ type StreamAdapter struct {
 
 func (s StreamAdapter) TopicName() string {
 	return s.TopicWildcard()
+}
+
+func (s StreamAdapter) IsStream() bool {
+	return true
 }
 
 func (s StreamAdapter) Pool() string {
