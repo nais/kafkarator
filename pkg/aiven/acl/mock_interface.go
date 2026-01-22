@@ -62,23 +62,23 @@ func (_m *MockInterface) Delete(ctx context.Context, project string, service str
 }
 
 // List provides a mock function with given fields: ctx, project, serviceName
-func (_m *MockInterface) List(ctx context.Context, project string, serviceName string) ([]*Acl, error) {
+func (_m *MockInterface) List(ctx context.Context, project string, serviceName string) (ExistingAcls, error) {
 	ret := _m.Called(ctx, project, serviceName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []*Acl
+	var r0 ExistingAcls
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]*Acl, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (ExistingAcls, error)); ok {
 		return rf(ctx, project, serviceName)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []*Acl); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) ExistingAcls); ok {
 		r0 = rf(ctx, project, serviceName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Acl)
+			r0 = ret.Get(0).(ExistingAcls)
 		}
 	}
 

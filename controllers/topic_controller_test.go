@@ -86,6 +86,26 @@ func fileReader(file string) io.Reader {
 	return f
 }
 
+func wrapExisting(acls []*acl.Acl) acl.ExistingAcls {
+	out := make(acl.ExistingAcls, 0, len(acls))
+	for _, a := range acls {
+		var ids []string
+		if a.ID != "" {
+			ids = []string{a.ID}
+		}
+		out = append(out, acl.ExistingAcl{
+			Acl: acl.Acl{
+				Permission:      a.Permission,
+				Topic:           a.Topic,
+				Username:        a.Username,
+				ResourcePattern: a.ResourcePattern,
+			},
+			IDs: ids,
+		})
+	}
+	return out
+}
+
 func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafkarator_aiven.Interfaces, func(t mock.TestingT) bool) {
 	notFoundError := aiven.Error{
 		Message:  "Not Found",
@@ -106,7 +126,7 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 		aclMock.
 			On("List", ctx, project, svc).
 			Maybe().
-			Return(test.Aiven.Existing.Acls, nil)
+			Return(wrapExisting(test.Aiven.Existing.Acls), nil)
 
 		for _, topic := range test.Aiven.Missing.Topics {
 			topicMock.
@@ -139,15 +159,21 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 		}
 
 		for _, a := range test.Aiven.Created.Acls {
+			a := a
 			aclMock.
-				On("Create", ctx, project, svc, a).
+				On("Create", ctx, project, svc, mock.AnythingOfType("acl.CreateKafkaACLRequest")).
+				Maybe().
 				Return(
-					[]*acl.Acl{{
-						ID:         wellKnownID,
-						Permission: a.Permission,
-						Topic:      a.Topic,
-						Username:   a.Username,
-					}},
+					func(_ context.Context, _ string, _ string, req acl.CreateKafkaACLRequest) []*acl.Acl {
+						// returnér alltid det som ble sendt inn (inkl. ResourcePattern)
+						return []*acl.Acl{{
+							ID:              wellKnownID,
+							Permission:      a.Permission,
+							Topic:           a.Topic,
+							Username:        a.Username,
+							ResourcePattern: a.ResourcePattern,
+						}}
+					},
 					nil,
 				)
 		}

@@ -10,7 +10,7 @@ import (
 )
 
 type Interface interface {
-	List(ctx context.Context, project, serviceName string) ([]*Acl, error)
+	List(ctx context.Context, project, serviceName string) (ExistingAcls, error)
 	Create(ctx context.Context, project, service string, req CreateKafkaACLRequest) ([]*Acl, error)
 	Delete(ctx context.Context, project, service, aclID string) error
 }
@@ -19,6 +19,7 @@ type Source interface {
 	TopicName() string
 	Pool() string
 	ACLs() kafka_nais_io_v1.TopicACLs
+	IsStream() bool
 }
 
 type Manager struct {
@@ -39,7 +40,7 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 		return err
 	}
 
-	wantedAcls, err := r.getWantedAcls(r.Source.TopicName(), r.Source.ACLs())
+	wantedAcls, err := r.getWantedAcls(r.Source.TopicName(), r.Source.ACLs(), getResourcePattern(r.Source.IsStream()))
 	if err != nil {
 		return err
 	}
@@ -60,26 +61,26 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 	return nil
 }
 
-func (r *Manager) getExistingAcls(ctx context.Context) ([]Acl, error) {
-	var kafkaAcls []*Acl
+func (r *Manager) getExistingAcls(ctx context.Context) (ExistingAcls, error) {
+	var existing ExistingAcls
 	err := metrics.ObserveAivenLatency("ACL_List", r.Project, func() error {
 		var err error
-		kafkaAcls, err = r.AivenACLs.List(ctx, r.Project, r.Service)
+		existing, err = r.AivenACLs.List(ctx, r.Project, r.Service)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	acls := topicACLs(kafkaAcls, r.Source.TopicName())
+	acls := topicACLs(existing, r.Source.TopicName())
 	log.Info("Existing ACLs: ", acls)
 	return acls, nil
 }
 
-func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.TopicACL) ([]Acl, error) {
+func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.TopicACL, resourcePattern string) (Acls, error) {
 	wantedAcls := make([]Acl, 0, len(topicAcls))
 	for _, aclSpec := range topicAcls {
-		newNameAcl, err := FromTopicACL(topic, &aclSpec, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
+		newNameAcl, err := FromTopicACL(topic, &aclSpec, resourcePattern, func(topicAcl *kafka_nais_io_v1.TopicACL) (string, error) {
 			return topicAcl.ServiceUserNameWithSuffix("*")
 		})
 		if err != nil {
@@ -94,9 +95,10 @@ func (r *Manager) getWantedAcls(topic string, topicAcls []kafka_nais_io_v1.Topic
 func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 	for _, acl := range toAdd {
 		req := CreateKafkaACLRequest{
-			Permission: acl.Permission,
-			Topic:      acl.Topic,
-			Username:   acl.Username,
+			Permission:      acl.Permission,
+			Topic:           acl.Topic,
+			Username:        acl.Username,
+			ResourcePattern: acl.ResourcePattern,
 		}
 
 		err := metrics.ObserveAivenLatency("ACL_Create", r.Project, func() error {
@@ -120,33 +122,39 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 	return nil
 }
 
-func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
+func (r *Manager) delete(ctx context.Context, toDelete ExistingAcls) error {
 	for _, acl := range toDelete {
-		if len(acl.ID) == 0 {
-			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
+		if len(acl.IDs) == 0 {
+			return fmt.Errorf("attempting to delete existing acl without IDs: %v", acl)
 		}
 		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
 			if r.DryRun {
 				r.Logger.Infof("DRY RUN: Would delete ACL entry: %v", acl)
 				return nil
 			}
-			return r.AivenACLs.Delete(ctx, r.Project, r.Service, acl.ID)
+
+			for _, id := range acl.IDs {
+				if err := r.AivenACLs.Delete(ctx, r.Project, r.Service, id); err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err != nil {
 			return err
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_id":         acl.ID,
-			"acl_username":   acl.Username,
-			"acl_permission": acl.Permission,
-		}).Infof("Deleted ACL entry")
+			"acl_ids":        acl.IDs,
+			"acl_username":   acl.Acl.Username,
+			"acl_permission": acl.Acl.Permission,
+		}).Infof("Deleted ACL entry(s)")
 	}
 	return nil
 }
 
 // NewACLs given a list of ACL specs, return a new list of ACL objects that does not already exist
-func NewACLs(existingAcls, wantedAcls Acls) []Acl {
+func NewACLs(existingAcls ExistingAcls, wantedAcls Acls) Acls {
 	candidates := make([]Acl, 0, len(wantedAcls))
 	for _, wantedAcl := range wantedAcls {
 		if !existingAcls.Contains(wantedAcl) {
@@ -157,10 +165,10 @@ func NewACLs(existingAcls, wantedAcls Acls) []Acl {
 }
 
 // DeleteACLs given a list of existing ACLs, return a new list of objects that don't exist in the cluster and should be deleted
-func DeleteACLs(existingAcls, wantedAcls Acls) []Acl {
-	candidates := make([]Acl, 0, len(existingAcls))
+func DeleteACLs(existingAcls ExistingAcls, wantedAcls Acls) ExistingAcls {
+	candidates := make(ExistingAcls, 0, len(existingAcls))
 	for _, existingAcl := range existingAcls {
-		if !wantedAcls.Contains(existingAcl) {
+		if !wantedAcls.Contains(existingAcl.Acl) {
 			candidates = append(candidates, existingAcl)
 		}
 	}
@@ -168,18 +176,30 @@ func DeleteACLs(existingAcls, wantedAcls Acls) []Acl {
 }
 
 // filter out ACLs not matching the topic name
-func topicACLs(acls []*Acl, topic string) []Acl {
-	result := make([]Acl, 0, len(acls))
+func topicACLs(acls ExistingAcls, topic string) ExistingAcls {
+	result := make(ExistingAcls, 0, len(acls))
 	for _, acl := range acls {
-		if acl.Topic == topic {
-			result = append(result, *acl)
+		if acl.Acl.Topic == topic {
+			result = append(result, acl)
 		}
 	}
 	return result
 }
 
+func getResourcePattern(isStream bool) string {
+	if isStream {
+		return "PREFIXED"
+	}
+
+	return "LITERAL"
+}
+
 type TopicAdapter struct {
 	*kafka_nais_io_v1.Topic
+}
+
+func (t TopicAdapter) IsStream() bool {
+	return false
 }
 
 func (t TopicAdapter) TopicName() string {
@@ -197,6 +217,10 @@ func (t TopicAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
 type StreamAdapter struct {
 	*kafka_nais_io_v1.Stream
 	Delete bool
+}
+
+func (s StreamAdapter) IsStream() bool {
+	return true
 }
 
 func (s StreamAdapter) TopicName() string {

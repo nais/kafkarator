@@ -13,15 +13,22 @@ type AclClient struct {
 	*aiven.KafkaACLHandler
 }
 
-func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*acl.Acl, error) {
+func (c *AclClient) List(ctx context.Context, project, serviceName string) (acl.ExistingAcls, error) {
 	out, err := c.KafkaACLHandler.List(ctx, project, serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	acls := make([]*acl.Acl, 0, len(out))
+	acls := make(acl.ExistingAcls, 0, len(out))
 	for _, aclOut := range out {
-		acls = append(acls, ptr.To(acl.FromKafkaACL(aclOut)))
+		acls = append(acls, acl.ExistingAcl{
+			Acl: acl.Acl{
+				ID:         aclOut.ID,
+				Permission: aclOut.Permission,
+				Topic:      aclOut.Topic,
+				Username:   aclOut.Username,
+			},
+		})
 	}
 	return acls, nil
 }

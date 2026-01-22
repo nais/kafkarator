@@ -3,6 +3,7 @@ package kafkanativeaclclient
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	nativekafkaclient "github.com/aiven/go-client-codegen"
@@ -11,113 +12,148 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	NativeAclAllow = "ALLOW"
-
-	NativeAclAll      = "All"
-	NativeAclDescribe = "Describe"
-	NativeAclRead     = "Read"
-	NativeAclWrite    = "Write"
-)
-
 type AclClient struct {
 	nativekafkaclient.Client
 }
 
-type nativeAcl struct {
-	Operation      kafka.OperationType
-	PermissionType kafka.PermissionType
-}
-
-func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*acl.Acl, error) {
-	out, err := c.ServiceKafkaNativeAclList(ctx, project, serviceName)
+func (c *AclClient) List(ctx context.Context, project, serviceName string) (acl.ExistingAcls, error) {
+	response, err := c.ServiceKafkaNativeAclList(ctx, project, serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	acls := make([]*acl.Acl, 0, len(out.KafkaAcl))
-	for _, aclOut := range out.KafkaAcl {
-		var idPtr *string
-		if aclOut.Id != "" {
-			idPtr = &aclOut.Id
+	type aclGroupKey struct {
+		username       string
+		topic          string
+		patternType    kafka.PatternType
+		permissionType kafka.KafkaAclPermissionType
+		host           string
+	}
+
+	type aclGroupState struct {
+		operations     map[kafka.OperationType]struct{}
+		idsByOperation map[kafka.OperationType][]string
+	}
+
+	groupedACLs := map[aclGroupKey]*aclGroupState{}
+
+	for _, nativeACL := range response.KafkaAcl {
+		username := strings.TrimPrefix(nativeACL.Principal, "User:")
+
+		host := ""
+		if nativeACL.Host != "" {
+			host = nativeACL.Host
 		}
 
-		permission, err := MapKafkaNativePermissionToAivenPermission(string(aclOut.Operation))
-		if err != nil {
-			return nil, err
+		groupKey := aclGroupKey{
+			username:       username,
+			topic:          nativeACL.ResourceName,
+			patternType:    nativeACL.PatternType,
+			permissionType: nativeACL.PermissionType,
+			host:           host,
 		}
-		if permission == nil {
-			// `Describe` is only required when using `KafkaNative` ACLs
+
+		groupState, exists := groupedACLs[groupKey]
+		if !exists {
+			groupState = &aclGroupState{
+				operations:     map[kafka.OperationType]struct{}{},
+				idsByOperation: map[kafka.OperationType][]string{},
+			}
+			groupedACLs[groupKey] = groupState
+		}
+
+		groupState.operations[nativeACL.Operation] = struct{}{}
+
+		if nativeACL.Id != "" {
+			groupState.idsByOperation[nativeACL.Operation] =
+				append(groupState.idsByOperation[nativeACL.Operation], nativeACL.Id)
+		}
+	}
+
+	existingACLs := make(acl.ExistingAcls, 0, len(groupedACLs))
+
+	for groupKey, groupState := range groupedACLs {
+		inferredPermission := inferPermissionFromOps(groupState.operations)
+		if inferredPermission == nil {
+			// e.g. describe-only / unknown combos
 			continue
 		}
 
-		converted := &kafka.AclOut{
-			Id:         idPtr,
-			Permission: kafka.PermissionType(*permission),
-			Topic:      aclOut.ResourceName,
-			Username:   strings.TrimPrefix(aclOut.Principal, "User:"),
+		requiredOperations := permissionToOps[*inferredPermission]
+
+		nativeIDs := make([]string, 0, 8)
+		for operation := range requiredOperations {
+			nativeIDs = append(
+				nativeIDs,
+				groupState.idsByOperation[operation]...,
+			)
 		}
-		acls = append(acls, makeAcl(converted))
-		if idPtr != nil {
-			log.Info("Appending Kafka NativeAcl ", *idPtr)
-		} else {
-			log.Info("Appending Kafka NativeAcl with nil ID")
-		}
+
+		sort.Strings(nativeIDs)
+
+		existingACLs = append(existingACLs, acl.ExistingAcl{
+			Acl: acl.Acl{
+				Permission:      string(*inferredPermission),
+				Topic:           groupKey.topic,
+				Username:        groupKey.username,
+				ResourcePattern: toResourcePatternString(groupKey.patternType),
+			},
+			IDs: nativeIDs,
+		})
 	}
-	return acls, nil
+
+	return existingACLs, nil
 }
 
 func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
 	host := "*"
 
-	kafkaNativeAcls := MapPermissionToKafkaNativePermission(req.Permission)
-	aivenAcls := make([]kafka.ServiceKafkaNativeAclAddOut, 0, len(kafkaNativeAcls))
-	for _, nativeAcl := range kafkaNativeAcls {
+	perm := kafka.PermissionType(req.Permission)
+	ops, ok := permissionToOps[perm]
+	if !ok {
+		return nil, fmt.Errorf("unknown permission type: %s", req.Permission)
+	}
+
+	patternType, err := parseResourcePattern(req.ResourcePattern)
+	if err != nil {
+		return nil, err
+	}
+
+	opList := make([]kafka.OperationType, 0, len(ops))
+	for op := range ops {
+		opList = append(opList, op)
+	}
+	sort.Slice(opList, func(i, j int) bool { return string(opList[i]) < string(opList[j]) })
+
+	for _, op := range opList {
 		in := &kafka.ServiceKafkaNativeAclAddIn{
 			Host:           &host,
-			Operation:      nativeAcl.Operation,
-			PatternType:    kafka.PatternTypePrefixed,
-			PermissionType: kafka.ServiceKafkaNativeAclPermissionType(nativeAcl.PermissionType),
+			Operation:      op,
+			PatternType:    patternType,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionTypeAllow,
 			Principal:      "User:" + req.Username,
 			ResourceName:   req.Topic,
 			ResourceType:   kafka.ResourceTypeTopic,
 		}
-		log.Info("Creating Kafka NativeAclAddIn ", in)
-		out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
+
+		log.WithFields(log.Fields{
+			"username": req.Username,
+			"topic":    req.Topic,
+			"op":       op,
+			"pattern":  patternType,
+		}).Info("Creating Kafka native ACL")
+
+		_, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 		if err != nil {
-			if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
-				log.Info("ACL already exists (string match fallback), skipping creation")
-				return nil, nil
+			if isAclAlreadyExistsError(err) {
+				log.Debug("ACL already exists (string match fallback), skipping creation")
+				continue
 			}
 			return nil, err
 		}
-		log.Debug("Creating Kafka NativeAclAddOut ", out)
-		aivenAcls = append(aivenAcls, *out)
 	}
 
-	kafkaratorAcls := make([]*acl.Acl, 0, len(aivenAcls))
-	for _, nativeAcl := range aivenAcls {
-		log.Info("Creating Kafka NativeAclAddOut ", nativeAcl)
-
-		permission, err := MapKafkaNativePermissionToAivenPermission(string(nativeAcl.Operation))
-		if err != nil {
-			return nil, err
-		}
-		if permission == nil {
-			// `Describe` is only required when using `KafkaNative` ACLs
-			continue
-		}
-
-		aivenAcl := &acl.Acl{
-			ID:         nativeAcl.Id,
-			Permission: *permission,
-			Topic:      nativeAcl.ResourceName,
-			Username:   strings.TrimPrefix(nativeAcl.Principal, "User:"),
-		}
-		kafkaratorAcls = append(kafkaratorAcls, aivenAcl)
-	}
-
-	return kafkaratorAcls, nil
+	return []*acl.Acl{}, nil
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
@@ -125,91 +161,82 @@ func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) 
 	return c.ServiceKafkaNativeAclDelete(ctx, project, service, aclID)
 }
 
-func valueOrEmpty(in *string) string {
-	if in != nil {
-		return *in
-	}
-	return ""
+func isAclAlreadyExistsError(err error) bool {
+	return err != nil &&
+		strings.Contains(err.Error(), "409") &&
+		strings.Contains(err.Error(), "Identical ACL entry already exists")
 }
 
-func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
-	return &acl.Acl{
-		ID:         valueOrEmpty(aclOut.Id),
-		Permission: string(aclOut.Permission),
-		Topic:      aclOut.Topic,
-		Username:   aclOut.Username,
-	}
+// ---------- permission inference + mapping ----------
+
+// Single source of truth: Create expands using this; List infers by checking containment.
+var permissionToOps = map[kafka.PermissionType]map[kafka.OperationType]struct{}{
+	kafka.PermissionTypeAdmin: {
+		kafka.OperationTypeRead:            {},
+		kafka.OperationTypeDescribe:        {},
+		kafka.OperationTypeWrite:           {},
+		kafka.OperationTypeAlterConfigs:    {},
+		kafka.OperationTypeDescribeConfigs: {},
+		kafka.OperationTypeDelete:          {},
+	},
+	kafka.PermissionTypeReadwrite: {
+		kafka.OperationTypeRead:     {},
+		kafka.OperationTypeDescribe: {},
+		kafka.OperationTypeWrite:    {},
+	},
+	kafka.PermissionTypeWrite: {
+		kafka.OperationTypeWrite:    {},
+		kafka.OperationTypeDescribe: {},
+	},
+	kafka.PermissionTypeRead: {
+		kafka.OperationTypeRead:     {},
+		kafka.OperationTypeDescribe: {},
+	},
 }
 
-// MapPermissionToKafkaNativePermission maps custom permission strings to Aiven API operation/permission_type (capitalized operation, uppercase permType)
-func MapPermissionToKafkaNativePermission(permission string) []nativeAcl {
-	switch permission {
-	case "write":
-		return []nativeAcl{
-			{
-				Operation:      NativeAclWrite,
-				PermissionType: NativeAclAllow,
-			},
-			{
-				Operation:      NativeAclDescribe,
-				PermissionType: NativeAclAllow,
-			},
+func inferPermissionFromOps(have map[kafka.OperationType]struct{}) *kafka.PermissionType {
+	order := []kafka.PermissionType{
+		kafka.PermissionTypeAdmin,
+		kafka.PermissionTypeReadwrite,
+		kafka.PermissionTypeWrite,
+		kafka.PermissionTypeRead,
+	}
+	for _, p := range order {
+		if containsAll(have, permissionToOps[p]) {
+			pp := p
+			return &pp
 		}
-	case "read":
-		return []nativeAcl{
-			{
-				Operation:      NativeAclRead,
-				PermissionType: NativeAclAllow,
-			},
-			{
-				Operation:      NativeAclDescribe,
-				PermissionType: NativeAclAllow,
-			},
+	}
+	return nil
+}
+
+func containsAll(have map[kafka.OperationType]struct{}, want map[kafka.OperationType]struct{}) bool {
+	for op := range want {
+		if _, ok := have[op]; !ok {
+			return false
 		}
-	case "admin":
-		return []nativeAcl{
-			{
-				Operation:      NativeAclAll,
-				PermissionType: NativeAclAllow,
-			},
-		}
-	case "readwrite":
-		return []nativeAcl{
-			{
-				Operation:      NativeAclDescribe,
-				PermissionType: NativeAclAllow,
-			},
-			{
-				Operation:      NativeAclRead,
-				PermissionType: NativeAclAllow,
-			},
-			{
-				Operation:      NativeAclWrite,
-				PermissionType: NativeAclAllow,
-			},
-		}
+	}
+	return true
+}
+
+func parseResourcePattern(p string) (kafka.PatternType, error) {
+	switch strings.ToUpper(p) {
+	case "", "LITERAL":
+		return kafka.PatternTypeLiteral, nil
+	case "PREFIXED":
+		return kafka.PatternTypePrefixed, nil
 	default:
-		return []nativeAcl{}
+		return "", fmt.Errorf("unknown resource pattern: %s", p)
 	}
 }
 
-// MapKafkaNativePermissionToAivenPermission maps Aiven API operation to custom permission string
-func MapKafkaNativePermissionToAivenPermission(operation string) (*string, error) {
-	var aivenAcl string
-
-	switch operation {
-	case NativeAclAll:
-		aivenAcl = "admin"
-		return &aivenAcl, nil
-	case NativeAclDescribe:
-		return nil, nil
-	case NativeAclRead:
-		aivenAcl = "read"
-		return &aivenAcl, nil
-	case NativeAclWrite:
-		aivenAcl = "write"
-		return &aivenAcl, nil
+func toResourcePatternString(pt kafka.PatternType) string {
+	switch pt {
+	case kafka.PatternTypeLiteral:
+		return "LITERAL"
+	case kafka.PatternTypePrefixed:
+		return "PREFIXED"
 	default:
-		return nil, fmt.Errorf("Kafka Native ACL not mapped to Aiven ACL: %s", operation)
+		return string(pt)
 	}
 }

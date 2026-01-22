@@ -14,15 +14,22 @@ type AclClient struct {
 	generatedclient.Client
 }
 
-func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*acl.Acl, error) {
+func (c *AclClient) List(ctx context.Context, project, serviceName string) (acl.ExistingAcls, error) {
 	out, err := c.ServiceKafkaNativeAclList(ctx, project, serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	acls := make([]*acl.Acl, 0, len(out.Acl))
+	acls := make(acl.ExistingAcls, 0, len(out.Acl))
 	for _, aclOut := range out.Acl {
-		acls = append(acls, makeAcl(&aclOut))
+		acls = append(acls, acl.ExistingAcl{
+			Acl: acl.Acl{
+				ID:         valueOrEmpty(aclOut.Id),
+				Permission: string(aclOut.Permission),
+				Topic:      aclOut.Topic,
+				Username:   aclOut.Username,
+			},
+		})
 	}
 	return acls, nil
 }
