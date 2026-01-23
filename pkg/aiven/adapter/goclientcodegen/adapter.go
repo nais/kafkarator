@@ -2,7 +2,6 @@ package goclientcodegen
 
 import (
 	"context"
-	"fmt"
 
 	generatedclient "github.com/aiven/go-client-codegen"
 	"github.com/aiven/go-client-codegen/handler/kafka"
@@ -27,37 +26,22 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) error {
 	in := &kafka.ServiceKafkaAclAddIn{
 		Permission: kafka.PermissionType(req.Permission),
 		Topic:      req.Topic,
 		Username:   req.Username,
 	}
-	out, err := c.ServiceKafkaAclAdd(ctx, project, service, in)
+	_, err := c.ServiceKafkaAclAdd(ctx, project, service, in)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	// The server doesn't return the ACL we created but list of all ACLs currently
-	// defined. Need to find the correct one manually. There could be multiple ACLs
-	// with same attributes. Assume the one that was created is the last one matching.
-	var foundACL *kafka.AclOut
-	for _, aclOut := range out {
-		if aclOut.Permission == in.Permission && aclOut.Topic == in.Topic && aclOut.Username == in.Username {
-			foundACL = &aclOut
-		}
-	}
-
-	if foundACL == nil {
-		return nil, fmt.Errorf("created ACL not found from response ACL list")
-	}
-
-	return []*acl.Acl{makeAcl(foundACL)}, nil
+	return nil
 }
 
-func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	log.Info("Deleting Aiven Acl with ID (goclientcodegen)", aclID, " from service ", service, " in project ", project)
-	_, err := c.ServiceKafkaAclDelete(ctx, project, service, aclID)
+func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
+	log.Info("Deleting Aiven Acl with ID (goclientcodegen)", acl.ID, " from service ", service, " in project ", project)
+	_, err := c.ServiceKafkaAclDelete(ctx, project, service, acl.ID)
 	return err
 }
 

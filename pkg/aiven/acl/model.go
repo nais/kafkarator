@@ -2,6 +2,7 @@ package acl
 
 import (
 	"fmt"
+
 	"github.com/aiven/aiven-go-client/v2"
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 )
@@ -11,6 +12,8 @@ type Acl struct {
 	Permission string
 	Topic      string
 	Username   string
+
+	NativeIDs []string
 }
 
 type Acls []Acl
@@ -48,8 +51,10 @@ func (a *Acls) Contains(other Acl) bool {
 }
 
 func (a Acl) String() string {
-	return fmt.Sprintf("Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s'}",
-		a.Username, a.Permission, a.Topic, a.ID)
+	return fmt.Sprintf(
+		"Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s', NativeIDs:%v}",
+		a.Username, a.Permission, a.Topic, a.ID, a.NativeIDs,
+	)
 }
 
 type CreateKafkaACLRequest struct {

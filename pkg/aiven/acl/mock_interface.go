@@ -14,46 +14,34 @@ type MockInterface struct {
 }
 
 // Create provides a mock function with given fields: ctx, project, service, isStream, req
-func (_m *MockInterface) Create(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error) {
+func (_m *MockInterface) Create(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) error {
 	ret := _m.Called(ctx, project, service, isStream, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 []*Acl
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) ([]*Acl, error)); ok {
-		return rf(ctx, project, service, isStream, req)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) []*Acl); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) error); ok {
 		r0 = rf(ctx, project, service, isStream, req)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Acl)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, bool, CreateKafkaACLRequest) error); ok {
-		r1 = rf(ctx, project, service, isStream, req)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
-// Delete provides a mock function with given fields: ctx, project, service, aclID
-func (_m *MockInterface) Delete(ctx context.Context, project string, service string, aclID string) error {
-	ret := _m.Called(ctx, project, service, aclID)
+// Delete provides a mock function with given fields: ctx, project, service, acl
+func (_m *MockInterface) Delete(ctx context.Context, project string, service string, acl Acl) error {
+	ret := _m.Called(ctx, project, service, acl)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, project, service, aclID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, Acl) error); ok {
+		r0 = rf(ctx, project, service, acl)
 	} else {
 		r0 = ret.Error(0)
 	}
