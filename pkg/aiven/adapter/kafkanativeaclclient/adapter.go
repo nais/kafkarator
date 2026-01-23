@@ -91,8 +91,9 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 		log.Info("Creating Kafka NativeAclAddIn ", in)
 		out, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 		if err != nil {
-			if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
-				log.Info("ACL already exists (string match fallback), skipping creation")
+			// Check if it's a 409 conflict error (ACL already exists)
+			if nativekafkaclient.IsAlreadyExists(err) {
+				log.Info("ACL already exists, skipping creation")
 				return nil, nil
 			}
 			return nil, err
