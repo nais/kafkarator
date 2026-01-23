@@ -12,6 +12,8 @@ type Acl struct {
 	Permission string
 	Topic      string
 	Username   string
+
+	NativeIDs []string
 }
 
 type Acls []Acl
@@ -49,8 +51,10 @@ func (a *Acls) Contains(other Acl) bool {
 }
 
 func (a Acl) String() string {
-	return fmt.Sprintf("Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s'}",
-		a.Username, a.Permission, a.Topic, a.ID)
+	return fmt.Sprintf(
+		"Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s', NativeIDs:%v}",
+		a.Username, a.Permission, a.Topic, a.ID, a.NativeIDs,
+	)
 }
 
 type CreateKafkaACLRequest struct {

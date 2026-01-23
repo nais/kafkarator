@@ -2,7 +2,6 @@ package acl
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -11,24 +10,26 @@ import (
 
 type Interface interface {
 	List(ctx context.Context, project, serviceName string) ([]*Acl, error)
-	Create(ctx context.Context, project, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error)
-	Delete(ctx context.Context, project, service, aclID string) error
+	Create(ctx context.Context, project, service string, isStream bool, req CreateKafkaACLRequest) error
+	Delete(ctx context.Context, project, service string, acl Acl) error
 }
 
 type Source interface {
 	TopicName() string
 	Pool() string
 	ACLs() kafka_nais_io_v1.TopicACLs
+	// TODO: find a better way to distinguish between Topic and Stream
 	IsStream() bool
 }
 
 type Manager struct {
-	AivenACLs Interface
-	Project   string
-	Service   string
-	Source    Source
-	Logger    log.FieldLogger
-	DryRun    bool
+	AivenACLs        Interface
+	Project          string
+	Service          string
+	Source           Source
+	Logger           log.FieldLogger
+	DryRun           bool
+	DeleteLegacyACLs bool
 }
 
 // Synchronize Syncs the ACL spec in the Source resource with Aiven.
@@ -106,9 +107,13 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 				r.Logger.Infof("DRY RUN: Would create ACL entry: %v", req)
 				return nil
 			}
-			_, err = r.AivenACLs.Create(ctx, r.Project, r.Service, r.Source.IsStream(), req)
-			return err
+
+			if err = r.AivenACLs.Create(ctx, r.Project, r.Service, r.Source.IsStream(), req); err != nil {
+				return err
+			}
+			return nil
 		})
+
 		if err != nil {
 			return err
 		}
@@ -123,24 +128,38 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 
 func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
 	for _, acl := range toDelete {
-		if len(acl.ID) == 0 {
-			return fmt.Errorf("attemping to delete acl without ID: %v", acl)
+
+		deleteNative := len(acl.NativeIDs) > 0
+		deleteLegacy := acl.ID != ""
+
+		if !deleteNative && !deleteLegacy {
+			r.Logger.WithFields(log.Fields{
+				"id":             acl.ID,
+				"native_ids":     acl.NativeIDs,
+				"acl_username":   acl.Username,
+				"acl_permission": acl.Permission,
+				"acl_topic":      acl.Topic,
+			}).Info("Skipping ACL delete (migration policy)")
+			continue
 		}
+
 		err := metrics.ObserveAivenLatency("ACL_Delete", r.Project, func() error {
 			if r.DryRun {
 				r.Logger.Infof("DRY RUN: Would delete ACL entry: %v", acl)
 				return nil
 			}
-			return r.AivenACLs.Delete(ctx, r.Project, r.Service, acl.ID)
+			return r.AivenACLs.Delete(ctx, r.Project, r.Service, acl)
 		})
 		if err != nil {
 			return err
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"acl_id":         acl.ID,
+			"id":             acl.ID,
+			"native_ids":     acl.NativeIDs,
 			"acl_username":   acl.Username,
 			"acl_permission": acl.Permission,
+			"acl_topic":      acl.Topic,
 		}).Infof("Deleted ACL entry")
 	}
 	return nil

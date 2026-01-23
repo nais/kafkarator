@@ -38,31 +38,20 @@ func (_m *MockInterface) EXPECT() *MockInterface_Expecter {
 }
 
 // Create provides a mock function for the type MockInterface
-func (_mock *MockInterface) Create(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error) {
+func (_mock *MockInterface) Create(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) error {
 	ret := _mock.Called(ctx, project, service, isStream, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 []*Acl
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) ([]*Acl, error)); ok {
-		return returnFunc(ctx, project, service, isStream, req)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) []*Acl); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, bool, CreateKafkaACLRequest) error); ok {
 		r0 = returnFunc(ctx, project, service, isStream, req)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*Acl)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, bool, CreateKafkaACLRequest) error); ok {
-		r1 = returnFunc(ctx, project, service, isStream, req)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // MockInterface_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
@@ -113,27 +102,27 @@ func (_c *MockInterface_Create_Call) Run(run func(ctx context.Context, project s
 	return _c
 }
 
-func (_c *MockInterface_Create_Call) Return(acls []*Acl, err error) *MockInterface_Create_Call {
-	_c.Call.Return(acls, err)
+func (_c *MockInterface_Create_Call) Return(err error) *MockInterface_Create_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) ([]*Acl, error)) *MockInterface_Create_Call {
+func (_c *MockInterface_Create_Call) RunAndReturn(run func(ctx context.Context, project string, service string, isStream bool, req CreateKafkaACLRequest) error) *MockInterface_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Delete provides a mock function for the type MockInterface
-func (_mock *MockInterface) Delete(ctx context.Context, project string, service string, aclID string) error {
-	ret := _mock.Called(ctx, project, service, aclID)
+func (_mock *MockInterface) Delete(ctx context.Context, project string, service string, acl Acl) error {
+	ret := _mock.Called(ctx, project, service, acl)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = returnFunc(ctx, project, service, aclID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, Acl) error); ok {
+		r0 = returnFunc(ctx, project, service, acl)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -149,12 +138,12 @@ type MockInterface_Delete_Call struct {
 //   - ctx context.Context
 //   - project string
 //   - service string
-//   - aclID string
-func (_e *MockInterface_Expecter) Delete(ctx interface{}, project interface{}, service interface{}, aclID interface{}) *MockInterface_Delete_Call {
-	return &MockInterface_Delete_Call{Call: _e.mock.On("Delete", ctx, project, service, aclID)}
+//   - acl Acl
+func (_e *MockInterface_Expecter) Delete(ctx interface{}, project interface{}, service interface{}, acl interface{}) *MockInterface_Delete_Call {
+	return &MockInterface_Delete_Call{Call: _e.mock.On("Delete", ctx, project, service, acl)}
 }
 
-func (_c *MockInterface_Delete_Call) Run(run func(ctx context.Context, project string, service string, aclID string)) *MockInterface_Delete_Call {
+func (_c *MockInterface_Delete_Call) Run(run func(ctx context.Context, project string, service string, acl Acl)) *MockInterface_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -168,9 +157,9 @@ func (_c *MockInterface_Delete_Call) Run(run func(ctx context.Context, project s
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
+		var arg3 Acl
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(Acl)
 		}
 		run(
 			arg0,
@@ -187,7 +176,7 @@ func (_c *MockInterface_Delete_Call) Return(err error) *MockInterface_Delete_Cal
 	return _c
 }
 
-func (_c *MockInterface_Delete_Call) RunAndReturn(run func(ctx context.Context, project string, service string, aclID string) error) *MockInterface_Delete_Call {
+func (_c *MockInterface_Delete_Call) RunAndReturn(run func(ctx context.Context, project string, service string, acl Acl) error) *MockInterface_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }

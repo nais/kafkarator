@@ -26,21 +26,20 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) ([]*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) error {
 	in := aiven.CreateKafkaACLRequest{
 		Permission: req.Permission,
 		Topic:      req.Topic,
 		Username:   req.Username,
 	}
-	out, err := c.KafkaACLHandler.Create(ctx, project, service, in)
+	_, err := c.KafkaACLHandler.Create(ctx, project, service, in)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return []*acl.Acl{ptr.To(acl.FromKafkaACL(out))}, nil
+	return nil
 }
 
-func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	log.Info("Deleting Aiven Acl with ID ", aclID, " from service ", service, " in project ", project)
-	return c.KafkaACLHandler.Delete(ctx, project, service, aclID)
+func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
+	log.Info("Deleting Aiven Acl with ID ", acl.ID, " from service ", service, " in project ", project)
+	return c.KafkaACLHandler.Delete(ctx, project, service, acl.ID)
 }

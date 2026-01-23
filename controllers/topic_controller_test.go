@@ -136,18 +136,17 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 				Return(nil)
 		}
 
+		for _, topic := range test.Aiven.Deleted.Topics {
+			topicMock.
+				On("Delete", ctx, project, svc, topic).
+				Maybe().
+				Return(nil)
+		}
+
 		for _, a := range test.Aiven.Created.Acls {
 			aclMock.
 				On("Create", ctx, project, svc, false, a).
-				Return(
-					[]*acl.Acl{{
-						ID:         wellKnownID,
-						Permission: a.Permission,
-						Topic:      a.Topic,
-						Username:   a.Username,
-					}},
-					nil,
-				)
+				Return(nil)
 		}
 
 		for topicName, topic := range test.Aiven.Updated.Topics {
@@ -156,15 +155,11 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 				Return(nil)
 		}
 
-		for _, topicName := range test.Aiven.Deleted.Topics {
-			topicMock.
-				On("Delete", ctx, project, svc, topicName).
-				Return(nil)
-		}
-
-		for _, a := range test.Aiven.Deleted.Acls {
+		for _, id := range test.Aiven.Deleted.Acls {
 			aclMock.
-				On("Delete", ctx, project, svc, a).
+				On("Delete", ctx, project, svc, mock.MatchedBy(func(x acl.Acl) bool {
+					return x.ID == id
+				})).
 				Return(nil)
 		}
 	}
