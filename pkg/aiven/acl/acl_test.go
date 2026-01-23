@@ -255,12 +255,11 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 		Return(nil)
 
 	aclManager := acl.Manager{
-		AivenACLs:        m,
-		Project:          TestPool,
-		Service:          TestService,
-		Source:           acl.StreamAdapter{Stream: &source},
-		Logger:           log.New(),
-		DeleteLegacyACLs: true,
+		AivenACLs: m,
+		Project:   TestPool,
+		Service:   TestService,
+		Source:    acl.StreamAdapter{Stream: &source},
+		Logger:    log.New(),
 	}
 
 	err := aclManager.Synchronize(ctx)

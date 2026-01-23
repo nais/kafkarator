@@ -23,13 +23,12 @@ type Source interface {
 }
 
 type Manager struct {
-	AivenACLs        Interface
-	Project          string
-	Service          string
-	Source           Source
-	Logger           log.FieldLogger
-	DryRun           bool
-	DeleteLegacyACLs bool
+	AivenACLs Interface
+	Project   string
+	Service   string
+	Source    Source
+	Logger    log.FieldLogger
+	DryRun    bool
 }
 
 // Synchronize Syncs the ACL spec in the Source resource with Aiven.

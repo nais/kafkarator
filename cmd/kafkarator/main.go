@@ -60,7 +60,6 @@ const (
 	SyncPeriod          = "sync-period"
 	TopicReportInterval = "topic-report-interval"
 	DryRun              = "dry-run"
-	DeleteLegacyACLs    = "delete-legacy-acls"
 )
 
 const (
@@ -84,7 +83,6 @@ func init() {
 	flag.Duration(SyncPeriod, time.Hour*1, "How often to re-synchronize all Topic resources including credential rotation")
 	flag.StringSlice(Projects, []string{"dev-nais-dev"}, "List of projects allowed to operate on")
 	flag.Bool(DryRun, false, "If true, do not make any changes")
-	flag.Bool(DeleteLegacyACLs, false, "If true, delete legacy ACLs when reconciling")
 
 	flag.Parse()
 
