@@ -192,8 +192,9 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 
 		_, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 		if err != nil {
+			// Check if it's a 409 conflict error (ACL already exists)
 			if nativekafkaclient.IsAlreadyExists(err) {
-				log.WithField("op", desired.Operation).Info("Native ACL already exists, skipping create")
+				log.WithField("op", desired.Operation).Info("ACL already exists (string match fallback), skipping creation")
 				continue
 			}
 			return err
