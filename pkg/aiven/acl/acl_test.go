@@ -2,13 +2,14 @@ package acl_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -189,7 +190,7 @@ func (suite *ACLFilterTestSuite) TestNewACLs() {
 func (suite *ACLFilterTestSuite) TestDeleteACLs() {
 	removed := acl.DeleteACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *acl.Acl) bool {
+	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b acl.Acl) bool {
 		return a.ID < b.ID
 	}))
 }
@@ -213,7 +214,7 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 		Return(suite.kafkaAcls, nil)
 	m.On("Create", ctx, TestPool, TestService, false, mock.Anything).
 		Times(2).
-		Return(nil, nil)
+		Return(nil)
 	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
 		Times(4).
 		Return(nil)
@@ -250,14 +251,15 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 		Return(suite.kafkaAcls, nil)
 	m.On("Create", ctx, TestPool, TestService, true, mock.Anything).
 		Times(1).
-		Return(nil, nil)
+		Return(nil)
 
 	aclManager := acl.Manager{
-		AivenACLs: m,
-		Project:   TestPool,
-		Service:   TestService,
-		Source:    acl.StreamAdapter{Stream: &source},
-		Logger:    log.New(),
+		AivenACLs:        m,
+		Project:          TestPool,
+		Service:          TestService,
+		Source:           acl.StreamAdapter{Stream: &source},
+		Logger:           log.New(),
+		DeleteLegacyACLs: true,
 	}
 
 	err := aclManager.Synchronize(ctx)
