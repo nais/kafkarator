@@ -157,10 +157,16 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 				Return(nil)
 		}
 
-		for _, id := range test.Aiven.Deleted.Acls {
+		for _, deletedID := range test.Aiven.Deleted.Acls {
 			aclMock.
 				On("Delete", ctx, project, svc, mock.MatchedBy(func(x acl.Acl) bool {
-					return x.ID == id
+					// Check if any of the ACL's native IDs match the ID to be deleted
+					for _, nativeID := range x.IDs {
+						if nativeID == deletedID {
+							return true
+						}
+					}
+					return false
 				})).
 				Return(nil)
 		}
