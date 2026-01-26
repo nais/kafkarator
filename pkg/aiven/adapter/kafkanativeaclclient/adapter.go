@@ -55,20 +55,22 @@ func (g *nativeAclGroup) hasOperation(op kafka.OperationType) bool {
 	return ok
 }
 
-func resolveAivenPermission(g *nativeAclGroup) (kafka.PermissionType, bool) {
+func resolveAivenPermission(g *nativeAclGroup) *kafka.PermissionType {
 	hasDescribe := g.hasOperation(kafka.OperationTypeDescribe)
 
+	// The set of permissions that map to a "admin" role
 	adminOps := []kafka.OperationType{
 		kafka.OperationTypeRead,
 		kafka.OperationTypeWrite,
+		kafka.OperationTypeDescribe,
 		kafka.OperationTypeDescribeConfigs,
 		kafka.OperationTypeAlterConfigs,
 		kafka.OperationTypeDelete,
 	}
 
-	// Check admin
-	isAdmin := hasDescribe
-	if isAdmin {
+	// Check if admin
+	isAdmin := true
+	if hasDescribe {
 		for _, op := range adminOps {
 			if !g.hasOperation(op) {
 				isAdmin = false
@@ -77,8 +79,10 @@ func resolveAivenPermission(g *nativeAclGroup) (kafka.PermissionType, bool) {
 		}
 	}
 
+	var permission kafka.PermissionType
 	if isAdmin {
-		return kafka.PermissionTypeAdmin, true
+		permission = kafka.PermissionTypeAdmin
+		return &permission
 	}
 
 	hasRead := g.hasOperation(kafka.OperationTypeRead)
@@ -86,14 +90,16 @@ func resolveAivenPermission(g *nativeAclGroup) (kafka.PermissionType, bool) {
 
 	switch {
 	case hasDescribe && hasRead && hasWrite:
-		return kafka.PermissionTypeReadwrite, true
+		permission = kafka.PermissionTypeReadwrite
 	case hasDescribe && hasRead:
-		return kafka.PermissionTypeRead, true
+		permission = kafka.PermissionTypeRead
 	case hasDescribe && hasWrite:
-		return kafka.PermissionTypeWrite, true
+		permission = kafka.PermissionTypeWrite
 	default:
-		return "", false
+		return &permission
 	}
+
+	return &permission
 }
 
 type nativeAcl struct {
@@ -133,13 +139,13 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 
 	resolvedAivenAcls := make([]*acl.Acl, 0, len(nativeAclGroups))
 	for groupKey, group := range nativeAclGroups {
-		permission, ok := resolveAivenPermission(group)
-		if !ok {
+		permission := resolveAivenPermission(group)
+		if permission == nil {
 			continue
 		}
 
-		nativeIDs := nativeIDsForPermission(group, permission)
-		permissionStr := string(permission)
+		nativeIDs := nativeIDsForPermission(group, *permission)
+		permissionStr := string(*permission)
 
 		resolvedAivenAcls = append(resolvedAivenAcls, &acl.Acl{
 			ID:         "",
