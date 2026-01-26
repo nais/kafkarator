@@ -6,19 +6,19 @@ config:
 aiven:
   existing:
     acls:
-      - id: acl-1
+      - ids: [acl-1]
         username: myteam.myapplication*
         permission: read
         topic: myteam.mytopic
-      - id: acl-2
+      - ids: [acl-2]
         username: otherteam.otherapplication*
         permission: write
         topic: myteam.mytopic
-      - id: acl-3
+      - ids: [acl-3]
         username: myteam.no-wildcard-680515dc
         permission: readwrite
         topic: myteam.mytopic
-      - id: not-relevant-acl
+      - ids: [not-relevant-acl]
         username: otherteam.myapplication*
         permission: read
         topic: otherteam.othertopic
