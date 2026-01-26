@@ -3,6 +3,7 @@ package acl
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
@@ -207,7 +208,7 @@ func (s StreamAdapter) Pool() string {
 func (s StreamAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
 	if s.Delete {
 		return kafka_nais_io_v1.TopicACLs{}
-	} else {
-		return kafka_nais_io_v1.TopicACLs{s.ACL()}
 	}
+
+	return s.GetACLs()
 }

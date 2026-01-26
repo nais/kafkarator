@@ -2,13 +2,15 @@ package acl_test
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
@@ -264,6 +266,70 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	suite.NoError(err)
 
 	m.AssertExpectations(suite.T())
+}
+
+func (suite *ACLFilterTestSuite) TestSynchronizeStreamWithAdditionalUsers() {
+	ctx := context.Background()
+	source := kafka_nais_io_v1.Stream{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      Topic,
+			Namespace: Team,
+		},
+		Spec: kafka_nais_io_v1.StreamSpec{
+			Pool:            TestPool,
+			AdditionalUsers: []string{"user1", "user2"},
+		},
+	}
+
+	m := &acl.MockInterface{}
+	m.On("List", ctx, TestPool, TestService).
+		Once().
+		Return(suite.kafkaAcls, nil)
+
+	created := make([]acl.CreateKafkaACLRequest, 0)
+
+	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+		Times(1+len(source.Spec.AdditionalUsers)).
+		Run(func(args mock.Arguments) {
+			req := args.Get(3).(acl.CreateKafkaACLRequest)
+			created = append(created, req)
+		}).
+		Return(nil, nil)
+
+	aclManager := acl.Manager{
+		AivenACLs: m,
+		Project:   TestPool,
+		Service:   TestService,
+		Source:    acl.StreamAdapter{Stream: &source},
+		Logger:    log.New(),
+	}
+
+	err := aclManager.Synchronize(ctx)
+	suite.NoError(err)
+	m.AssertExpectations(suite.T())
+
+	for _, req := range created {
+		assert.Equal(suite.T(), "admin", req.Permission)
+		assert.Equal(suite.T(), source.TopicWildcard(), req.Topic)
+	}
+
+	wantPrefixes := map[string]bool{
+		Team + "_" + Topic + "_": false,
+		"user1_" + Topic + "_":   false,
+		"user2_" + Topic + "_":   false,
+	}
+
+	for _, req := range created {
+		for p := range wantPrefixes {
+			if strings.HasPrefix(req.Username, p) {
+				wantPrefixes[p] = true
+			}
+		}
+	}
+
+	for p, seen := range wantPrefixes {
+		assert.Assert(suite.T(), seen, "expected a created username with prefix %q, but didn't see it; got=%v", p, created)
+	}
 }
 
 func TestACLFilter(t *testing.T) {
