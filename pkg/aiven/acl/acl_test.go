@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 )
 
 const (
@@ -39,31 +38,31 @@ type ACLFilterTestSuite struct {
 func (suite *ACLFilterTestSuite) SetupSuite() {
 	suite.existingAcls = []acl.Acl{
 		{ // Delete because of username
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{ // Delete because of username and permission
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
 		{ // Keep
-			ID:         "abcdef-new",
+			IDs:        []string{"abcdef-new"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2_app_eb343e9a_*",
@@ -103,25 +102,25 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.shouldRemove = []acl.Acl{
 		{
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
@@ -130,31 +129,31 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.kafkaAcls = []*acl.Acl{
 		{ // Delete because of username
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{ // Delete because of username and permission
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
 		{ // Keep
-			ID:         "abcdef-new",
+			IDs:        []string{"abcdef-new"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2_app_eb343e9a_*",
@@ -192,7 +191,7 @@ func (suite *ACLFilterTestSuite) TestDeleteACLs() {
 	removed := acl.DeleteACLs(suite.existingAcls, suite.wantedAcls)
 
 	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b acl.Acl) bool {
-		return a.ID < b.ID
+		return a.Username < b.Username
 	}))
 }
 

@@ -41,5 +41,11 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 
 func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
 	log.Info("Deleting Aiven Acl from service ", service, " in project ", project)
-	return c.KafkaACLHandler.Delete(ctx, project, service, "")
+	for _, ID := range acl.IDs {
+		err := c.KafkaACLHandler.Delete(ctx, project, service, ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -148,10 +148,10 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		permissionStr := string(*permission)
 
 		resolvedAivenAcls = append(resolvedAivenAcls, &acl.Acl{
-			Permission:              permissionStr,
-			Topic:                   group.topic,
-			Username:                group.username,
-			KafkaNativeIdCollection: nativeIDs,
+			Permission: permissionStr,
+			Topic:      group.topic,
+			Username:   group.username,
+			IDs:        nativeIDs,
 		})
 
 		log.WithFields(log.Fields{
@@ -204,7 +204,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
-	for _, id := range acl.KafkaNativeIdCollection {
+	for _, id := range acl.IDs {
 		log.WithFields(log.Fields{
 			"username": acl.Username,
 			"topic":    acl.Topic,
