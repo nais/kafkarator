@@ -334,6 +334,120 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStreamWithAdditionalUsers() {
 	}
 }
 
+func (suite *ACLFilterTestSuite) TestSynchronizeTopic_DeletesAllNativeIDs() {
+	ctx := context.Background()
+
+	// read => describe + read
+	// write => describe + write
+	// readwrite => describe + read + write
+	kafkaAcls := []*acl.Acl{
+		{
+			IDs:        []string{"u1-describe", "u1-read"},
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app-f1fbd6bd",
+		},
+		{
+			IDs:        []string{"u2-describe", "u2-write"},
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user.app*",
+		},
+		{
+			IDs:        []string{"u3-describe", "u3-read", "u3-write"},
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user2.app-4ca551f9",
+		},
+		{
+			IDs:        []string{"keep-describe", "keep-write"},
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2_app_eb343e9a_*", // kept
+		},
+	}
+
+	source := kafka_nais_io_v1.Topic{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      Topic,
+			Namespace: Team,
+		},
+		Spec: kafka_nais_io_v1.TopicSpec{
+			Pool: TestPool,
+			ACL:  suite.topicAcls,
+		},
+	}
+
+	m := &acl.MockInterface{}
+	m.On("List", ctx, TestPool, TestService).
+		Once().
+		Return(kafkaAcls, nil)
+
+	seen := collectDeletedIDs(ctx, m)
+
+	m.On("Create", ctx, TestPool, TestService, false, acl.CreateKafkaACLRequest{
+		Permission: "read",
+		Topic:      FullTopic,
+		Username:   "user_app_0841666a_*",
+	}).Once().Return(nil)
+
+	m.On("Create", ctx, TestPool, TestService, false, acl.CreateKafkaACLRequest{
+		Permission: "readwrite",
+		Topic:      FullTopic,
+		Username:   "user3_app_538859ff_*",
+	}).Once().Return(nil)
+
+	aclManager := acl.Manager{
+		AivenACLs: m,
+		Project:   TestPool,
+		Service:   TestService,
+		Source:    acl.TopicAdapter{Topic: &source},
+		Logger:    log.New(),
+	}
+
+	err := aclManager.Synchronize(ctx)
+	suite.NoError(err)
+
+	expectedDelete := []string{
+		// user.app-f1fbd6bd (read)
+		"u1-describe", "u1-read",
+
+		// user.app* (write)
+		"u2-describe", "u2-write",
+
+		// user2.app-4ca551f9 (readwrite)
+		"u3-describe", "u3-read", "u3-write",
+	}
+
+	for _, id := range expectedDelete {
+		if seen[id] == 0 {
+			suite.T().Errorf("expected native id to be deleted but wasn't seen: %s", id)
+		}
+	}
+
+	if seen["keep-describe"] > 0 || seen["keep-write"] > 0 {
+		suite.T().Errorf("saw deletion of kept ACL ids: %#v", seen)
+	}
+
+	m.AssertExpectations(suite.T())
+}
+
+func collectDeletedIDs(ctx context.Context, m *acl.MockInterface) map[string]int {
+	seen := map[string]int{}
+
+	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
+		Maybe().
+		Run(func(args mock.Arguments) {
+			a := args.Get(3).(acl.Acl)
+			for _, id := range a.IDs {
+				seen[id]++
+			}
+		}).
+		Return(nil)
+
+	return seen
+}
+
 func TestACLFilter(t *testing.T) {
 	testSuite := new(ACLFilterTestSuite)
 	suite.Run(t, testSuite)
