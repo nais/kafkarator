@@ -8,10 +8,10 @@ import (
 )
 
 type Acl struct {
-	Permission              string
-	Topic                   string
-	Username                string
-	KafkaNativeIdCollection []string
+	Permission                  string
+	Topic                       string
+	Username                    string
+	CorrespondingKafkaNativeIDs []string
 }
 
 type Acls []Acl
@@ -50,7 +50,7 @@ func (a *Acls) Contains(other Acl) bool {
 func (a Acl) String() string {
 	return fmt.Sprintf(
 		"Acl{Username:'%s', Permission:'%s', Topic:'%s', NativeIDs:%v}",
-		a.Username, a.Permission, a.Topic, a.KafkaNativeIdCollection,
+		a.Username, a.Permission, a.Topic, a.CorrespondingKafkaNativeIDs,
 	)
 }
 
