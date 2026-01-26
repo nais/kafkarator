@@ -101,6 +101,13 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 	topicMock := &topic_package.MockInterface{}
 	topicMock.Test(t)
 
+	// Collect which native IDs we actually attempt to delete
+	expectedDeleted := map[string]struct{}{}
+	for _, id := range test.Aiven.Deleted.Acls {
+		expectedDeleted[id] = struct{}{}
+	}
+	seenDeleted := map[string]int{}
+
 	for _, project := range test.Config.Projects {
 		svc, _ := mockNameResolver.ResolveKafkaServiceName(ctx, project)
 		aclMock.
@@ -157,17 +164,17 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 				Return(nil)
 		}
 
-		for _, deletedID := range test.Aiven.Deleted.Acls {
+		// Allow any number of Delete calls; record IDs from each call
+		if len(test.Aiven.Deleted.Acls) > 0 {
 			aclMock.
-				On("Delete", ctx, project, svc, mock.MatchedBy(func(x acl.Acl) bool {
-					// Check if any of the ACL's native IDs match the ID to be deleted
-					for _, nativeID := range x.IDs {
-						if nativeID == deletedID {
-							return true
-						}
+				On("Delete", ctx, project, svc, mock.Anything).
+				Maybe().
+				Run(func(args mock.Arguments) {
+					a := args.Get(3).(acl.Acl)
+					for _, id := range a.IDs {
+						seenDeleted[id]++
 					}
-					return false
-				})).
+				}).
 				Return(nil)
 		}
 	}
@@ -180,11 +187,19 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 			result := false
 			if ok := aclMock.AssertExpectations(t); !ok {
 				t.Errorf("Expectations on ACLs failed")
-				result = result || ok
+				result = false
 			}
 			if ok := topicMock.AssertExpectations(t); !ok {
 				t.Errorf("Expectations on Topic failed")
-				result = result || ok
+				result = false
+			}
+
+			// Verify we attempted to delete all expected ids
+			for id := range expectedDeleted {
+				if seenDeleted[id] == 0 {
+					t.Errorf("expected native ACL id to be deleted but never saw it: %s", id)
+					result = false
+				}
 			}
 			return result
 		}
