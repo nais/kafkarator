@@ -40,21 +40,13 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
-	log.Info("Deleting Aiven Acl with ID (goclientcodegen)", acl.ID, " from service ", service, " in project ", project)
-	_, err := c.ServiceKafkaAclDelete(ctx, project, service, acl.ID)
+	log.Info("Deleting Aiven Acl from service ", service, " in project ", project)
+	_, err := c.ServiceKafkaAclDelete(ctx, project, service, "")
 	return err
-}
-
-func valueOrEmpty(in *string) string {
-	if in != nil {
-		return *in
-	}
-	return ""
 }
 
 func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
 	return &acl.Acl{
-		ID:         valueOrEmpty(aclOut.Id),
 		Permission: string(aclOut.Permission),
 		Topic:      aclOut.Topic,
 		Username:   aclOut.Username,

@@ -8,12 +8,10 @@ import (
 )
 
 type Acl struct {
-	ID         string
-	Permission string
-	Topic      string
-	Username   string
-
-	NativeIDs []string
+	Permission              string
+	Topic                   string
+	Username                string
+	KafkaNativeIdCollection []string
 }
 
 type Acls []Acl
@@ -32,7 +30,6 @@ func FromTopicACL(topic string, topicAcl *kafka_nais_io_v1.TopicACL, namegen fun
 
 func FromKafkaACL(kafkaAcl *aiven.KafkaACL) Acl {
 	return Acl{
-		ID:         kafkaAcl.ID,
 		Permission: kafkaAcl.Permission,
 		Topic:      kafkaAcl.Topic,
 		Username:   kafkaAcl.Username,
@@ -52,8 +49,8 @@ func (a *Acls) Contains(other Acl) bool {
 
 func (a Acl) String() string {
 	return fmt.Sprintf(
-		"Acl{Username:'%s', Permission:'%s', Topic:'%s', ID:'%s', NativeIDs:%v}",
-		a.Username, a.Permission, a.Topic, a.ID, a.NativeIDs,
+		"Acl{Username:'%s', Permission:'%s', Topic:'%s', NativeIDs:%v}",
+		a.Username, a.Permission, a.Topic, a.KafkaNativeIdCollection,
 	)
 }
 
