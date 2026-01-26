@@ -128,13 +128,11 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
 	for _, acl := range toDelete {
 
-		deleteNative := len(acl.NativeIDs) > 0
-		deleteLegacy := acl.ID != ""
+		deleteNative := len(acl.KafkaNativeIdCollection) > 0
 
-		if !deleteNative && !deleteLegacy {
+		if !deleteNative {
 			r.Logger.WithFields(log.Fields{
-				"id":             acl.ID,
-				"native_ids":     acl.NativeIDs,
+				"native_ids":     acl.KafkaNativeIdCollection,
 				"acl_username":   acl.Username,
 				"acl_permission": acl.Permission,
 				"acl_topic":      acl.Topic,
@@ -154,8 +152,7 @@ func (r *Manager) delete(ctx context.Context, toDelete []Acl) error {
 		}
 
 		r.Logger.WithFields(log.Fields{
-			"id":             acl.ID,
-			"native_ids":     acl.NativeIDs,
+			"native_ids":     acl.KafkaNativeIdCollection,
 			"acl_username":   acl.Username,
 			"acl_permission": acl.Permission,
 			"acl_topic":      acl.Topic,
