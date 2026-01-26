@@ -193,8 +193,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 
 		_, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 		if err != nil {
-			// TODO: With grouping we avoid this error, can be removed later
-			if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
+			if nativekafkaclient.IsAlreadyExists(err) {
 				log.WithField("op", desired.Operation).Info("Native ACL already exists, skipping create")
 				continue
 			}
