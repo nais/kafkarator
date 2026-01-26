@@ -148,7 +148,6 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 		permissionStr := string(*permission)
 
 		resolvedAivenAcls = append(resolvedAivenAcls, &acl.Acl{
-			ID:                      "",
 			Permission:              permissionStr,
 			Topic:                   group.topic,
 			Username:                group.username,
@@ -193,8 +192,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 
 		_, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
 		if err != nil {
-			// TODO: With grouping we avoid this error, can be removed later
-			if strings.Contains(err.Error(), "409") && strings.Contains(err.Error(), "Identical ACL entry already exists") {
+			if nativekafkaclient.IsAlreadyExists(err) {
 				log.WithField("op", desired.Operation).Info("Native ACL already exists, skipping create")
 				continue
 			}
@@ -222,14 +220,8 @@ func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl
 			return err
 		}
 
-		log.Warning("Skipping deletion of legacy ACL ID ", acl.ID, " due to migration policy")
-		/*
-			if acl.ID != "" {
-				_, err := c.ServiceKafkaAclDelete(ctx, project, service, acl.ID)
-				if err != nil {
-					return err
-				}
-			} */
+		// TODO: double-check that we never get here (during a transition phase maybe?)
+		log.Warning("Skipping deletion of legacy ACL due to migration policy")
 	}
 	return nil
 }
