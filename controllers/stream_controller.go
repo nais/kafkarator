@@ -58,9 +58,9 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		"namespace": req.Namespace,
 	})
 
-	logger.Infof("Processing request")
+	logger.Infof("Starting processing request for stream %s", stream.Name)
 	defer func() {
-		logger.Infof("Finished processing request")
+		logger.Infof("Finished processing request for stream %s", stream.Name)
 	}()
 
 	fail := func(err error, requeue bool) (ctrl.Result, error) {
@@ -75,7 +75,8 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	err := r.Get(ctx, req.NamespacedName, &stream)
 	switch {
 	case k8s_errors.IsNotFound(err):
-		return fail(fmt.Errorf("resource deleted from cluster; noop"), false)
+		logger.Infof("Resource deleted from cluster; nothing to do")
+		return ctrl.Result{}, nil
 	case err != nil:
 		return fail(fmt.Errorf("unable to retrieve resource from cluster: %s", err), true)
 	}

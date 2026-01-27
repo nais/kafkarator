@@ -30,6 +30,11 @@ values:
     config:
       type: string
       secret: true
+  aiven.log.level:
+    description: Log level for kafkarator
+    displayName: Aivenator log level
+    config:
+      type: string
   caBundle:
     description: Enable CA bundle for Aiven API
     displayName: Enable CA bundle

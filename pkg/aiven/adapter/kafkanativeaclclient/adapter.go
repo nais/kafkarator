@@ -163,7 +163,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 			"permission_type": groupKey.PermissionType,
 			"aiven_perm":      permissionStr,
 			"native_ids":      nativeIDs,
-		}).Info("Coalesced Kafka native ACL group into one Aiven ACL")
+		}).Debug("Coalesced Kafka native ACL group into one Aiven ACL")
 	}
 
 	return resolvedAivenAcls, nil
