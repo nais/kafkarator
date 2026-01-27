@@ -189,7 +189,7 @@ func (r *StreamReconciler) Process(ctx context.Context, stream kafka_nais_io_v1.
 	}
 
 	// Process or delete?
-	if stream.ObjectMeta.DeletionTimestamp != nil {
+	if stream.DeletionTimestamp != nil {
 		return r.handleDelete(ctx, stream, logger, status, fail)
 	}
 
