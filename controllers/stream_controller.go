@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/aiven/aiven-go-client/v2"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
@@ -13,12 +17,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
-	"time"
 )
 
 type StreamReconcileResult struct {
@@ -57,9 +58,9 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		"namespace": req.Namespace,
 	})
 
-	logger.Infof("Processing request")
+	logger.Infof("Starting processing request for stream %s", stream.Name)
 	defer func() {
-		logger.Infof("Finished processing request")
+		logger.Infof("Finished processing request for stream %s", stream.Name)
 	}()
 
 	fail := func(err error, requeue bool) (ctrl.Result, error) {
@@ -74,7 +75,8 @@ func (r *StreamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	err := r.Get(ctx, req.NamespacedName, &stream)
 	switch {
 	case k8s_errors.IsNotFound(err):
-		return fail(fmt.Errorf("resource deleted from cluster; noop"), false)
+		logger.Infof("Resource deleted from cluster; nothing to do")
+		return ctrl.Result{}, nil
 	case err != nil:
 		return fail(fmt.Errorf("unable to retrieve resource from cluster: %s", err), true)
 	}
@@ -187,7 +189,7 @@ func (r *StreamReconciler) Process(ctx context.Context, stream kafka_nais_io_v1.
 	}
 
 	// Process or delete?
-	if stream.ObjectMeta.DeletionTimestamp != nil {
+	if stream.DeletionTimestamp != nil {
 		return r.handleDelete(ctx, stream, logger, status, fail)
 	}
 
@@ -264,6 +266,9 @@ func (r *StreamReconciler) handleDelete(ctx context.Context, stream kafka_nais_i
 
 	logger.Infof("Permanently deleting Aiven stream and its data")
 	topics, err := r.Aiven.Topics.List(ctx, projectName, serviceName)
+	if err != nil {
+		return fail(fmt.Errorf("failed to list topics on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+	}
 	for _, topic := range topics {
 		if strings.HasPrefix(topic.TopicName, stream.TopicPrefix()) {
 			err = metrics.ObserveAivenLatency("Topic_Delete", projectName, func() error {

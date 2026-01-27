@@ -5,14 +5,20 @@
 
   outputs = { nixpkgs, ... }:
     let
-      goOverlay = final: prev: {
-        go = prev.go.overrideAttrs (old: rec {
-          version = "1.23.0";
+      goOverlay = final: prev: let
+        version = "1.25.5";
+        newerGoVersion = prev.go.overrideAttrs (old: {
+          inherit version;
           src = prev.fetchurl {
             url = "https://go.dev/dl/go${version}.src.tar.gz";
-            hash = "sha256-Qreo6A2AXaoDAi7T/eQyHUw78smQoUQWXQHu7Nb2mcY=";
+            hash = ""; # TODO: if `version` is changed in the future
           };
         });
+        nixpkgsVersion = prev.go.version;
+        newVersionNotInNixpkgs = -1 == builtins.compareVersions nixpkgsVersion version;
+      in {
+        go = if newVersionNotInNixpkgs then newerGoVersion else prev.go;
+        buildGoModule = prev.buildGoModule.override { go = final.go; };
       };
       # helpers
       withSystem = nixpkgs.lib.genAttrs [
@@ -36,7 +42,7 @@
             golangci-lint-langserver
             gopls
             python3
-            python312Packages.python-lsp-server
+            python3Packages.python-lsp-server
             black
           ];
         };

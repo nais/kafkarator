@@ -6,7 +6,7 @@ config:
 aiven:
   existing:
     acls:
-      - acl_id: new-well-known-id
+      - ids: [new-well-known-id]
         username: myteam_myapplication_1c62faf5_*
         permission: read
         topic: myteam.mytopic

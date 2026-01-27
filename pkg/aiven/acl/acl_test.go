@@ -2,16 +2,16 @@ package acl_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/nais/kafkarator/pkg/aiven/acl"
+	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-
-	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 )
 
 const (
@@ -37,31 +37,31 @@ type ACLFilterTestSuite struct {
 func (suite *ACLFilterTestSuite) SetupSuite() {
 	suite.existingAcls = []acl.Acl{
 		{ // Delete because of username
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{ // Delete because of username and permission
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
 		{ // Keep
-			ID:         "abcdef-new",
+			IDs:        []string{"abcdef-new"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2_app_eb343e9a_*",
@@ -101,25 +101,25 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.shouldRemove = []acl.Acl{
 		{
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
@@ -128,31 +128,31 @@ func (suite *ACLFilterTestSuite) SetupSuite() {
 
 	suite.kafkaAcls = []*acl.Acl{
 		{ // Delete because of username
-			ID:         "abc",
+			IDs:        []string{"abc"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user.app-f1fbd6bd",
 		},
 		{ // Delete because of wrong permission
-			ID:         "abcde",
+			IDs:        []string{"abcde"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user.app*",
 		},
 		{ // Delete because of username and permission
-			ID:         "123",
+			IDs:        []string{"123"},
 			Permission: "read",
 			Topic:      FullTopic,
 			Username:   "user2.app-4ca551f9",
 		},
 		{ // Delete because of old naming convention
-			ID:         "abcdef",
+			IDs:        []string{"abcdef"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2.app*",
 		},
 		{ // Keep
-			ID:         "abcdef-new",
+			IDs:        []string{"abcdef-new"},
 			Permission: "write",
 			Topic:      FullTopic,
 			Username:   "user2_app_eb343e9a_*",
@@ -189,8 +189,8 @@ func (suite *ACLFilterTestSuite) TestNewACLs() {
 func (suite *ACLFilterTestSuite) TestDeleteACLs() {
 	removed := acl.DeleteACLs(suite.existingAcls, suite.wantedAcls)
 
-	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b *acl.Acl) bool {
-		return a.ID < b.ID
+	assert.DeepEqual(suite.T(), suite.shouldRemove, removed, cmpopts.SortSlices(func(a, b acl.Acl) bool {
+		return a.Username < b.Username
 	}))
 }
 
@@ -211,9 +211,9 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic() {
 	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, false, mock.Anything).
 		Times(2).
-		Return(nil, nil)
+		Return(nil)
 	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
 		Times(4).
 		Return(nil)
@@ -248,9 +248,9 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	m.On("List", ctx, TestPool, TestService).
 		Once().
 		Return(suite.kafkaAcls, nil)
-	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, true, mock.Anything).
 		Times(1).
-		Return(nil, nil)
+		Return(nil)
 
 	aclManager := acl.Manager{
 		AivenACLs: m,
@@ -264,6 +264,120 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStream() {
 	suite.NoError(err)
 
 	m.AssertExpectations(suite.T())
+}
+
+func (suite *ACLFilterTestSuite) TestSynchronizeTopic_DeletesAllNativeIDs() {
+	ctx := context.Background()
+
+	// read => describe + read
+	// write => describe + write
+	// readwrite => describe + read + write
+	kafkaAcls := []*acl.Acl{
+		{
+			IDs:        []string{"u1-describe", "u1-read"},
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app-f1fbd6bd",
+		},
+		{
+			IDs:        []string{"u2-describe", "u2-write"},
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user.app*",
+		},
+		{
+			IDs:        []string{"u3-describe", "u3-read", "u3-write"},
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user2.app-4ca551f9",
+		},
+		{
+			IDs:        []string{"keep-describe", "keep-write"},
+			Permission: "write",
+			Topic:      FullTopic,
+			Username:   "user2_app_eb343e9a_*", // kept
+		},
+	}
+
+	source := kafka_nais_io_v1.Topic{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      Topic,
+			Namespace: Team,
+		},
+		Spec: kafka_nais_io_v1.TopicSpec{
+			Pool: TestPool,
+			ACL:  suite.topicAcls,
+		},
+	}
+
+	m := &acl.MockInterface{}
+	m.On("List", ctx, TestPool, TestService).
+		Once().
+		Return(kafkaAcls, nil)
+
+	seen := collectDeletedIDs(ctx, m)
+
+	m.On("Create", ctx, TestPool, TestService, false, acl.CreateKafkaACLRequest{
+		Permission: "read",
+		Topic:      FullTopic,
+		Username:   "user_app_0841666a_*",
+	}).Once().Return(nil)
+
+	m.On("Create", ctx, TestPool, TestService, false, acl.CreateKafkaACLRequest{
+		Permission: "readwrite",
+		Topic:      FullTopic,
+		Username:   "user3_app_538859ff_*",
+	}).Once().Return(nil)
+
+	aclManager := acl.Manager{
+		AivenACLs: m,
+		Project:   TestPool,
+		Service:   TestService,
+		Source:    acl.TopicAdapter{Topic: &source},
+		Logger:    log.New(),
+	}
+
+	err := aclManager.Synchronize(ctx)
+	suite.NoError(err)
+
+	expectedDelete := []string{
+		// user.app-f1fbd6bd (read)
+		"u1-describe", "u1-read",
+
+		// user.app* (write)
+		"u2-describe", "u2-write",
+
+		// user2.app-4ca551f9 (readwrite)
+		"u3-describe", "u3-read", "u3-write",
+	}
+
+	for _, id := range expectedDelete {
+		if seen[id] == 0 {
+			suite.T().Errorf("expected native id to be deleted but wasn't seen: %s", id)
+		}
+	}
+
+	if seen["keep-describe"] > 0 || seen["keep-write"] > 0 {
+		suite.T().Errorf("saw deletion of kept ACL ids: %#v", seen)
+	}
+
+	m.AssertExpectations(suite.T())
+}
+
+func collectDeletedIDs(ctx context.Context, m *acl.MockInterface) map[string]int {
+	seen := map[string]int{}
+
+	m.On("Delete", ctx, TestPool, TestService, mock.Anything).
+		Maybe().
+		Run(func(args mock.Arguments) {
+			a := args.Get(3).(acl.Acl)
+			for _, id := range a.IDs {
+				seen[id]++
+			}
+		}).
+		Return(nil)
+
+	return seen
 }
 
 func TestACLFilter(t *testing.T) {

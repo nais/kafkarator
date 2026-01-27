@@ -11,6 +11,11 @@ values:
     displayName: "Feature: generated client"
     config:
       type: bool
+  featureFlags.native_kafka_acl:
+    description: Use native Kafka ACLs instead of Aiven ACLs
+    displayName: "Feature: native Kafka ACL"
+    config:
+      type: bool
   aiven.projects:
     description: Aiven projects (space separated) with Kafka enabled for this instance of kafkarator
     computed:
@@ -25,6 +30,11 @@ values:
     config:
       type: string
       secret: true
+  aiven.log_level:
+    description: Log level for kafkarator
+    displayName: Kafkarator log level
+    config:
+      type: string
   caBundle:
     description: Enable CA bundle for Aiven API
     displayName: Enable CA bundle
