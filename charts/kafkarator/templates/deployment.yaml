@@ -39,7 +39,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: KAFKARATOR_LOG_LEVEL
-              value: "{{ .Values.aiven.logLevel }}"
+              value: "{{ .Values.aiven.log_level }}"
             - name: KAFKARATOR_LOG_FORMAT
               value: json
             - name: KAFKARATOR_METRICS_ADDRESS

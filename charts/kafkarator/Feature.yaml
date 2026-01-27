@@ -30,9 +30,9 @@ values:
     config:
       type: string
       secret: true
-  aiven.log.level:
+  aiven.log_level:
     description: Log level for kafkarator
-    displayName: Aivenator log level
+    displayName: Kafkarator log level
     config:
       type: string
   caBundle:
