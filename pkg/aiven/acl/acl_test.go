@@ -290,10 +290,10 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStreamWithAdditionalUsers() {
 
 	created := make([]acl.CreateKafkaACLRequest, 0)
 
-	m.On("Create", ctx, TestPool, TestService, mock.Anything).
+	m.On("Create", ctx, TestPool, TestService, mock.Anything, mock.Anything).
 		Times(1+len(source.Spec.AdditionalUsers)).
 		Run(func(args mock.Arguments) {
-			req := args.Get(3).(acl.CreateKafkaACLRequest)
+			req := args.Get(4).(acl.CreateKafkaACLRequest)
 			created = append(created, req)
 		}).
 		Return(nil, nil)

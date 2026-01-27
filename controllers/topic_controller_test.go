@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,9 +28,6 @@ import (
 
 const (
 	testDataDirectory = "testdata"
-
-	// Use these in your test data
-	wellKnownID = "well-known-id"
 )
 
 type testCase struct {
@@ -207,7 +203,7 @@ func aivenMockInterfaces(ctx context.Context, t *testing.T, test testCase) (kafk
 
 func yamlSubTest(ctx context.Context, t *testing.T, path string) {
 	fixture := fileReader(path)
-	data, err := ioutil.ReadAll(fixture)
+	data, err := io.ReadAll(fixture)
 	if err != nil {
 		t.Errorf("unable to read test data: %s", err)
 		t.Fail()
@@ -257,7 +253,7 @@ func TestGoldenFile(t *testing.T) {
 	kafkaratormetrics.Register(prometheus.DefaultRegisterer)
 	ctx := context.Background()
 
-	files, err := ioutil.ReadDir(testDataDirectory)
+	files, err := os.ReadDir(testDataDirectory)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
