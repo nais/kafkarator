@@ -27,9 +27,6 @@ import (
 
 const (
 	testDataDirectory = "testdata"
-
-	// Use these in your test data
-	wellKnownID = "well-known-id"
 )
 
 type testCase struct {
