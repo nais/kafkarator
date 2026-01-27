@@ -219,9 +219,6 @@ func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl
 		if err := c.ServiceKafkaNativeAclDelete(ctx, project, service, id); err != nil {
 			return err
 		}
-
-		// TODO: double-check that we never get here (during a transition phase maybe?)
-		log.Warning("Skipping deletion of legacy ACL due to migration policy")
 	}
 	return nil
 }
