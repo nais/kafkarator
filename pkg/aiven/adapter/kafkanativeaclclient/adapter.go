@@ -207,11 +207,11 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
 	for _, id := range acl.IDs {
 		log.WithFields(log.Fields{
-			"username": acl.Username,
-			"topic":    acl.Topic,
-			"perm":     acl.Permission,
-			"id":       id,
-		}).Info("Deleting Kafka native ACL entry")
+			"username":   acl.Username,
+			"topic":      acl.Topic,
+			"permission": acl.Permission,
+			"id":         id,
+		}).Info("deleting Kafka native ACL entry")
 
 		// Migration policy:
 		// - delete native ACL entries (NativeIDs)
