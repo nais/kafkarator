@@ -259,7 +259,7 @@ func (r *StreamReconciler) handleDelete(ctx context.Context, stream kafka_nais_i
 	}
 	err = aclManager.Synchronize(ctx)
 	if err != nil {
-		return fail(fmt.Errorf("failed to delete ACLs %s on Aiven: %s", stream.GetACLs(), err), kafka_nais_io_v1.EventFailedSynchronization, true)
+		return fail(fmt.Errorf("failed to delete ACLs %s on Aiven: %s", stream.ACL(), err), kafka_nais_io_v1.EventFailedSynchronization, true)
 	}
 	status.Message = "Deleted Stream ACL"
 

@@ -276,8 +276,11 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStreamWithAdditionalUsers() {
 			Namespace: Team,
 		},
 		Spec: kafka_nais_io_v1.StreamSpec{
-			Pool:            TestPool,
-			AdditionalUsers: []string{"user1", "user2"},
+			Pool: TestPool,
+			AdditionalUsers: []kafka_nais_io_v1.AdditionalStreamUser{
+				{Username: "user1"},
+				{Username: "user2"},
+			},
 		},
 	}
 

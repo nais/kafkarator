@@ -210,5 +210,14 @@ func (s StreamAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
 		return kafka_nais_io_v1.TopicACLs{}
 	}
 
-	return s.GetACLs()
+	acls := kafka_nais_io_v1.TopicACLs{s.ACL()}
+	for _, user := range s.Spec.AdditionalUsers {
+		acls = append(acls, kafka_nais_io_v1.TopicACL{
+			Access:      "admin",
+			Application: user.Username,
+			Team:        s.Namespace,
+		})
+	}
+
+	return acls
 }
