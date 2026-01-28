@@ -3,6 +3,7 @@ package goclientcodegen
 import (
 	"context"
 	"fmt"
+
 	generatedclient "github.com/aiven/go-client-codegen"
 	"github.com/aiven/go-client-codegen/handler/kafka"
 	"github.com/nais/kafkarator/pkg/aiven/acl"

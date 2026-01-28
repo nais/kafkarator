@@ -3,6 +3,7 @@ package acl
 import (
 	"context"
 	"fmt"
+
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
@@ -207,7 +208,16 @@ func (s StreamAdapter) Pool() string {
 func (s StreamAdapter) ACLs() kafka_nais_io_v1.TopicACLs {
 	if s.Delete {
 		return kafka_nais_io_v1.TopicACLs{}
-	} else {
-		return kafka_nais_io_v1.TopicACLs{s.ACL()}
 	}
+
+	acls := kafka_nais_io_v1.TopicACLs{s.ACL()}
+	for _, user := range s.Spec.AdditionalUsers {
+		acls = append(acls, kafka_nais_io_v1.TopicACL{
+			Access:      "admin",
+			Application: user.Username,
+			Team:        s.Namespace,
+		})
+	}
+
+	return acls
 }
