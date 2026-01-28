@@ -315,8 +315,8 @@ func (suite *ACLFilterTestSuite) TestSynchronizeStreamWithAdditionalUsers() {
 
 	wantPrefixes := map[string]bool{
 		Team + "_" + Topic + "_": false,
-		"user1_" + Topic + "_":   false,
-		"user2_" + Topic + "_":   false,
+		Team + "_user1_":         false,
+		Team + "_user2_":         false,
 	}
 
 	for _, req := range created {
