@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/IBM/sarama v1.46.3
-	github.com/aiven/aiven-go-client/v2 v2.37.0
+	github.com/aiven/aiven-go-client/v2 v2.38.0
 	github.com/aiven/go-client-codegen v0.148.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
@@ -70,7 +70,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/onsi/gomega v1.38.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
