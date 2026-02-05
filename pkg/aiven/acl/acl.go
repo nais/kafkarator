@@ -45,9 +45,9 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 		return err
 	}
 
-	if !r.Source.IsStream() {
-		wantedAcls = NormalizeWanted(wantedAcls)
-	}
+	//if !r.Source.IsStream() {
+	//	wantedAcls = NormalizeWanted(wantedAcls)
+	//}
 
 	toAdd := NewACLs(existingAcls, wantedAcls)
 	toDelete := DeleteACLs(existingAcls, wantedAcls)
