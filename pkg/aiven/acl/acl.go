@@ -52,12 +52,12 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 	toAdd := NewACLs(existingAcls, wantedAcls)
 	toDelete := DeleteACLs(existingAcls, wantedAcls)
 
-	err = r.add(ctx, toAdd)
+	err = r.delete(ctx, toDelete)
 	if err != nil {
 		return err
 	}
 
-	err = r.delete(ctx, toDelete)
+	err = r.add(ctx, toAdd)
 	if err != nil {
 		return err
 	}
