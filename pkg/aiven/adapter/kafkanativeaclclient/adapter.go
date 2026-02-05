@@ -96,10 +96,10 @@ func resolveAivenPermission(g *nativeAclGroup) *kafka.PermissionType {
 	case hasDescribe && hasWrite:
 		permission = kafka.PermissionTypeWrite
 	default:
-		return &permission
+		return nil
 	}
 
-	return nil
+	return &permission
 }
 
 type nativeAcl struct {
