@@ -448,6 +448,57 @@ func collectDeletedIDs(ctx context.Context, m *acl.MockInterface) map[string]int
 	return seen
 }
 
+func (suite *ACLFilterTestSuite) TestNormalizeWanted_ReadAndWriteSameUserBecomesReadwrite() {
+	in := []acl.Acl{
+		{Permission: "read", Topic: FullTopic, Username: "kafka-test*"},
+		{Permission: "write", Topic: FullTopic, Username: "kafka-test*"},
+	}
+
+	got := acl.NormalizeWanted(in)
+
+	want := []acl.Acl{
+		{Permission: "readwrite", Topic: FullTopic, Username: "kafka-test*"},
+	}
+
+	assert.DeepEqual(suite.T(), want, got)
+}
+
+func (suite *ACLFilterTestSuite) TestNormalizeWanted_ReadwritePassthrough() {
+	in := []acl.Acl{
+		{Permission: "readwrite", Topic: FullTopic, Username: "kafka-test*"},
+	}
+
+	got := acl.NormalizeWanted(in)
+
+	want := []acl.Acl{
+		{Permission: "readwrite", Topic: FullTopic, Username: "kafka-test*"},
+	}
+
+	assert.DeepEqual(suite.T(), want, got)
+}
+
+func (suite *ACLFilterTestSuite) TestNormalizeWanted_AllowsDowngradeFromReadwriteToWrite() {
+	existing := []acl.Acl{
+		{IDs: []string{"d", "r", "w"}, Permission: "readwrite", Topic: FullTopic, Username: "kafka-test*"},
+	}
+
+	wanted := []acl.Acl{
+		{Permission: "write", Topic: FullTopic, Username: "kafka-test*"},
+	}
+	wanted = acl.NormalizeWanted(wanted)
+
+	added := acl.NewACLs(existing, wanted)
+	removed := acl.DeleteACLs(existing, wanted)
+
+	assert.DeepEqual(suite.T(), []acl.Acl{
+		{Permission: "write", Topic: FullTopic, Username: "kafka-test*"},
+	}, added)
+
+	assert.DeepEqual(suite.T(), []acl.Acl{
+		{IDs: []string{"d", "r", "w"}, Permission: "readwrite", Topic: FullTopic, Username: "kafka-test*"},
+	}, removed)
+}
+
 func TestACLFilter(t *testing.T) {
 	testSuite := new(ACLFilterTestSuite)
 	suite.Run(t, testSuite)

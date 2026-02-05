@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	// +kubebuilder:scaffold:imports
 )
 
 var scheme = runtime.NewScheme()

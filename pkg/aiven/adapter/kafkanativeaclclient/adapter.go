@@ -99,7 +99,7 @@ func resolveAivenPermission(g *nativeAclGroup) *kafka.PermissionType {
 		return &permission
 	}
 
-	return &permission
+	return nil
 }
 
 type nativeAcl struct {
