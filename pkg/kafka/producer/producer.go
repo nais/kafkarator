@@ -36,7 +36,7 @@ func New(brokers []string, topic string, txProducer bool, tlsConfig *tls.Config,
 
 	if txProducer {
 		uuidStr := uuid.NewString()
-		config.Producer.Transaction.ID = uuidStr // these need to be unique, in some sense
+		config.Producer.Transaction.ID = fmt.Sprintf("%s_%s", topic, uuidStr) // these need to be unique, in some sense
 		config.Producer.Idempotent = true
 		config.Net.MaxOpenRequests = 1
 	}
@@ -87,7 +87,7 @@ func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
 	}
 
 	retryCount := 3
-	for i := 0; i < retryCount; i++ {
+	for range retryCount {
 		err = p.producer.CommitTxn()
 		if err == nil {
 			p.logger.Infof("Transaction committed successfully")

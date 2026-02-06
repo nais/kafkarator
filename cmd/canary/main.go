@@ -251,7 +251,7 @@ func main() {
 
 	prodtx, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), true, tlsConfig, logger)
 	if err != nil {
-		logger.Errorf("unable to set up kafka producer: %s", err)
+		logger.Errorf("unable to set up kafka tx producer: %s", err)
 		os.Exit(ExitConfig)
 	}
 
@@ -274,6 +274,11 @@ func main() {
 		Logger:            logger,
 		TlsConfig:         tlsConfig,
 	})
+	if err != nil {
+		logger.Errorf("unable to set up kafka consumer for tx-topic: %s", err)
+		cancel()
+		os.Exit(ExitConfig)
+	}
 
 	callback := canarykafka.NewCallback(viper.GetBool(SlowConsumer), cons)
 	err = consumer.New(ctx, cancel, consumer.Config{
@@ -287,7 +292,7 @@ func main() {
 		TlsConfig:         tlsConfig,
 	})
 	if err != nil {
-		logger.Errorf("unable to set up kafka consumer: %s", err)
+		logger.Errorf("unable to set up kafka consumer for non-tx-topic: %s", err)
 		cancel()
 		os.Exit(ExitConfig)
 	}
@@ -302,22 +307,21 @@ func main() {
 		}
 		timer := time.Now()
 		partition, offset, err := prod.Produce(kafka.Message(timer.Format(time.RFC3339Nano)))
-		ProduceLatency.Observe(time.Now().Sub(timer).Seconds())
-		if err == nil {
-			message := canarykafka.Message{
-				Offset:    offset,
-				TimeStamp: timer,
-				Partition: partition,
-			}
-			logger.Infof("Produced message: %s", message.String())
-			LastProducedTimestamp.SetToCurrentTime()
-			LastProducedOffset.Set(float64(offset))
-		} else {
+		ProduceLatency.Observe(time.Since(timer).Seconds())
+		if err != nil {
 			logger.Errorf("unable to produce canary message on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
 				cancel()
 			}
 		}
+		message := canarykafka.Message{
+			Offset:    offset,
+			TimeStamp: timer,
+			Partition: partition,
+		}
+		logger.Infof("Produced message: %s", message.String())
+		LastProducedTimestamp.SetToCurrentTime()
+		LastProducedOffset.Set(float64(offset))
 	}
 
 	produceTx := func(ctx context.Context) {
@@ -326,21 +330,20 @@ func main() {
 		}
 		timer := time.Now()
 		var messages []kafka.Message
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			messages = append(messages, kafka.Message(timer.Format(time.RFC3339Nano)))
 		}
 		_, offset, err := prodtx.ProduceTx(messages)
-		ProduceTxLatency.Observe(time.Now().Sub(timer).Seconds())
-		if err == nil {
-			logger.Infof("Produced transaction")
-			TransactionTxLatency.Observe(time.Now().Sub(timer).Seconds())
-			TransactedOffset.Set(float64(offset))
-		} else {
+		ProduceTxLatency.Observe(time.Since(timer).Seconds())
+		if err != nil {
 			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
 				cancel()
 			}
 		}
+		logger.Infof("Produced transaction")
+		TransactionTxLatency.Observe(time.Since(timer).Seconds())
+		TransactedOffset.Set(float64(offset))
 	}
 
 	logger.Infof("Ready.")
@@ -355,13 +358,13 @@ func main() {
 			produce(ctx)
 		case msg := <-cons:
 			LastConsumedTimestamp.SetToCurrentTime()
-			ConsumeLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			ConsumeLatency.Observe(time.Since(msg.TimeStamp).Seconds())
 			LastConsumedOffset.Set(float64(msg.Offset))
 		case <-produceTxTicker.C:
 			produceTx(ctx)
 		case msg := <-consTx:
 			LastConsumedTxTimestamp.SetToCurrentTime()
-			TransactionTxLatency.Observe(time.Now().Sub(msg.TimeStamp).Seconds())
+			TransactionTxLatency.Observe(time.Since(msg.TimeStamp).Seconds())
 		case sig := <-signals:
 			logger.Infof("exiting due to signal: %s", strings.ToUpper(sig.String()))
 			cancel()
@@ -382,6 +385,6 @@ func recordStartupTimes() error {
 
 	StartTimestamp.SetToCurrentTime()
 	DeployTimestamp.Set(float64(deployStartTime.Unix()))
-	LeadTime.Set(time.Now().Sub(deployStartTime).Seconds())
+	LeadTime.Set(time.Since(deployStartTime).Seconds())
 	return nil
 }
