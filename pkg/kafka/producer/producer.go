@@ -87,7 +87,7 @@ func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
 	}
 
 	retryCount := 3
-	for i := 0; i < retryCount; i++ {
+	for range retryCount {
 		err = p.producer.CommitTxn()
 		if err == nil {
 			p.logger.Infof("Transaction committed successfully")
