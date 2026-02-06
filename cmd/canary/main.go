@@ -251,7 +251,7 @@ func main() {
 
 	prodtx, err := producer.New(viper.GetStringSlice(KafkaBrokers), viper.GetString(KafkaTopic), true, tlsConfig, logger)
 	if err != nil {
-		logger.Errorf("unable to set up kafka producer: %s", err)
+		logger.Errorf("unable to set up kafka tx producer: %s", err)
 		os.Exit(ExitConfig)
 	}
 
