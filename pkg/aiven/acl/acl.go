@@ -45,9 +45,9 @@ func (r *Manager) Synchronize(ctx context.Context) error {
 		return err
 	}
 
-	//if !r.Source.IsStream() {
-	//	wantedAcls = NormalizeWanted(wantedAcls)
-	//}
+	if !r.Source.IsStream() {
+		wantedAcls = NormalizeWanted(wantedAcls)
+	}
 
 	toAdd := NewACLs(existingAcls, wantedAcls)
 	toDelete := DeleteACLs(existingAcls, wantedAcls)
@@ -120,11 +120,6 @@ func (r *Manager) add(ctx context.Context, toAdd []Acl) error {
 		if err != nil {
 			return err
 		}
-
-		r.Logger.WithFields(log.Fields{
-			"acl_username":   req.Username,
-			"acl_permission": req.Permission,
-		}).Infof("Created ACL entry")
 	}
 	return nil
 }
