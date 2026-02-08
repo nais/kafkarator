@@ -16,9 +16,6 @@ spec:
   acl:
     - access: readwrite
       team: "nais-verification"
-      application: kafkarator-canary
-    - access: readwrite
-      team: "nais-verification"
       application: kafka-canary
     - access: read
       team: "*"
