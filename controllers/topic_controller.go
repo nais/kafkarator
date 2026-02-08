@@ -114,7 +114,7 @@ func (r *TopicReconciler) Process(ctx context.Context, topic kafka_nais_io_v1.To
 		return fail(err, kafka_nais_io_v1.EventFailedSynchronization, false)
 	}
 
-	if topic.ObjectMeta.DeletionTimestamp != nil {
+	if topic.DeletionTimestamp != nil {
 		logger.Info("Deleting ACls for topic")
 		strippedTopic := topic.DeepCopy()
 		strippedTopic.Spec.ACL = nil

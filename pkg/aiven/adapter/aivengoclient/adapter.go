@@ -2,8 +2,10 @@ package aivengoclient
 
 import (
 	"context"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 )
 
@@ -24,20 +26,26 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 	return acls, nil
 }
 
-func (c *AclClient) Create(ctx context.Context, project, service string, req acl.CreateKafkaACLRequest) (*acl.Acl, error) {
+func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) error {
 	in := aiven.CreateKafkaACLRequest{
 		Permission: req.Permission,
 		Topic:      req.Topic,
 		Username:   req.Username,
 	}
-	out, err := c.KafkaACLHandler.Create(ctx, project, service, in)
+	_, err := c.KafkaACLHandler.Create(ctx, project, service, in)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return ptr.To(acl.FromKafkaACL(out)), nil
+	return nil
 }
 
-func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
-	return c.KafkaACLHandler.Delete(ctx, project, service, aclID)
+func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl.Acl) error {
+	log.Info("Deleting Aiven Acl from service ", service, " in project ", project)
+	for _, ID := range acl.IDs {
+		err := c.KafkaACLHandler.Delete(ctx, project, service, ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
