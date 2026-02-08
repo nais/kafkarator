@@ -152,6 +152,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 			Topic:      group.topic,
 			Username:   group.username,
 			IDs:        nativeIDs,
+			// NativeIDsByOperation: group.idsByOperation,
 		})
 
 		log.WithFields(log.Fields{
@@ -199,6 +200,12 @@ func (c *AclClient) Create(ctx context.Context, project, service string, isStrea
 			}
 			return err
 		}
+		log.WithFields(log.Fields{
+			"username":   req.Username,
+			"topic":      req.Topic,
+			"permission": req.Permission,
+			"operation":  desired.Operation,
+		}).Info("created Kafka native ACL entry")
 	}
 
 	return nil

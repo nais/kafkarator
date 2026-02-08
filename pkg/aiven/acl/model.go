@@ -12,6 +12,7 @@ type Acl struct {
 	Permission string
 	Topic      string
 	Username   string
+	// NativeIDsByOperation map[kafka.OperationType]string
 }
 
 type Acls []Acl
