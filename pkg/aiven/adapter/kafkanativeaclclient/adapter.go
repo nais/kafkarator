@@ -152,7 +152,6 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 			Topic:      group.topic,
 			Username:   group.username,
 			IDs:        nativeIDs,
-			// NativeIDsByOperation: group.idsByOperation,
 		})
 
 		log.WithFields(log.Fields{
@@ -173,41 +172,97 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 func (c *AclClient) Create(ctx context.Context, project, service string, isStream bool, req acl.CreateKafkaACLRequest) error {
 	host := "*"
 
-	patternType := kafka.PatternTypeLiteral
+	// Topic pattern: literal for Topic, prefixed for Stream
+	topicPattern := kafka.PatternTypeLiteral
 	if isStream {
-		patternType = kafka.PatternTypePrefixed
+		topicPattern = kafka.PatternTypePrefixed
 	}
 
-	desiredNativeAcls := MapPermissionToKafkaNativePermission(kafka.PermissionType(req.Permission))
-
-	for _, desired := range desiredNativeAcls {
+	// Topic ACLs
+	desiredTopicAcls := MapPermissionToKafkaNativePermission(kafka.PermissionType(req.Permission))
+	for _, desired := range desiredTopicAcls {
 		in := &kafka.ServiceKafkaNativeAclAddIn{
 			Host:           &host,
 			Operation:      desired.Operation,
-			PatternType:    patternType,
+			PatternType:    topicPattern,
 			PermissionType: desired.PermissionType,
 			Principal:      "User:" + req.Username,
 			ResourceName:   req.Topic,
 			ResourceType:   kafka.ResourceTypeTopic,
 		}
 
-		_, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in)
-		if err != nil {
-			// Check if it's a 409 conflict error (ACL already exists)
+		if _, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in); err != nil {
 			if nativekafkaclient.IsAlreadyExists(err) {
-				log.WithField("op", desired.Operation).Info("ACL already exists (string match fallback), skipping creation")
 				continue
 			}
 			return err
 		}
-		log.WithFields(log.Fields{
-			"username":   req.Username,
-			"topic":      req.Topic,
-			"permission": req.Permission,
-			"operation":  desired.Operation,
-		}).Info("created Kafka native ACL entry")
 	}
 
+	// TransactionalId
+	perm := kafka.PermissionType(req.Permission)
+	txnPattern := kafka.PatternTypePrefixed
+	txnName := transactionalIDName(req.Username)
+	if needsTransactionalACL(perm) {
+
+		// TransactionalId ACLs
+		for _, desired := range transactionalNativeACLs() {
+			in := &kafka.ServiceKafkaNativeAclAddIn{
+				Host:           &host,
+				Operation:      desired.Operation,
+				PatternType:    txnPattern,
+				PermissionType: desired.PermissionType,
+				Principal:      "User:" + req.Username,
+				ResourceName:   txnName,
+				ResourceType:   kafka.ResourceTypeTransactionalId,
+			}
+
+			if _, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in); err != nil {
+				if nativekafkaclient.IsAlreadyExists(err) {
+					continue
+				}
+				return err
+			}
+		}
+
+		log.WithFields(log.Fields{
+			"username":   req.Username,
+			"permission": req.Permission,
+			"txn_prefix": txnName,
+		}).Info("created Kafka native TransactionalId ACL entries")
+	}
+
+	// Group ACLs
+	for _, desired := range groupNativeACLs() {
+		in := &kafka.ServiceKafkaNativeAclAddIn{
+			Host:           &host,
+			Operation:      desired.Operation,
+			PatternType:    txnPattern,
+			PermissionType: desired.PermissionType,
+			Principal:      "User:" + req.Username,
+			ResourceName:   req.Topic,
+			ResourceType:   kafka.ResourceTypeGroup,
+		}
+
+		if _, err := c.ServiceKafkaNativeAclAdd(ctx, project, service, in); err != nil {
+			if nativekafkaclient.IsAlreadyExists(err) {
+				continue
+			}
+			return err
+		}
+
+		log.WithFields(log.Fields{
+			"username":     req.Username,
+			"permission":   req.Permission,
+			"group_prefix": req.Topic,
+		}).Info("created Kafka native Group ACL entries")
+	}
+
+	log.WithFields(log.Fields{
+		"username":   req.Username,
+		"permission": req.Permission,
+		"topic":      req.Topic,
+	}).Info("created Kafka native ACL entries")
 	return nil
 }
 
@@ -220,10 +275,6 @@ func (c *AclClient) Delete(ctx context.Context, project, service string, acl acl
 			"id":         id,
 		}).Info("deleting Kafka native ACL entry")
 
-		// Migration policy:
-		// - delete native ACL entries (NativeIDs)
-		// - do NOT delete legacy ACLs (a.ID) yet
-		// - keep them in sync with nativ under migration
 		if err := c.ServiceKafkaNativeAclDelete(ctx, project, service, id); err != nil {
 			return err
 		}
@@ -312,4 +363,46 @@ func MapPermissionToKafkaNativePermission(permission kafka.PermissionType) []nat
 	}
 
 	return nativeAclList
+}
+
+func needsTransactionalACL(permission kafka.PermissionType) bool {
+	switch permission {
+	case kafka.PermissionTypeWrite, kafka.PermissionTypeReadwrite:
+		return true
+	default:
+		return false
+	}
+}
+
+func transactionalNativeACLs() []nativeAcl {
+	return []nativeAcl{
+		{
+			Operation:      kafka.OperationTypeDescribe,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionTypeAllow,
+		},
+		{
+			Operation:      kafka.OperationTypeWrite,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionTypeAllow,
+		},
+	}
+}
+
+func groupNativeACLs() []nativeAcl {
+	return []nativeAcl{
+		{
+			Operation:      kafka.OperationTypeRead,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionTypeAllow,
+		},
+		{
+			Operation:      kafka.OperationTypeDescribe,
+			PermissionType: kafka.ServiceKafkaNativeAclPermissionTypeAllow,
+		},
+	}
+}
+
+func transactionalIDName(s string) string {
+	if i := strings.IndexByte(s, '_'); i > 0 {
+		return s[:i]
+	}
+	return s
 }

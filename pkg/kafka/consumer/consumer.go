@@ -50,10 +50,11 @@ func (c *Consumer) Cleanup(_ sarama.ConsumerGroupSession) error {
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	retry := true
 	var err error
+	groupId := c.topic + "-" + c.groupID
 
 	report := func(add int) {
 		metrics.SecretQueueSize.With(prometheus.Labels{
-			metrics.LabelGroupID: c.groupID,
+			metrics.LabelGroupID: groupId,
 		}).Set(float64(len(claim.Messages()) + add))
 	}
 	report(0)
@@ -89,8 +90,9 @@ func New(ctx context.Context, cancel context.CancelFunc, cfg Config) error {
 	config.ClientID, _ = os.Hostname()
 	config.Consumer.Return.Errors = true
 	sarama.Logger = cfg.Logger
+	groupId := cfg.Topic + "-" + cfg.GroupID
 
-	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.GroupID, config)
+	consumer, err := sarama.NewConsumerGroup(cfg.Brokers, groupId, config)
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,7 @@ func New(ctx context.Context, cancel context.CancelFunc, cfg Config) error {
 	c := &Consumer{
 		callback:      cfg.Callback,
 		consumer:      consumer,
-		groupID:       cfg.GroupID,
+		groupID:       groupId,
 		logger:        cfg.Logger,
 		retryInterval: cfg.RetryInterval,
 		topic:         cfg.Topic,

@@ -360,6 +360,18 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic_DeletesAllNativeIDs() {
 			Username:   "user2.app-4ca551f9",
 		},
 		{
+			IDs:        []string{"txn-describe", "txn-write"},
+			Permission: "readwrite",
+			Topic:      FullTopic,
+			Username:   "user.app*", // ensure this user is getting replaced/removed
+		},
+		{
+			IDs:        []string{"grp-read", "grp-describe"},
+			Permission: "read",
+			Topic:      FullTopic,
+			Username:   "user.app*",
+		},
+		{
 			IDs:        []string{"keep-describe", "keep-write"},
 			Permission: "write",
 			Topic:      FullTopic,
@@ -417,6 +429,9 @@ func (suite *ACLFilterTestSuite) TestSynchronizeTopic_DeletesAllNativeIDs() {
 
 		// user2.app-4ca551f9 (readwrite)
 		"u3-describe", "u3-read", "u3-write",
+
+		"txn-describe", "txn-write",
+		"grp-read", "grp-describe",
 	}
 
 	for _, id := range expectedDelete {
