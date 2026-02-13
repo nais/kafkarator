@@ -27,7 +27,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # ratchet:actions/checkout@v5
       - name: "Set image version"
         id: constants
         run: |
@@ -54,7 +54,7 @@ jobs:
     env:
       VERSION: "${{ needs.version.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # ratchet:actions/checkout@v5
       - name: Install cosign
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # ratchet:sigstore/cosign-installer@v3.10.0
         with:
@@ -71,7 +71,7 @@ jobs:
           token_format: "access_token"
       - name: Login to Google Artifact Registry
         if: github.ref == 'refs/heads/master'
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # ratchet:docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2
         with:
           registry: ${{ env.GOOGLE_REGISTRY }}
           username: "oauth2accesstoken"
@@ -116,7 +116,7 @@ jobs:
     needs:
       - version
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # ratchet:actions/checkout@v5
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         if: github.ref == 'refs/heads/master'
@@ -126,12 +126,12 @@ jobs:
           service_account: 'gh-kafkarator@nais-io.iam.gserviceaccount.com'
           token_format: 'access_token'
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@cb1e50a9932213ecece00a606661ae9ca44f3397' # ratchet:google-github-actions/setup-gcloud@v1
+        uses: 'google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b' # ratchet:google-github-actions/setup-gcloud@v1
       - name: 'Log in to Google Artifact Registry'
         if: github.ref == 'refs/heads/master'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
-      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v3
+      - uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # ratchet:azure/setup-helm@v3
         name: 'Setup Helm'
         with:
           version: '3.8.0'

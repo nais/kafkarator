@@ -1,6 +1,6 @@
 module github.com/nais/kafkarator
 
-go 1.25.5
+go 1.25.6
 
 require (
 	github.com/IBM/sarama v1.46.3
@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/nais/liberator v0.0.0-20260128091017-350fb9813ed9
+	github.com/nais/liberator v0.0.0-20260212110305-16d9574ca20c
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
@@ -19,9 +19,9 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/vektra/mockery/v2 v2.53.5
 	gotest.tools v2.2.0+incompatible
-	k8s.io/apimachinery v0.35.0
-	k8s.io/client-go v0.35.0
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/apimachinery v0.35.1
+	k8s.io/client-go v0.35.1
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/controller-runtime v0.23.1
 )
 
@@ -104,7 +104,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.35.0 // indirect
+	k8s.io/api v0.35.1 // indirect
 	k8s.io/apiextensions-apiserver v0.35.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
