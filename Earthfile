@@ -75,7 +75,7 @@ docker-canary-deployer:
     WORKDIR /canary/
     COPY +uv-provider/uv /usr/local/bin/
     COPY canary-deployer/requirements.txt /canary/
-    RUN apk add python3=~3.10 && \
+    RUN apk add python3 && \
         /usr/local/bin/uv pip install --system --requirement /canary/requirements.txt
     COPY canary-deployer/*.yaml /canary/
     COPY canary-deployer/deployer.py /canary/
