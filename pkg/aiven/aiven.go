@@ -6,10 +6,6 @@ import (
 	"github.com/nais/liberator/pkg/aiven/service"
 )
 
-func ServiceName(project string) string {
-	return project + "-kafka"
-}
-
 type Interfaces struct {
 	ACLs         acl.Interface
 	Topics       topic.Interface

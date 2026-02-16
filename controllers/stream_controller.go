@@ -265,6 +265,9 @@ func (r *StreamReconciler) handleDelete(ctx context.Context, stream kafka_nais_i
 
 	logger.Infof("Permanently deleting Aiven stream and its data")
 	topics, err := r.Aiven.Topics.List(ctx, projectName, serviceName)
+	if err != nil {
+		return fail(fmt.Errorf("failed to list topics on Aiven: %s", err), kafka_nais_io_v1.EventFailedSynchronization, true)
+	}
 	for _, topic := range topics {
 		if strings.HasPrefix(topic.TopicName, stream.TopicPrefix()) {
 			err = metrics.ObserveAivenLatency("Topic_Delete", projectName, func() error {

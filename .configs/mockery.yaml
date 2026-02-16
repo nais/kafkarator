@@ -1,0 +1,13 @@
+dir: "{{ .InterfaceDir }}"
+filename: "mock_{{.InterfaceName | snakecase }}.go"
+template: testify
+template-data:
+  unroll-variadic: true
+packages:
+  github.com/nais/kafkarator/pkg/aiven/acl:
+    interfaces:
+      Interface:
+      Source:
+  github.com/nais/kafkarator/pkg/aiven/topic:
+    interfaces:
+      Interface:

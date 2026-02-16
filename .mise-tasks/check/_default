@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+#MISE description="Run all checks"
+
+set -e
+
+unset MISE_TASK_OUTPUT
+
+mise run check:deadcode ::: check:gosec ::: check:staticcheck ::: check:vulncheck ::: check:helm-lint

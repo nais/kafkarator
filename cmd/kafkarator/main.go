@@ -3,6 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/adapter/aivengoclient"
@@ -10,12 +16,8 @@ import (
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/logrus2logr"
 	"k8s.io/utils/ptr"
-	"os"
-	"os/signal"
+
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"strings"
-	"syscall"
-	"time"
 
 	"github.com/aiven/aiven-go-client/v2"
 	generated_client "github.com/aiven/go-client-codegen"
@@ -68,7 +70,6 @@ const (
 )
 
 func init() {
-
 	// Automatically read configuration options from environment variables.
 	// i.e. --aiven-token will be configurable using KAFKARATOR_AIVEN_TOKEN.
 	viper.SetEnvPrefix("KAFKARATOR")
@@ -155,7 +156,6 @@ func main() {
 		},
 		Logger: logr.New(logrSink.WithName("manager")),
 	})
-
 	if err != nil {
 		logger.Println(err)
 		os.Exit(ExitController)

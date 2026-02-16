@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"bytes"
+
 	"github.com/nais/kafkarator/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -40,7 +41,7 @@ func (c *Certificates) DiffAndUpdate(logger log.FieldLogger) {
 		return
 	}
 
-	if bytes.Compare(c.Cert, cert) == 0 {
+	if bytes.Equal(c.Cert, cert) {
 		logger.Debug("certificate on disk matches last read certificate")
 		return
 	}

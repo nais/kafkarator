@@ -83,7 +83,7 @@ var (
 func ObserveAivenLatency(operation, pool string, fun func() error) error {
 	timer := time.Now()
 	err := fun()
-	used := time.Now().Sub(timer)
+	used := time.Since(timer)
 	status := 200
 	if err != nil {
 		aivenErr, ok := err.(aiven.Error)

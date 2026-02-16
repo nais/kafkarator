@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build all binaries"
+
+set -e
+
+mise run build:kafkarator ::: build:canary

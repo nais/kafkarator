@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+#MISE description="Run gosec"
+
+set -e
+
+# We've disabled G404 and G101 as they are not relevant for our use case
+# G404: Use of weak random number generator (math/rand instead of crypto/rand).
+#    We don't use random numbers for security purposes.
+# G101: Look for hard coded credentials
+#    The check for credentials is a bit weak and triggers on multiple variables just including
+#    the word `secret`. We depend on GitHub to find possible credentials in our code.
+
+go tool github.com/securego/gosec/v2/cmd/gosec --exclude G404,G101 --exclude-generated -terse ./...

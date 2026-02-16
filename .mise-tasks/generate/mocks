@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Generate mocks using mockery"
+
+set -e
+
+go run github.com/vektra/mockery/v3 --config ./.configs/mockery.yaml

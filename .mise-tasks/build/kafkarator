@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build kafkarator"
+
+set -e
+
+go build -o bin/kafkarator cmd/kafkarator/*.go

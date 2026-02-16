@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/nais/kafkarator/pkg/aiven"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
@@ -13,13 +14,6 @@ type Synchronizer struct {
 	ACLs   acl.Manager
 	Topics topic.Manager
 	Logger *log.Entry
-}
-
-type SyncResult struct {
-	brokers  string
-	registry string
-	ca       string
-	topic    kafka_nais_io_v1.Topic
 }
 
 func NewSynchronizer(ctx context.Context, a kafkarator_aiven.Interfaces, t kafka_nais_io_v1.Topic, logger *log.Entry, dryRun bool) (*Synchronizer, error) {

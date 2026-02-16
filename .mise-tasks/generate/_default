@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+#MISE description="Generate all code"
+
+unset MISE_TASK_OUTPUT
+
+mise run generate:mocks
+mise run fmt:go

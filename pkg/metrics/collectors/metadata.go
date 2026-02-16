@@ -3,6 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/aiven/service"
