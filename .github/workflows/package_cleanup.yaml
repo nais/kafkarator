@@ -18,7 +18,7 @@ jobs:
           - kafkarator/canary-deployer
           - kafkarator/cache
     steps:
-      - uses: actions/delete-package-versions@v5
+      - uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # ratchet:actions/delete-package-versions@v5
         with:
           package-name: ${{ matrix.package-name }}
           package-type: container
