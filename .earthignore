@@ -6,7 +6,7 @@
 .AppleDouble
 atlassian-ide-plugin.xml
 bin
-charts
+# charts
 cmake-build-*/
 .com.apple.timemachine.donotpresent
 com_crashlytics_export_strings.xml

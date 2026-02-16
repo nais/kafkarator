@@ -36,6 +36,7 @@ build:
     RUN curl https://mise.run | sh
     ENV PATH="/root/.local/share/mise/bin:/root/.local/bin:${PATH}"
     RUN mise trust /workspace/mise.toml
+    RUN mise run check
     RUN echo ${GOARCH} && make test
     RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/*.go
     RUN go build -installsuffix cgo -o canary cmd/canary/*.go
