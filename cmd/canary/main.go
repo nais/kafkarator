@@ -234,12 +234,40 @@ func main() {
 
 	go func() {
 		addr := viper.GetString(MetricsAddress)
+
+		readTimeout := 5 * time.Second
+		if v := os.Getenv("METRICS_READ_TIMEOUT"); v != "" {
+			if d, err := time.ParseDuration(v); err != nil {
+				logger.Warnf("invalid METRICS_READ_TIMEOUT (%q): %v, using default %s", v, err, readTimeout)
+			} else {
+				readTimeout = d
+			}
+		}
+
+		writeTimeout := 10 * time.Second
+		if v := os.Getenv("METRICS_WRITE_TIMEOUT"); v != "" {
+			if d, err := time.ParseDuration(v); err != nil {
+				logger.Warnf("invalid METRICS_WRITE_TIMEOUT (%q): %v, using default %s", v, err, writeTimeout)
+			} else {
+				writeTimeout = d
+			}
+		}
+
+		idleTimeout := 120 * time.Second
+		if v := os.Getenv("METRICS_IDLE_TIMEOUT"); v != "" {
+			if d, err := time.ParseDuration(v); err != nil {
+				logger.Warnf("invalid METRICS_IDLE_TIMEOUT (%q): %v, using default %s", v, err, idleTimeout)
+			} else {
+				idleTimeout = d
+			}
+		}
+
 		srv := &http.Server{
 			Addr:         addr,
 			Handler:      promhttp.Handler(),
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			ReadTimeout:  readTimeout,
+			WriteTimeout: writeTimeout,
+			IdleTimeout:  idleTimeout,
 		}
 		logger.Error(srv.ListenAndServe())
 		cancel()
