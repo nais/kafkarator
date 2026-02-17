@@ -74,6 +74,7 @@ jobs:
     needs:
       - test
       - validate
+      - version
     strategy:
       fail-fast: false
       matrix:
@@ -144,6 +145,7 @@ jobs:
     name: Build and push chart
     runs-on: ubuntu-latest
     needs:
+      - version
       - validate
       - test
     steps:
@@ -192,6 +194,7 @@ jobs:
     needs:
       - build
       - chart
+      - version
     runs-on: fasit-deploy
     permissions:
       id-token: write
