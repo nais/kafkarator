@@ -33,8 +33,12 @@ build:
     COPY --dir +kubebuilder/ /usr/local/kubebuilder/
     COPY . /workspace
     # Install mise for Makefile compatibility
-    RUN curl https://mise.run | sh
-    ENV PATH="/root/.local/share/mise/bin:/root/.local/bin:${PATH}"
+    ARG MISE_VERSION="v2026.2.11"
+    ARG MISE_CHECKSUM="3e1baedb9284124b770d2d561a04a98c343d05967c83deb8b35c7c941f8d9c9a"
+    RUN wget -O /tmp/mise https://github.com/jdx/mise/releases/download/${MISE_VERSION}/mise-${MISE_VERSION}-linux-x64 && \
+        echo "${MISE_CHECKSUM}  /tmp/mise" | sha256sum -c - && \
+        chmod +x /tmp/mise && \
+        mv /tmp/mise /usr/local/bin/mise
     RUN mise trust /workspace/mise.toml
     RUN mise run check
     RUN echo ${GOARCH} && make test
