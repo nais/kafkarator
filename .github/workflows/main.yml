@@ -21,7 +21,6 @@ env:
   EARTHLY_VERBOSE: true
   EARTHLY_FULL_TARGET: true
   EARTHLY_OUTPUT: true
-  MISE_VERSION: '2026.02.15'
 
 jobs:
   version:
@@ -46,8 +45,6 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - name: Setup mise
         uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
-        with:
-          version: ${{ env.MISE_VERSION }}
       - name: Trust mise config
         run: mise trust
       - name: Run tests
@@ -63,8 +60,6 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - name: Setup mise
         uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
-        with:
-          version: ${{ env.MISE_VERSION }}
       - name: Trust mise config
         run: mise trust
       - name: Run checks
