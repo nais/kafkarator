@@ -21,6 +21,7 @@ env:
   EARTHLY_VERBOSE: true
   EARTHLY_FULL_TARGET: true
   EARTHLY_OUTPUT: true
+  MISE_VERSION: '2026.02.15'
 
 jobs:
   version:
@@ -37,18 +38,20 @@ jobs:
       version: "${{ steps.constants.outputs.VERSION }}"
 
   test:
-    name: Test (make test)
+    name: Test (mise run test)
     runs-on: ubuntu-latest
     needs:
       - version
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
-      - name: Setup Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # ratchet:actions/setup-go@v5
+      - name: Setup mise
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
         with:
-          go-version-file: 'go.mod'
-      - name: Run make test
-        run: make test
+          version: ${{ env.MISE_VERSION }}
+      - name: Trust mise config
+        run: mise trust
+      - name: Run tests
+        run: mise run test
 
 
   validate:
@@ -61,7 +64,7 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
         with:
-          version: '2026.02.15'
+          version: ${{ env.MISE_VERSION }}
       - name: Trust mise config
         run: mise trust
       - name: Run checks
