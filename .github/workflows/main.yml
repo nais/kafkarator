@@ -36,40 +36,32 @@ jobs:
     outputs:
       version: "${{ steps.constants.outputs.VERSION }}"
 
-  test:
-    name: Test (mise run test)
+  test_validate:
+    name: Test and Validate
     runs-on: ubuntu-latest
     needs:
       - version
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+
       - name: Setup Go
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # ratchet:actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            **/go.sum
+
       - name: Setup mise
         uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
+
       - name: Trust mise config
         run: mise trust
+
       - name: Run tests
         run: mise run test
 
-
-  validate:
-    name: Validate (lint, staticcheck, etc)
-    runs-on: ubuntu-latest
-    needs:
-      - version
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
-      - name: Setup Go
-        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # ratchet:actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
-      - name: Setup mise
-        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
-      - name: Trust mise config
-        run: mise trust
       - name: Run checks
         run: mise run check
 
@@ -80,8 +72,7 @@ jobs:
       contents: read
       id-token: write
     needs:
-      - test
-      - validate
+      - test_validate
       - version
     strategy:
       fail-fast: false
@@ -152,8 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - version
-      - validate
-      - test
+      - test_validate
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - id: 'auth'
