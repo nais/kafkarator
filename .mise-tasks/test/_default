@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Test all code"
+
+set -e
+
+go test -cover ./...

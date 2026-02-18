@@ -5,25 +5,21 @@ import (
 	"os"
 )
 
-func TlsFromFiles(certPath, keyPath, caPath string) (cert, key, ca []byte, err error) {
-
-	cert, err = os.ReadFile(certPath)
+func TlsFromFiles(certPath, keyPath, caPath string) ([]byte, []byte, []byte, error) {
+	cert, err := os.ReadFile(certPath) // #nosec G304
 	if err != nil {
-		err = fmt.Errorf("unable to read certificate file %s: %s", certPath, err)
-		return
+		return nil, nil, nil, fmt.Errorf("unable to read certificate file %s: %w", certPath, err)
 	}
 
-	key, err = os.ReadFile(keyPath)
+	key, err := os.ReadFile(keyPath) // #nosec G304
 	if err != nil {
-		err = fmt.Errorf("unable to read key file %s: %s", keyPath, err)
-		return
+		return nil, nil, nil, fmt.Errorf("unable to read key file %s: %w", keyPath, err)
 	}
 
-	ca, err = os.ReadFile(caPath)
+	ca, err := os.ReadFile(caPath) // #nosec G304
 	if err != nil {
-		err = fmt.Errorf("unable to read CA certificate file %s: %s", caPath, err)
-		return
+		return nil, nil, nil, fmt.Errorf("unable to read CA certificate file %s: %w", caPath, err)
 	}
 
-	return
+	return cert, key, ca, nil
 }

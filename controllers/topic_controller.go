@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/nais/kafkarator/pkg/utils"
 	"net/http"
 	"time"
+
+	"github.com/nais/kafkarator/pkg/utils"
 
 	"github.com/aiven/aiven-go-client/v2"
 	kafkarator_aiven "github.com/nais/kafkarator/pkg/aiven"

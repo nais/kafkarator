@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"github.com/aiven/aiven-go-client/v2"
 	"reflect"
+
+	"github.com/aiven/aiven-go-client/v2"
 )
 
 func toMap(tags []aiven.KafkaTopicTag) map[string]string {

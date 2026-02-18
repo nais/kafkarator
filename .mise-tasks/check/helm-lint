@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+#MISE description="Run helm lint"
+
+set -e
+
+helm lint --strict ./charts/kafkarator
+helm lint --strict ./charts/kafka-canary
+helm lint --strict ./charts/kafka-canary-alert

@@ -61,9 +61,6 @@ func (p *Producer) Produce(msg kafka.Message) (int32, int64, error) {
 	return p.producer.SendMessage(producerMessage)
 }
 
-func (p *Producer) Close() error {
-	return p.producer.Close()
-}
 func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
 	p.logger.Infof("Starting transaction for %d messages", len(msg))
 	err := p.producer.BeginTxn()
@@ -87,7 +84,7 @@ func (p *Producer) ProduceTx(msg []kafka.Message) (int32, int64, error) {
 	}
 
 	retryCount := 3
-	for range retryCount {
+	for i := 0; i < retryCount; i++ {
 		err = p.producer.CommitTxn()
 		if err == nil {
 			p.logger.Infof("Transaction committed successfully")

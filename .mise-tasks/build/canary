@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build canary"
+
+set -e
+
+go build -o bin/canary cmd/canary/*.go

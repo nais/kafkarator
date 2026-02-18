@@ -3,6 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/metrics"
 	"github.com/nais/liberator/pkg/aiven/service"
@@ -18,12 +19,6 @@ type Acls struct {
 	aiven        *aiven.Client
 	logger       log.FieldLogger
 	nameResolver service.NameResolver
-}
-
-type metric struct {
-	topic  string
-	pool   string
-	source string
 }
 
 func (a *Acls) Description() string {

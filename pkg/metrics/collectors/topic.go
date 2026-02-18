@@ -3,6 +3,8 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/topic"
 	"github.com/nais/kafkarator/pkg/metrics"
@@ -11,7 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type Topic struct {

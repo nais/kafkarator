@@ -233,7 +233,15 @@ func main() {
 	}
 
 	go func() {
-		logger.Error(http.ListenAndServe(viper.GetString(MetricsAddress), promhttp.Handler()))
+		addr := viper.GetString(MetricsAddress)
+		srv := &http.Server{
+			Addr:         addr,
+			Handler:      promhttp.Handler(),
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		}
+		logger.Error(srv.ListenAndServe())
 		cancel()
 	}()
 

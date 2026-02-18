@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 type FeatureFlags struct {

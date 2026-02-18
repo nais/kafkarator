@@ -1,14 +1,18 @@
+.PHONY: all build test fmt check generate
 
-all: kafkarator canary test
+all: build test fmt check generate
 
-kafkarator:
-	go build -o bin/kafkarator cmd/kafkarator/*.go
-
-canary:
-	go build -o bin/canary cmd/canary/*.go
-
-mocks:
-	cd pkg/aiven && go run github.com/vektra/mockery/v2 --inpackage --all --case snake
+build:
+	mise run build
 
 test:
-	go test ./... -v -count=1
+	mise run test
+
+fmt:
+	mise run fmt
+
+check:
+	mise run check
+
+generate:
+	mise run generate

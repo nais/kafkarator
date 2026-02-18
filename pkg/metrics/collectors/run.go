@@ -2,11 +2,12 @@ package collectors
 
 import (
 	"context"
+	"time"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 type Opts struct {
@@ -51,7 +52,7 @@ func run(collector Collector, reportInterval time.Duration) {
 		ctx, cancel := context.WithTimeout(context.Background(), reportInterval)
 		now := time.Now()
 		err := collector.Report(ctx)
-		duration := time.Now().Sub(now)
+		duration := time.Since(now)
 		cancel()
 		if err != nil {
 			collector.Logger().Errorf("Unable to report %s: %s", collector.Description(), err)

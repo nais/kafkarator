@@ -2,6 +2,7 @@ package aivengoclient
 
 import (
 	"context"
+
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
 	"k8s.io/utils/ptr"

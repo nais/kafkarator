@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+#MISE description="Format all code"
+
+set -e
+
+unset MISE_TASK_OUTPUT
+
+mise run fmt:go

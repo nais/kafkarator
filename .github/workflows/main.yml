@@ -27,7 +27,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - name: "Set image version"
         id: constants
         run: |
@@ -36,6 +36,43 @@ jobs:
     outputs:
       version: "${{ steps.constants.outputs.VERSION }}"
 
+  test:
+    name: Test (mise run test)
+    runs-on: ubuntu-latest
+    needs:
+      - version
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+      - name: Setup mise
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
+      - name: Trust mise config
+        run: mise trust
+      - name: Run tests
+        run: mise run test
+
+
+  validate:
+    name: Validate (lint, staticcheck, etc)
+    runs-on: ubuntu-latest
+    needs:
+      - version
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+      - name: Setup mise
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # ratchet:jdx/mise-action@v3
+      - name: Trust mise config
+        run: mise trust
+      - name: Run checks
+        run: mise run check
+
   build:
     name: Build and push
     runs-on: ubuntu-latest
@@ -43,6 +80,8 @@ jobs:
       contents: read
       id-token: write
     needs:
+      - test
+      - validate
       - version
     strategy:
       fail-fast: false
@@ -54,7 +93,7 @@ jobs:
     env:
       VERSION: "${{ needs.version.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - name: Install cosign
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # ratchet:sigstore/cosign-installer@v3.10.0
         with:
@@ -115,8 +154,10 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - version
+      - validate
+      - test
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         if: github.ref == 'refs/heads/master'
@@ -159,9 +200,9 @@ jobs:
     name: Rollout
     if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/master'
     needs:
-      - version
       - build
       - chart
+      - version
     runs-on: fasit-deploy
     permissions:
       id-token: write

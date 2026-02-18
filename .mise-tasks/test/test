@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+#MISE description="Run test tests"
+
+go test --race ./... github.com/nais/kafkarator/pkg/aiven/...
