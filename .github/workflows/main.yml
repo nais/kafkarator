@@ -54,7 +54,7 @@ jobs:
             **/go.sum
 
       - name: Setup mise
-        uses: jdx/mise-action@e79ddf65a11cec7b0e882bedced08d6e976efb2d # ratchet:jdx/mise-action@v3
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # ratchet:jdx/mise-action@v3
 
       - name: Trust mise config
         run: mise trust
