@@ -1,6 +1,6 @@
 module github.com/nais/kafkarator
 
-go 1.25.7
+go 1.26
 
 tool (
 	github.com/securego/gosec/v2/cmd/gosec
@@ -14,7 +14,7 @@ tool (
 require (
 	github.com/IBM/sarama v1.47.0
 	github.com/aiven/aiven-go-client/v2 v2.38.0
-	github.com/aiven/go-client-codegen v0.155.0
+	github.com/aiven/go-client-codegen v0.161.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
@@ -137,7 +137,7 @@ require (
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
 	golang.org/x/term v0.40.0 // indirect
