@@ -31,7 +31,6 @@
       devShells = withPkgs (pkgs: {
         default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            gnumake
             go
             golangci-lint-langserver
             gopls

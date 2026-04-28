@@ -122,8 +122,8 @@ The `scripts/` directory contains Python utilities for investigating and cleanin
 
 - **Build locally (binaries):**
   ```sh
-  make kafkarator
-  make canary
+  mise run build:kafkarator
+  mise run build:canary
   ```
   This builds the binaries directly using Go.
 
