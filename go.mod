@@ -16,7 +16,7 @@ tool (
 require (
 	github.com/IBM/sarama v1.47.0
 	github.com/aiven/aiven-go-client/v2 v2.38.0
-	github.com/aiven/go-client-codegen v0.175.0
+	github.com/aiven/go-client-codegen v0.177.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
@@ -107,7 +107,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
-	github.com/rs/zerolog v1.35.0 // indirect
+	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/securego/gosec/v2 v2.23.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
