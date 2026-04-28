@@ -1,12 +1,11 @@
 FROM ghcr.io/astral-sh/uv:latest AS uv-provider
 
-FROM ghcr.io/nais/deploy/deploy:latest
+FROM europe-north1-docker.pkg.dev/nais-io/nais/images/deploy:latest
 
 COPY --from=uv-provider /uv /usr/local/bin/
 WORKDIR /canary/
-COPY canary-deployer/requirements.txt /canary/
-RUN apk add python3 && /usr/local/bin/uv pip install --system --requirement /canary/requirements.txt
+COPY canary-deployer/pyproject.toml canary-deployer/uv.lock canary-deployer/deployer.py /canary/
+RUN uv sync --frozen --no-dev
 COPY canary-deployer/*.yaml /canary/
-COPY canary-deployer/deployer.py /canary/
-RUN python3 -c "import deployer"
-CMD ["python3", "/canary/deployer.py"]
+RUN /canary/.venv/bin/python -c "import deployer"
+CMD ["/canary/.venv/bin/python", "/canary/deployer.py"]
