@@ -3,4 +3,4 @@
 
 set -e
 
-docker buildx bake --load --var VERSION=baked
+docker buildx bake --load
