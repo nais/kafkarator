@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Run test with race checking"
+
+set -e
+
+go test -race ./...
