@@ -4,17 +4,6 @@ FROM busybox
 
 ARG --global REGISTRY=europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator
 
-kubebuilder:
-    FROM golang:1.25.7
-    # Constants
-    ARG os="linux"
-    ARG arch="amd64"
-    ARG kubebuilder_version="2.3.1"
-
-    RUN wget -qO - https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kubebuilder_version}/kubebuilder_${kubebuilder_version}_${os}_${arch}.tar.gz | tar -xz -C /tmp/
-    SAVE ARTIFACT /tmp/kubebuilder_${kubebuilder_version}_${os}_${arch}/*
-    SAVE IMAGE --cache-hint
-
 dependencies:
     FROM golang:1.25.7
     # Go settings, needs to be ENV to be inherited into build
@@ -30,7 +19,6 @@ dependencies:
 
 build:
     FROM +dependencies
-    COPY --dir +kubebuilder/ /usr/local/kubebuilder/
     COPY . /workspace
     RUN go build -installsuffix cgo -o kafkarator cmd/kafkarator/*.go
     RUN go build -installsuffix cgo -o canary cmd/canary/*.go
