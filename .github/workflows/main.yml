@@ -35,6 +35,16 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - version
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - test
+          - check:deadcode
+          - check:gosec
+          - check:helm-lint
+          - check:staticcheck
+          - check:vulncheck
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
 
@@ -53,11 +63,8 @@ jobs:
       - name: Trust mise config
         run: mise trust
 
-      - name: Run tests
-        run: mise run test
-
-      - name: Run checks
-        run: mise run check
+      - name: Run task
+        run: mise run ${{ matrix.task }}
 
   build:
     name: Build and push
