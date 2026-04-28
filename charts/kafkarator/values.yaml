@@ -18,6 +18,8 @@ caBundle: false
 
 extraEnv: {}
 
+dryRun: false
+
 featureFlags:
   generated_client: false
 

@@ -2,5 +2,8 @@
 pin = true
 
 [tools]
+ctlptl = "0.9.3"
 go = "1.25.7"
 helm = "4.1.0"
+k3d = "5.8.3"
+tilt = "0.37.0"

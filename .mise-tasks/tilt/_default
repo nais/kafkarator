@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# [MISE] description="Start tilt"
+# [MISE] depends=["tilt:setup-cluster"]
+
+tilt up

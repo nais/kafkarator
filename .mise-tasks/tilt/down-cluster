@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# [MISE] description="Delete test cluster"
+
+ctlptl delete cluster --cascade=true k3d

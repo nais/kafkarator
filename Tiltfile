@@ -5,13 +5,11 @@ APP_NAME="kafkarator"
 
 helm_resource('nais-crds', '../liberator/charts', pod_readiness="ignore")
 
-ignore = str(read_file(".earthignore")).split("\n")
-custom_build(
+docker_build(
     ref=APP_NAME,
-    command="earthly +docker-kafkarator --VERSION=$EXPECTED_TAG --REGISTRY=$EXPECTED_REGISTRY",
-    deps=["cmd", "controllers", "pkg", "go.mod", "go.sum", "Earthfile"],
-    skips_local_docker=False,
-    ignore=ignore,
+    context=".",
+    dockerfile="Dockerfile.kafkarator",
+    only=["cmd", "controllers", "pkg", "go.mod", "go.sum", "Dockerfile.kafkarator"],
 )
 
 # Deployed to the cluster
@@ -21,9 +19,7 @@ k8s_yaml(helm("charts/{}".format(APP_NAME), set=[
     # Application configure for testing
     "aiven.projects=dev-nais-dev",
     "aiven.token=" + os.getenv('AIVEN_TOKEN'),
-    # Debugger settings
-    "debugger.deployment=false",
-    "debugger.service=false",
+    "dryRun=true"
 ]))
 kafkarator_objects = [
     "chart-kafkarator:NetworkPolicy",

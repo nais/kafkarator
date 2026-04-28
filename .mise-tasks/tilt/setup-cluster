@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# [MISE] description="Setup test cluster using kind"
+
+if ! ctlptl get cluster k3d; then
+  ctlptl create cluster k3d --registry=ctlptl-registry
+fi
+
