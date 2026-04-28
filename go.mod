@@ -1,6 +1,8 @@
 module github.com/nais/kafkarator
 
-go 1.25.7
+go 1.26
+
+toolchain go1.26.2
 
 tool (
 	github.com/securego/gosec/v2/cmd/gosec

@@ -3,7 +3,7 @@ pin = true
 
 [tools]
 ctlptl = "0.9.3"
-go = "1.25.7"
+go = "1.26.2"
 helm = "4.1.0"
 k3d = "5.8.3"
 python = "3.12"
