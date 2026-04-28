@@ -8,4 +8,4 @@ COPY canary-deployer/pyproject.toml canary-deployer/uv.lock canary-deployer/depl
 RUN uv sync --frozen --no-dev
 COPY canary-deployer/*.yaml /canary/
 RUN /canary/.venv/bin/python -c "import deployer"
-CMD ["/canary/.venv/bin/python", "/canary/deployer.py"]
+ENTRYPOINT ["/canary/.venv/bin/python", "/canary/deployer.py"]
