@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build kafkarator docker image"
+
+set -e
+
+docker buildx bake --load kafkarator

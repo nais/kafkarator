@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build all docker images"
+
+set -e
+
+docker buildx bake --load --var VERSION=baked

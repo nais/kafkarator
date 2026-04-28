@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+#MISE description="Build canary docker image"
+
+set -e
+
+docker buildx bake --load canary
