@@ -1,0 +1,12 @@
+FROM ghcr.io/astral-sh/uv:latest AS uv-provider
+
+FROM ghcr.io/nais/deploy/deploy:latest
+
+COPY --from=uv-provider /uv /usr/local/bin/
+WORKDIR /canary/
+COPY canary-deployer/requirements.txt /canary/
+RUN apk add python3 && /usr/local/bin/uv pip install --system --requirement /canary/requirements.txt
+COPY canary-deployer/*.yaml /canary/
+COPY canary-deployer/deployer.py /canary/
+RUN python3 -c "import deployer"
+CMD ["python3", "/canary/deployer.py"]
