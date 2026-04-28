@@ -149,12 +149,15 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - kafkarator
-          - kafka-canary
-          - kafka-canary-alert
+          - name: kafkarator
+            target: '{"kafka":"enabled","kind":"tenant"}'
+          - name: kafka-canary
+            target: '{"kafka":"enabled","kind":"management"}'
+          - name: kafka-canary-alert
+            target: '{"kafka":"enabled","kind":"tenant"}'
     steps:
       - uses: nais/fasit-deploy@v3 # ratchet:exclude
         with:
-          chart: oci://${{ env.FEATURE_REGISTRY }}/${{ matrix.feature }}
+          chart: oci://${{ env.FEATURE_REGISTRY }}/${{ matrix.feature.name }}
           version: ${{ needs.version.outputs.VERSION }}
-          target: '{"kafka":"enabled","kind":"tenant"}'
+          target: '${{ matrix.feature.target }}'
