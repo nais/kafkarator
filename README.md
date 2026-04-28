@@ -93,7 +93,7 @@ The `scripts/` directory contains Python utilities for investigating and cleanin
 
 ### Prerequisites
 - [mise](https://mise.jdx.dev/) (for tool and task management)
-- [Earthly](https://earthly.dev) (for reproducible builds)
+- [Docker](https://www.docker.com/) (with buildx, for building images)
 - [Go](https://go.dev/) (see `mise.toml` for version)
 - [Helm](https://helm.sh/) (for chart linting)
 
@@ -101,9 +101,10 @@ The `scripts/` directory contains Python utilities for investigating and cleanin
 
 - **Build Docker images:**
   ```sh
-  ./earthlyw +docker
+  mise run docker
   ```
-  This uses the `earthlyw` wrapper to ensure you always use the correct Earthly version for reproducible builds. It builds Docker images for both `kafkarator` and `canary`.
+  This runs `docker buildx bake` via the mise task and builds all three images (`kafkarator`, `canary`, `canary-deployer`). 
+  To build a single image, use `mise run docker:kafkarator`, `mise run docker:canary`, or `mise run docker:canary-deployer`.
 
 - **Run all code checks (lint, static analysis, security, Helm lint):**
   ```sh
@@ -174,7 +175,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - [NAIS Platform](https://doc.nais.io)
 - [Aiven Kafka](https://aiven.io/kafka)
-- [Earthly](https://earthly.dev)
 - [mise](https://mise.jdx.dev/)
 - [Helm](https://helm.sh/)
 - [Architecture Decision Records](doc/adr/README.md)
