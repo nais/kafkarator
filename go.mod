@@ -15,7 +15,7 @@ tool (
 
 require (
 	github.com/IBM/sarama v1.48.0
-	github.com/aiven/aiven-go-client/v2 v2.41.0
+	github.com/aiven/aiven-go-client/v2 v2.42.0
 	github.com/aiven/go-client-codegen v0.177.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
