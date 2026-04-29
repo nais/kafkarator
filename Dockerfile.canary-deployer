@@ -2,8 +2,14 @@ FROM ghcr.io/astral-sh/uv:latest AS uv-provider
 
 FROM europe-north1-docker.pkg.dev/nais-io/nais/images/deploy:latest
 
+USER 1069:1069
+WORKDIR /opt/uv-python/
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+
 COPY --from=uv-provider /uv /usr/local/bin/
+
 WORKDIR /canary/
+ENV HOME=/canary/
 COPY canary-deployer/pyproject.toml canary-deployer/uv.lock canary-deployer/deployer.py /canary/
 RUN uv sync --frozen --no-dev
 COPY canary-deployer/*.yaml /canary/
