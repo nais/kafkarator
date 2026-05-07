@@ -135,8 +135,8 @@ jobs:
             helm push "$chart" oci://${{ env.FEATURE_REGISTRY }}
           done
 
-  rollout:
-    name: Rollout
+  deploy:
+    name: Deploy
     if: github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/master'
     needs:
       - build
@@ -150,14 +150,26 @@ jobs:
       matrix:
         feature:
           - name: kafkarator
-            target: '{"kafka":"enabled","kind":"tenant"}'
+            targets: |
+              [
+                { "target": { "kafka": "enabled", "kind": "tenant", "tenant": "ci-nais" }, "wait": true },
+                { "target": { "kafka": "enabled", "kind": "tenant" } }
+              ]
           - name: kafka-canary
-            target: '{"kafka":"enabled","kind":"management"}'
+            targets: |
+              [
+                { "target": { "kafka": "enabled", "kind": "management", "tenant": "ci-nais" }, "wait": true },
+                { "target": { "kafka": "enabled", "kind": "management" } }
+              ]
           - name: kafka-canary-alert
-            target: '{"kafka":"enabled","kind":"tenant"}'
+            targets: |
+              [
+                { "target": { "kafka": "enabled", "kind": "tenant", "tenant": "ci-nais" }, "wait": true },
+                { "target": { "kafka": "enabled", "kind": "tenant" } }
+              ]
     steps:
-      - uses: nais/fasit-deploy@v3 # ratchet:exclude
+      - uses: nais/fasit-deploy@97187355184a7f0f4b7a36a2b49a86ce02240f7b # ratchet:nais/fasit-deploy@v4.0.0
         with:
           chart: oci://${{ env.FEATURE_REGISTRY }}/${{ matrix.feature.name }}
           version: ${{ needs.version.outputs.VERSION }}
-          target: '${{ matrix.feature.target }}'
+          targets: ${{ matrix.feature.targets }}
