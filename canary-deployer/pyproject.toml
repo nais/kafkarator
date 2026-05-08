@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
     "trio==0.31.0",
     "pydantic==2.12.5",
-    "pydantic-settings==2.11.0",
+    "pydantic-settings==2.14.1",
 ]
 
 [build-system]
