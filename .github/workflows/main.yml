@@ -21,7 +21,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6.0.3
       - name: "Set image version"
         id: constants
         run: |
@@ -36,7 +36,7 @@ jobs:
     needs:
       - version
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6.0.3
 
       - name: Setup Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # ratchet:actions/setup-go@v6
@@ -78,7 +78,7 @@ jobs:
     env:
       VERSION: "${{ needs.version.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6.0.3
       - uses: nais/platform-build-push-sign@df590279b21bc5978519685752f9eaddd546043c # ratchet:nais/platform-build-push-sign@main
         with:
           name: kafkarator/${{ matrix.target }}
@@ -98,7 +98,7 @@ jobs:
       - version
       - test_validate
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # ratchet:actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # ratchet:actions/checkout@v6.0.3
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         if: github.ref == 'refs/heads/master'
