@@ -6,6 +6,7 @@
 #   "requests",
 #   "rich",
 #   "humanize",
+#   "philiprehberger-duration",
 # ]
 # ///
 
@@ -16,14 +17,16 @@ Prints a summary of average and median size reduction for each topic/partition.
 """
 
 import argparse
+import enum
 import json
 import re
 import subprocess
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import timedelta, datetime
 
+from philiprehberger_duration import parse, Duration
 import humanize
 import requests
 from rich.console import Console
@@ -144,13 +147,10 @@ def median(values: list[float]) -> float:
     return s[mid]
 
 
-def parse_since(value: str) -> int:
+def parse_since(value: str) -> timedelta:
     """Parse a duration string like '24h' or '7d' into seconds."""
-    m = re.fullmatch(r"(\d+)([hd])", value.strip().lower())
-    if not m:
-        raise argparse.ArgumentTypeError(f"Invalid --since value '{value}'. Use e.g. '24h' or '7d'.")
-    amount, unit = int(m.group(1)), m.group(2)
-    return amount * (3600 if unit == "h" else 86400)
+    seconds = parse(value)
+    return timedelta(seconds=seconds)
 
 
 def main():
@@ -160,9 +160,11 @@ def main():
                         help="How far back to query (e.g. 24h, 7d). Default: 24h")
     args = parser.parse_args()
 
-    now_ns = int(time.time() * 1e9)
-    start_ns = now_ns - args.since * 1_000_000_000
-    period = humanize.naturaldelta(timedelta(seconds=args.since))
+    now = datetime.now()
+    now_ns = int(now.timestamp() * 1_000_000_000)
+    start = now - args.since
+    start_ns = int(start.timestamp() * 1_000_000_000)
+    period = humanize.naturaldelta(args.since)
 
     compacted_topics = list(find_compacted_topics())
 
@@ -220,7 +222,7 @@ def main():
 
     for row in rows:
         tp_table.add_row(*row.topic_row())
-        if row.compacted and row.samples > 10 and row.avg_pct == 0.0:
+        if row.compacted and row.avg_pct == 0.0:
             sus_table.add_row(row.name, str(row.samples))
 
     console.print()
