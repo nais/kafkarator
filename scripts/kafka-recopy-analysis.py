@@ -16,26 +16,70 @@ Prints a summary of average and median size reduction for each topic/partition.
 """
 
 import argparse
+import json
 import re
+import subprocess
 import time
-from datetime import timedelta
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import timedelta
 
-import requests
 import humanize
+import requests
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, track
 from rich.table import Table
 
 LOKI_URL = "https://loki.nav.cloud.nais.io/loki/api/v1/query_range"
 LOKI_QUERY = '{service_name="aiven-klog", k8s_cluster_name="prod"} |~ "(?i)Log cleaner thread 0 cleaned log"'
 LOKI_ORG = "nais"
+KUBE_CONTEXT = "nav-prod"
 LIMIT = 5000
 
 _RE_TOPIC = re.compile(r"cleaned log\s+(\S+)", re.IGNORECASE)
+_RE_TOPIC_PARTITION = re.compile(r"(\S+)-(\d+)")
 _RE_SIZE = re.compile(r"([\d.]+)%\s+size reduction", re.IGNORECASE)
 
 console = Console()
+
+
+@dataclass
+class LogRecord:
+    topic: str
+    partition: int
+    size_pct: float
+
+
+@dataclass(order=True)
+class TopicStats:
+    name: str
+    compacted: bool
+    samples: int
+    min_pct: float
+    avg_pct: float
+    median_pct: float
+    max_pct: float
+
+    def topic_row(self):
+        return self.name, str(self.compacted), str(self.samples), f"{self.min_pct:.1f}", f"{self.avg_pct:.1f}", f"{self.median_pct:.1f}", f"{self.max_pct:.1f}"
+
+
+def find_compacted_topics():
+    cmd = [
+        "kubectl",
+        "get", "topic",
+        "--all-namespaces",
+        "--context", KUBE_CONTEXT,
+        "--output", "json",
+    ]
+    with console.status(f"Executing {' '.join(cmd)}"):
+        output = subprocess.check_output(cmd)
+        data = json.loads(output)
+
+    for item in track(data["items"], description=f"Parsing topics from {KUBE_CONTEXT}", console=console):
+        cleanup_policy = item["spec"].get("config", {}).get("cleanupPolicy", "delete")
+        if "compact" in cleanup_policy:
+            yield item["status"].get("fullyQualifiedName", "ERROR")
 
 
 def fetch_log_lines(start_ns: int, end_ns: int):
@@ -61,7 +105,7 @@ def fetch_log_lines(start_ns: int, end_ns: int):
         if not result:
             break
 
-        batch_lines = []
+        count = 0
         latest_ts = current_start
 
         for stream in result:
@@ -69,25 +113,25 @@ def fetch_log_lines(start_ns: int, end_ns: int):
                 ts_int = int(ts)
                 if ts_int > latest_ts:
                     latest_ts = ts_int
-                batch_lines.append((ts_int, line))
+                count += 1
+                yield line
 
-        if not batch_lines:
+        if count == 0:
             break
-
-        batch_lines.sort(key=lambda x: x[0])
-
-        for _, line in batch_lines:
-            yield line
 
         current_start = latest_ts + 1
 
 
-def parse_line(line: str):
+def parse_line(line: str) -> LogRecord | None:
     """Return (topic_partition, size_pct) or None if not parseable."""
     topic_match = _RE_TOPIC.search(line)
     size_match = _RE_SIZE.search(line)
     if topic_match and size_match:
-        return topic_match.group(1), float(size_match.group(1))
+        topic_partition_match = _RE_TOPIC_PARTITION.match(topic_match.group(1))
+        if not topic_partition_match:
+            return None
+        return LogRecord(topic=topic_partition_match.group(1), partition=int(topic_partition_match.group(2)),
+                         size_pct=float(size_match.group(1)))
     return None
 
 
@@ -120,85 +164,105 @@ def main():
     start_ns = now_ns - args.since * 1_000_000_000
     period = humanize.naturaldelta(timedelta(seconds=args.since))
 
-    stats: dict[str, list[float]] = defaultdict(list)
+    compacted_topics = list(find_compacted_topics())
+
+    stats: dict[str, list[LogRecord]] = defaultdict(list)
 
     with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
     ) as progress:
         task = progress.add_task(f"Fetching Loki logs for {period} …", total=None)
         for line in fetch_log_lines(start_ns, now_ns):
-            result = parse_line(line)
-            if result:
-                topic_partition, size_pct = result
-                topic = re.sub(r"-\d+$", "", topic_partition)
-                if topic.startswith("__"):
+            record = parse_line(line)
+            if record:
+                if record.topic.startswith("__"):
                     continue
-                stats[topic_partition].append(size_pct)
-            progress.update(task, description=f"Fetching Loki logs for {period} … ({sum(len(v) for v in stats.values())} entries)")
+                stats[record.topic].append(record)
+            progress.update(task,
+                            description=f"Fetching Loki logs for {period} … ({sum(len(v) for v in stats.values())} entries)")
 
     if not stats:
         console.print("[yellow]No matching log entries found.[/yellow]")
         return
 
     rows = []
-    for tp, values in stats.items():
-        avg = sum(values) / len(values)
+    for topic, records in stats.items():
+        values = [r.size_pct for r in records]
+        avg = sum(values) / len(records)
         med = median(values)
-        rows.append((tp, len(values), min(values), avg, med, max(values)))
+        rows.append(TopicStats(
+            name=topic,
+            compacted=topic in compacted_topics,
+            samples=len(values),
+            min_pct=min(values),
+            avg_pct=avg,
+            median_pct=med,
+            max_pct=max(values))
+        )
 
-    def tp_sort_key(r):
-        tp = r[0]
-        m = re.match(r"^(.*)-(\d+)$", tp)
-        if m:
-            return (m.group(1), int(m.group(2)))
-        return (tp, 0)
+    rows.sort()
 
-    rows.sort(key=tp_sort_key)
-
-    tp_table = Table(title="Topic-Partition Size Reduction", show_lines=False)
-    tp_table.add_column("Topic-Partition", style="cyan", no_wrap=True)
+    tp_table = Table(title="Topic Size Reduction", show_lines=False)
+    tp_table.add_column("Topic", style="cyan", no_wrap=True)
+    tp_table.add_column("Compacted?")
     tp_table.add_column("Samples", justify="right")
     tp_table.add_column("Min %", justify="right")
     tp_table.add_column("Avg %", justify="right")
     tp_table.add_column("Median %", justify="right")
     tp_table.add_column("Max %", justify="right")
 
-    for tp, samples, mn, avg, med, mx in rows:
-        tp_table.add_row(tp, str(samples), f"{mn:.1f}", f"{avg:.1f}", f"{med:.1f}", f"{mx:.1f}")
+    sus_table = Table(title="Compacted topics with no size reduction", show_lines=False)
+    sus_table.add_column("Topic", style="cyan", no_wrap=True)
+    sus_table.add_column("Samples", justify="right")
+
+    for row in rows:
+        tp_table.add_row(*row.topic_row())
+        if row.compacted and row.samples > 10 and row.avg_pct == 0.0:
+            sus_table.add_row(row.name, str(row.samples))
 
     console.print()
     console.print(tp_table)
+    console.print()
+    console.print(sus_table)
 
     buckets = {
-        "0.0% size reduction":  0,
-        "<10% size reduction":  0,
-        "<50% size reduction":  0,
-        "<90% size reduction":  0,
-        "≥90% size reduction":  0,
+        "0.0% size reduction": [0, 0, 0],
+        "<10% size reduction": [0, 0, 0],
+        "<50% size reduction": [0, 0, 0],
+        "<90% size reduction": [0, 0, 0],
+        "≥90% size reduction": [0, 0, 0],
     }
-    for _, _, _, avg, _, _ in rows:
-        if avg == 0.0:
-            buckets["0.0% size reduction"] += 1
-        elif avg < 10:
-            buckets["<10% size reduction"] += 1
-        elif avg < 50:
-            buckets["<50% size reduction"] += 1
-        elif avg < 90:
-            buckets["<90% size reduction"] += 1
+    for row in rows:
+        idx = int(row.compacted) + 1
+        if row.avg_pct == 0.0:
+            buckets["0.0% size reduction"][0] += 1
+            buckets["0.0% size reduction"][idx] += 1
+        elif row.avg_pct < 10:
+            buckets["<10% size reduction"][0] += 1
+            buckets["<10% size reduction"][idx] += 1
+        elif row.avg_pct < 50:
+            buckets["<50% size reduction"][0] += 1
+            buckets["<50% size reduction"][idx] += 1
+        elif row.avg_pct < 90:
+            buckets["<90% size reduction"][0] += 1
+            buckets["<90% size reduction"][idx] += 1
         else:
-            buckets["≥90% size reduction"] += 1
+            buckets["≥90% size reduction"][0] += 1
+            buckets["≥90% size reduction"][idx] += 1
 
     bucket_table = Table(title="Summary buckets (by average size reduction)", show_lines=False)
     bucket_table.add_column("Bucket")
     bucket_table.add_column("Count", justify="right")
+    bucket_table.add_column("Compacted", justify="right")
+    bucket_table.add_column("Normal", justify="right")
 
-    for label, count in buckets.items():
-        bucket_table.add_row(label, str(count))
+    for label, counts in buckets.items():
+        bucket_table.add_row(label, *(str(count) for count in counts))
     bucket_table.add_section()
-    bucket_table.add_row("[bold]Total[/bold]", f"[bold]{sum(buckets.values())}[/bold]")
+    bucket_table.add_row("[bold]Total[/bold]", f"[bold]{sum(v[0] for v in buckets.values())}[/bold]")
 
     console.print()
     console.print(bucket_table)
