@@ -14,7 +14,7 @@ tool (
 require (
 	github.com/IBM/sarama v1.48.0
 	github.com/aiven/aiven-go-client/v2 v2.44.0
-	github.com/aiven/go-client-codegen v0.179.0
+	github.com/aiven/go-client-codegen v0.197.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
@@ -135,7 +135,7 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
 	golang.org/x/term v0.43.0 // indirect
