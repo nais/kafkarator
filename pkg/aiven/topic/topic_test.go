@@ -17,16 +17,19 @@ import (
 	"github.com/nais/kafkarator/pkg/utils"
 )
 
+//go:fix inline
 func intp(i int) *int {
-	return &i
+	return new(i)
 }
 
+//go:fix inline
 func int64p(i int64) *int64 {
-	return &i
+	return new(i)
 }
 
+//go:fix inline
 func stringp(s string) *string {
-	return &s
+	return new(s)
 }
 
 type topicTest struct {
@@ -51,16 +54,16 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					Partitions:  intp(2),
-					Replication: intp(3),
+					Partitions:  new(2),
+					Replication: new(3),
 				},
 			},
 		},
 		project: "someproject",
 		service: "mypool-kafka",
 		create: &aiven.CreateKafkaTopicRequest{
-			Partitions:  intp(2),
-			Replication: intp(3),
+			Partitions:  new(2),
+			Replication: new(3),
 			TopicName:   "myteam.mytopic",
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},
@@ -78,7 +81,7 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					Replication: intp(3),
+					Replication: new(3),
 				},
 			},
 		},
@@ -88,7 +91,7 @@ var tests = []topicTest{
 			Replication: 2,
 		},
 		update: &aiven.UpdateKafkaTopicRequest{
-			Replication: intp(3),
+			Replication: new(3),
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},
 			},
@@ -105,14 +108,14 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					CleanupPolicy:         stringp("compact"),
-					MaxMessageBytes:       intp(2048),
-					MinimumInSyncReplicas: intp(3),
-					Partitions:            intp(2),
-					Replication:           intp(3),
-					RetentionBytes:        intp(1024),
-					RetentionHours:        intp(36),
-					SegmentHours:          intp(24),
+					CleanupPolicy:         new("compact"),
+					MaxMessageBytes:       new(2048),
+					MinimumInSyncReplicas: new(3),
+					Partitions:            new(2),
+					Replication:           new(3),
+					RetentionBytes:        new(1024),
+					RetentionHours:        new(36),
+					SegmentHours:          new(24),
 				},
 			},
 		},
@@ -199,12 +202,12 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					CleanupPolicy:         stringp("compact"),
+					CleanupPolicy:         new("compact"),
 					MaxMessageBytes:       nil,
-					MinimumInSyncReplicas: intp(3),
-					Partitions:            intp(2),
-					Replication:           intp(3),
-					RetentionBytes:        intp(1024),
+					MinimumInSyncReplicas: new(3),
+					Partitions:            new(2),
+					Replication:           new(3),
+					RetentionBytes:        new(1024),
 					RetentionHours:        nil,
 					SegmentHours:          nil,
 				},
@@ -245,8 +248,8 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					Replication:    intp(3),
-					RetentionHours: intp(-1),
+					Replication:    new(3),
+					RetentionHours: new(-1),
 				},
 			},
 		},
@@ -262,7 +265,7 @@ var tests = []topicTest{
 			},
 		},
 		update: &aiven.UpdateKafkaTopicRequest{
-			Replication: intp(3),
+			Replication: new(3),
 			Config: aiven.KafkaTopicConfig{
 				RetentionMs: int64p(-1),
 			},
@@ -282,7 +285,7 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					SegmentHours: intp(0),
+					SegmentHours: new(0),
 				},
 			},
 		},
@@ -298,7 +301,7 @@ var tests = []topicTest{
 		},
 		update: &aiven.UpdateKafkaTopicRequest{
 			Config: aiven.KafkaTopicConfig{
-				SegmentMs: int64p((time.Duration(1) * time.Hour).Milliseconds()),
+				SegmentMs: new((time.Duration(1) * time.Hour).Milliseconds()),
 			},
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},
@@ -364,7 +367,7 @@ var tests = []topicTest{
 			Spec: kafka_nais_io_v1.TopicSpec{
 				Pool: "mypool",
 				Config: &kafka_nais_io_v1.Config{
-					RetentionBytes: intp(3),
+					RetentionBytes: new(3),
 				},
 			},
 		},

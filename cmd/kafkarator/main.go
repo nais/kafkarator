@@ -15,7 +15,6 @@ import (
 	"github.com/nais/kafkarator/pkg/aiven/adapter/goclientcodegen"
 	"github.com/nais/liberator/pkg/aiven/service"
 	"github.com/nais/liberator/pkg/logrus2logr"
-	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
@@ -148,7 +147,7 @@ func main() {
 			SyncPeriod: &syncPeriod,
 		},
 		Client: ctrl_client.Options{
-			DryRun: ptr.To(viper.GetBool(DryRun)),
+			DryRun: new(viper.GetBool(DryRun)),
 		},
 		Scheme: scheme,
 		Metrics: metricsserver.Options{

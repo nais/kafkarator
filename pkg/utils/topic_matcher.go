@@ -14,7 +14,7 @@ func toMap(tags []aiven.KafkaTopicTag) map[string]string {
 	return mappedTags
 }
 
-func topicReqComp(expected, actual interface{}, expectedTags, actualTags map[string]string) bool {
+func topicReqComp(expected, actual any, expectedTags, actualTags map[string]string) bool {
 	delete(expectedTags, "touched-at")
 	delete(actualTags, "touched-at")
 	tagsEqual := reflect.DeepEqual(expectedTags, actualTags)

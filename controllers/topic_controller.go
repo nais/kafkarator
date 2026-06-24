@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/nais/kafkarator/pkg/utils"
@@ -47,12 +48,7 @@ type TopicReconciler struct {
 }
 
 func (r *TopicReconciler) projectWhitelisted(project string) bool {
-	for _, p := range r.Projects {
-		if p == project {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Projects, project)
 }
 
 // Process changes in Aiven and return a topic processing status

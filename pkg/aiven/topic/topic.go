@@ -11,7 +11,6 @@ import (
 	kafka_nais_io_v1 "github.com/nais/liberator/pkg/apis/kafka.nais.io/v1"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -181,10 +180,10 @@ func (r *Manager) update(ctx context.Context) error {
 
 func enableRemoteStorage(cfg *kafka_nais_io_v1.Config) *bool {
 	if cfg.LocalRetentionBytes != nil && *cfg.LocalRetentionBytes > 0 {
-		return ptr.To(true)
+		return new(true)
 	}
 	if cfg.LocalRetentionHours != nil && *cfg.LocalRetentionHours > 0 {
-		return ptr.To(true)
+		return new(true)
 	}
 	return nil
 }

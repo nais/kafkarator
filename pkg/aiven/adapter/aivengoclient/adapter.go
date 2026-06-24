@@ -5,7 +5,6 @@ import (
 
 	"github.com/aiven/aiven-go-client/v2"
 	"github.com/nais/kafkarator/pkg/aiven/acl"
-	"k8s.io/utils/ptr"
 )
 
 type AclClient struct {
@@ -20,7 +19,7 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 
 	acls := make([]*acl.Acl, 0, len(out))
 	for _, aclOut := range out {
-		acls = append(acls, ptr.To(acl.FromKafkaACL(aclOut)))
+		acls = append(acls, new(acl.FromKafkaACL(aclOut)))
 	}
 	return acls, nil
 }
@@ -36,7 +35,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		return nil, err
 	}
 
-	return ptr.To(acl.FromKafkaACL(out)), nil
+	return new(acl.FromKafkaACL(out)), nil
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {

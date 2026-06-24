@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,12 +41,7 @@ type StreamReconciler struct {
 }
 
 func (r *StreamReconciler) projectWhitelisted(project string) bool {
-	for _, p := range r.Projects {
-		if p == project {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Projects, project)
 }
 
 // +kubebuilder:rbac:groups=kafka.nais.io,resources=streams,verbs=get;list;watch;create;update;patch;delete
