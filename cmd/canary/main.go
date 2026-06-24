@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -347,7 +348,15 @@ func main() {
 			logger.Errorf("unable to produce transaction on Kafka: %s", err)
 			if kafka.IsErrUnauthorized(err) {
 				cancel()
+				return
 			}
+			if errors.Is(err, producer.ErrFatalProducer) {
+				logger.Warnf("Transactional producer entered fatal state; recreating...")
+				if recreateErr := prodtx.Recreate(); recreateErr != nil {
+					logger.Errorf("Failed to recreate transactional producer: %s", recreateErr)
+				}
+			}
+			return
 		}
 		logger.Infof("Produced transaction")
 		TransactionTxLatency.Observe(time.Since(timer).Seconds())
