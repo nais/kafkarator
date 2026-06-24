@@ -17,21 +17,6 @@ import (
 	"github.com/nais/kafkarator/pkg/utils"
 )
 
-//go:fix inline
-func intp(i int) *int {
-	return new(i)
-}
-
-//go:fix inline
-func int64p(i int64) *int64 {
-	return new(i)
-}
-
-//go:fix inline
-func stringp(s string) *string {
-	return new(s)
-}
-
 type topicTest struct {
 	name     string
 	topic    kafka_nais_io_v1.Topic         // input
@@ -267,7 +252,7 @@ var tests = []topicTest{
 		update: &aiven.UpdateKafkaTopicRequest{
 			Replication: new(3),
 			Config: aiven.KafkaTopicConfig{
-				RetentionMs: int64p(-1),
+				RetentionMs: new(int64(-1)),
 			},
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},
@@ -382,7 +367,7 @@ var tests = []topicTest{
 		},
 		update: &aiven.UpdateKafkaTopicRequest{
 			Config: aiven.KafkaTopicConfig{
-				RetentionBytes: int64p(3),
+				RetentionBytes: new(int64(3)),
 			},
 			Tags: []aiven.KafkaTopicTag{
 				{Key: "created-by", Value: "Kafkarator"},
