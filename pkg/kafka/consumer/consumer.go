@@ -83,7 +83,7 @@ func New(ctx context.Context, cancel context.CancelFunc, cfg Config) error {
 	config := sarama.NewConfig()
 	config.Net.TLS.Enable = true
 	config.Net.TLS.Config = cfg.TlsConfig
-	config.Version = sarama.V3_1_0_0
+	config.Version = sarama.V3_8_1_0
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.MaxProcessingTime = cfg.MaxProcessingTime
 	config.ClientID, _ = os.Hostname()
