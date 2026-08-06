@@ -16,7 +16,7 @@ require (
 	github.com/aiven/aiven-go-client/v2 v2.44.0
 	github.com/aiven/go-client-codegen v0.201.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
