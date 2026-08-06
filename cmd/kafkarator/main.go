@@ -161,6 +161,7 @@ func main() {
 	}
 
 	terminator, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	logger.Info("Kafkarator running")
 
 	go startReconcilers(quit, logger, featureFlags, mgr)
