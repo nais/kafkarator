@@ -6,9 +6,7 @@ metadata:
     {{- include "kafkarator.labels" . | nindent 4 }}
 spec:
   egress:
-  - to:
-    - ipBlock:
-        cidr: "0.0.0.0/0"
+  - {}
   - to:
       - namespaceSelector: {}
         podSelector:
