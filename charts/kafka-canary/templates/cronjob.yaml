@@ -1,3 +1,5 @@
+# Deploy cronjob: mints a short-lived service account token and applies the
+# canary manifest to each environment.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -7,12 +9,11 @@ metadata:
 spec:
   schedule: "*/30 * * * *"
   startingDeadlineSeconds: 600
-  successfulJobsHistoryLimit: 1
-  suspend: false
   concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
+  suspend: false
   jobTemplate:
     spec:
-      activeDeadlineSeconds: 600
       template:
-        {{- include "kafka-canary.job-template" . | nindent 8 }}
+        {{- include "kafka-canary.job-template" (set . "command" "deploy") | nindent 8 }}

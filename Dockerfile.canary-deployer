@@ -1,17 +1,15 @@
-FROM ghcr.io/astral-sh/uv:latest AS uv-provider
+FROM golang:1.26 AS builder
 
-FROM europe-north1-docker.pkg.dev/nais-io/nais/images/deploy:latest
+ENV CGO_ENABLED=0
 
-USER 1069:1069
-WORKDIR /opt/uv-python/
-ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -installsuffix cgo -o canary-deployer cmd/canary-deployer/*.go
 
-COPY --from=uv-provider /uv /usr/local/bin/
+FROM cgr.dev/chainguard/static:latest
 
-WORKDIR /canary/
-ENV HOME=/canary/
-COPY canary-deployer/pyproject.toml canary-deployer/uv.lock canary-deployer/deployer.py /canary/
-RUN uv sync --frozen --no-dev
-COPY canary-deployer/*.yaml /canary/
-RUN /canary/.venv/bin/python -c "import deployer"
-ENTRYPOINT ["/canary/.venv/bin/python", "/canary/deployer.py"]
+WORKDIR /
+COPY --from=builder /workspace/canary-deployer /
+ENTRYPOINT ["/canary-deployer"]

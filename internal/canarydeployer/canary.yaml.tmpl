@@ -3,16 +3,16 @@ kind: Application
 apiVersion: nais.io/v1alpha1
 metadata:
   name: kafka-canary
-  namespace: "{{ team }}"
+  namespace: "{{ .Team }}"
   labels:
-    team: "{{ team }}"
+    team: "{{ .Team }}"
 spec:
   replicas:
     min: 2
     max: 2
-  image: "{{ image }}"
+  image: "{{ .Image }}"
   kafka:
-    pool: "{{ pool }}"
+    pool: "{{ .Pool }}"
   prometheus:
     enabled: true
     path: /metrics
@@ -22,17 +22,17 @@ spec:
       memory: 64Mi
   env:
     - name: CANARY_DEPLOY_START_TIME
-      value: "{{ now }}"
+      value: "{{ .Now }}"
     - name: CANARY_MESSAGE_INTERVAL
       value: 5s
     - name: CANARY_KAFKA_TOPIC
-      value: "{{ canary_kafka_topic }}"
+      value: "{{ .CanaryKafkaTopic }}"
     - name: CANARY_KAFKA_TX_TOPIC
-      value: "{{ canary_kafka_tx_topic }}"
+      value: "{{ .CanaryKafkaTxTopic }}"
     - name: CANARY_ENABLE_TRANSACTION
-      value: "{{ canary_enable_transaction }}"
+      value: "{{ .CanaryEnableTransaction }}"
     - name: CANARY_KAFKA_GROUP_ID
-      value: "{{ groupid }}"
+      value: "{{ .GroupID }}"
     - name: CANARY_LOG_FORMAT
       value: json
     - name: CANARY_METRICS_ADDRESS

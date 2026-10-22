@@ -1,15 +1,9 @@
-# Default values for kafka-canary.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
 # deploy_configs contains a json structure describing deploy configurations
 deploy_configs: "" # Mapped in fasit
-# deploy_server is the endpoint that hookd listens on (including port if needed)
-deploy_server: "" # Mapped in fasit
-# deploy_use_tls selects if the hookd connection should use TLS
-deploy_use_tls: "true"
-# deploy_key_secret_name is the name of a secret that contains a DEPLOY_API_KEY (created by nais-verification feature)
-deploy_key_secret_name: "nais-verification-deploy-key"
+# host:port of the open Nais API gRPC endpoint
+grpcTarget: "nais-api:3001"
+# Base URL of the Nais API REST endpoint (apply path appended)
+apiBaseUrl: "http://nais-api:3006"
 
 canary:
   image:
@@ -19,5 +13,4 @@ canary:
 deployer:
   image:
     repository: europe-north1-docker.pkg.dev/nais-io/nais/images/kafkarator/canary-deployer
-    pullPolicy: IfNotPresent
     tag: latest # Overridden in main workflow

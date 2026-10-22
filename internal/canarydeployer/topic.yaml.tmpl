@@ -2,14 +2,14 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: {{ topic_name }}
-  namespace: "{{ team }}"
+  name: {{ .TopicName }}
+  namespace: "{{ .Team }}"
   labels:
-    team: "{{ team }}"
+    team: "{{ .Team }}"
   annotations:
     kafka.nais.io/removeDataWhenResourceIsDeleted: "true"
 spec:
-  pool: "{{ pool }}"
+  pool: "{{ .Pool }}"
   config:
     partitions: 2
     retentionHours: 24

@@ -1,5 +1,6 @@
 dependencies:
   - allOf:
+      - nais-api
       - nais-verification
 environmentKinds:
   - management
@@ -33,13 +34,12 @@ values:
           {{ end }}
           {{ end }}
         ]
-  deploy_server:
-    computed:
-      template: '"hookd-grpc:9090"'
-  deploy_use_tls:
-    computed:
-      template: '"false"'
-  deployer.image.pullPolicy:
+  grpcTarget:
+    description: host:port of the open Nais API gRPC endpoint
+    config:
+      type: string
+  apiBaseUrl:
+    description: Base URL of the Nais API REST endpoint
     config:
       type: string
   deployer.image.repository:

@@ -1,0 +1,16 @@
+# Provisioning job: idempotently ensures the nais-verification team and the
+# canary service account exist. Runs on every install/upgrade via Helm hooks.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kafka-canary.fullname" . }}-provision
+  labels:
+    {{- include "kafka-canary.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    {{- include "kafka-canary.job-template" (set . "command" "provision") | nindent 4 }}
