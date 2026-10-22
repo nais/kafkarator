@@ -69,7 +69,7 @@ spec:
       args:
         - {{ .command | quote }}
       env:
-        - name: IMAGE
+        - name: CANARY_IMAGE
           value: "{{ .Values.canary.image.repository }}:{{ .Values.canary.image.tag }}"
         - name: DEPLOY_CONFIGS_PATH
           value: /config/deploy_configs.json

@@ -44,7 +44,7 @@ func Deploy(ctx context.Context, cfg *Config) error {
 		return err
 	}
 
-	configs, err := LoadDeployConfigs(cfg.DeployConfigsPath)
+	configs, err := LoadDeployConfigs(cfg.CanaryDeployConfigsPath)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ type canaryVars struct {
 func renderCanary(cfg *Config, dc DeployConfig, now string) (map[string]any, error) {
 	return renderManifest(canaryManifestTmpl, canaryVars{
 		Team:               TeamSlug,
-		Image:              cfg.Image,
+		Image:              cfg.CanaryImage,
 		Pool:               dc.Pool,
 		Now:                now,
 		CanaryKafkaTopic:   fmt.Sprintf("%s.kafka-canary-%s", TeamSlug, dc.CanaryCluster),

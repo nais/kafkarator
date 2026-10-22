@@ -57,7 +57,7 @@ func TestLoadDeployConfigsOtherTenant(t *testing.T) {
 }
 
 func TestRenderCanary(t *testing.T) {
-	cfg := &Config{Image: "example.com/canary:1"}
+	cfg := &Config{CanaryImage: "example.com/canary:1"}
 	dc := DeployConfig{Pool: "nav-dev", CanaryCluster: "dev-gcp", TopicCluster: "dev-gcp"}
 	m, err := renderCanary(cfg, dc, "2026-10-21T00:00:00Z")
 	if err != nil {

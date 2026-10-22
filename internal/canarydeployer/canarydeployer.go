@@ -1,7 +1,3 @@
-// Package canarydeployer deploys the kafka canary (topics + application) to
-// each configured cluster via the Nais API, in the "v3" world where the old
-// hookd deploy API key is replaced by a short-lived service account token.
-//
 // Two entrypoints, driven by environment variables:
 //
 //   - provision: idempotently ensure the nais-verification team and the
@@ -15,44 +11,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 const (
-	// TeamSlug is the team the canary runs as.
-	TeamSlug = "nais-verification"
-
-	// ServiceAccountName is the canary's service account within the Nais team.
+	TeamSlug           = "nais-verification"
 	ServiceAccountName = "kafka-kanary"
-
-	// RoleName grants k8s_resources:apply (among other team-member rights).
-	RoleName = "Team member"
+	RoleName           = "Team member" // RoleName grants k8s_resources:apply (among other team-member rights).
 
 	teamPurpose               = "A place for Nais to run verification workloads"
 	teamChannel               = "#nais"
 	serviceAccountDescription = "Service account used by the kafka canary deployer"
 )
 
-// Config is the environment-driven configuration shared by both entrypoints.
 type Config struct {
 	GRPCTarget string
 	APIBaseURL string
 
-	// Image is the canary application image to deploy.
-	Image string
-
-	// DeployConfigsPath points to the JSON file describing per-cluster deploy
-	// configurations.
-	DeployConfigsPath string
+	CanaryImage             string
+	CanaryDeployConfigsPath string
 }
 
 func ConfigFromEnv() (*Config, error) {
 	return &Config{
-		GRPCTarget:        os.Getenv("GRPC_TARGET"),
-		APIBaseURL:        strings.TrimSuffix(os.Getenv("API_BASE_URL"), "/"),
-		Image:             os.Getenv("IMAGE"),
-		DeployConfigsPath: os.Getenv("DEPLOY_CONFIGS_PATH"),
+		GRPCTarget:              os.Getenv("GRPC_TARGET"),
+		APIBaseURL:              strings.TrimSuffix(os.Getenv("API_BASE_URL"), "/"),
+		CanaryImage:             os.Getenv("CANARY_IMAGE"),
+		CanaryDeployConfigsPath: os.Getenv("DEPLOY_CONFIGS_PATH"),
 	}, nil
 }
 
@@ -60,6 +47,7 @@ func (c *Config) validateProvision() error {
 	if c.GRPCTarget == "" {
 		return fmt.Errorf("GRPC_TARGET is required")
 	}
+
 	return nil
 }
 
@@ -70,12 +58,13 @@ func (c *Config) validateDeploy() error {
 	if c.APIBaseURL == "" {
 		return fmt.Errorf("API_BASE_URL is required")
 	}
-	if c.Image == "" {
-		return fmt.Errorf("IMAGE is required")
+	if c.CanaryImage == "" {
+		return fmt.Errorf("CANARY_IMAGE is required")
 	}
-	if c.DeployConfigsPath == "" {
+	if c.CanaryDeployConfigsPath == "" {
 		return fmt.Errorf("DEPLOY_CONFIGS_PATH is required")
 	}
+
 	return nil
 }
 
@@ -101,13 +90,13 @@ type deployConfigEntry struct {
 	Tenant       string `json:"tenant"`
 }
 
-// LoadDeployConfigs reads and interprets deploy_configs.json, mirroring the
-// Python deployer's load_deploy_configs. For the "nav" tenant, the topic
-// cluster is looked up from entries that are themselves tenant-kind with an
-// aiven project; for other tenants each entry maps its own aiven project to
-// its cluster.
+// LoadDeployConfigs reads and interprets deploy_configs.json For the "nav"
+// tenant, the topic cluster is looked up from entries that are themselves
+// tenant-kind with an aiven project; for other tenants each entry maps its
+// own aiven project to its cluster.
 func LoadDeployConfigs(path string) ([]DeployConfig, error) {
-	raw, err := os.ReadFile(path)
+	safePath := filepath.Clean(path)
+	raw, err := os.ReadFile(safePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading deploy configs: %w", err)
 	}
@@ -155,5 +144,6 @@ func topicClusterLookup(entries []deployConfigEntry) map[string]string {
 		}
 		lookup[e.AivenProject] = e.ClusterName
 	}
+
 	return lookup
 }
