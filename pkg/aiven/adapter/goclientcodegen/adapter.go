@@ -21,7 +21,12 @@ func (c *AclClient) List(ctx context.Context, project, serviceName string) ([]*a
 
 	acls := make([]*acl.Acl, 0, len(out.Acl))
 	for _, aclOut := range out.Acl {
-		acls = append(acls, makeAcl(&aclOut))
+		acls = append(acls, &acl.Acl{
+			ID:         valueOrEmpty(aclOut.Id),
+			Permission: string(aclOut.Permission),
+			Topic:      aclOut.Topic,
+			Username:   aclOut.Username,
+		})
 	}
 	return acls, nil
 }
@@ -40,10 +45,15 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 	// The server doesn't return the ACL we created but list of all ACLs currently
 	// defined. Need to find the correct one manually. There could be multiple ACLs
 	// with same attributes. Assume the one that was created is the last one matching.
-	var foundACL *kafka.AclOut
+	var foundACL *acl.Acl
 	for _, aclOut := range out {
 		if aclOut.Permission == in.Permission && aclOut.Topic == in.Topic && aclOut.Username == in.Username {
-			foundACL = &aclOut
+			foundACL = &acl.Acl{
+				ID:         aclOut.Id,
+				Permission: string(aclOut.Permission),
+				Topic:      aclOut.Topic,
+				Username:   aclOut.Username,
+			}
 		}
 	}
 
@@ -51,7 +61,7 @@ func (c *AclClient) Create(ctx context.Context, project, service string, req acl
 		return nil, fmt.Errorf("created ACL not found from response ACL list")
 	}
 
-	return makeAcl(foundACL), nil
+	return foundACL, nil
 }
 
 func (c *AclClient) Delete(ctx context.Context, project, service, aclID string) error {
@@ -64,13 +74,4 @@ func valueOrEmpty(in *string) string {
 		return *in
 	}
 	return ""
-}
-
-func makeAcl(aclOut *kafka.AclOut) *acl.Acl {
-	return &acl.Acl{
-		ID:         valueOrEmpty(aclOut.Id),
-		Permission: string(aclOut.Permission),
-		Topic:      aclOut.Topic,
-		Username:   aclOut.Username,
-	}
 }
