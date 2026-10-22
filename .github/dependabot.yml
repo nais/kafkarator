@@ -12,13 +12,6 @@ updates:
           - k8s.io/api*
           - k8s.io/client-go
           - sigs.k8s.io/controller-runtime
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 7
-    groups:
       gomod:
         patterns:
           - '*'
