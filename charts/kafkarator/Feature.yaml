@@ -4,7 +4,6 @@ dependencies:
     - kyverno
 environmentKinds:
   - tenant
-  - legacy
 values:
   featureFlags.generated_client:
     description: Use generated client for ACLs

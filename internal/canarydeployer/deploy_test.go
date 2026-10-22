@@ -20,7 +20,7 @@ func TestLoadDeployConfigsNav(t *testing.T) {
 	// For Nav, only tenant-kind entries are eligible topic clusters.
 	path := writeConfigs(t, `[
 		{"kind":"tenant","cluster_name":"prod-gcp","aiven_project":"nav-prod","tenant":"nav"},
-		{"kind":"legacy","cluster_name":"prod-fss","aiven_project":"nav-prod","tenant":"nav"}
+		{"kind":"onprem","cluster_name":"prod-fss","aiven_project":"nav-prod","tenant":"nav"}
 	]`)
 
 	configs, err := LoadDeployConfigs(path)

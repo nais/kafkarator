@@ -4,7 +4,6 @@ dependencies:
     # - kafka-canary ## We can't express this dependency here
 environmentKinds:
   - tenant
-  - legacy
   - onprem
 values:
   cluster:
