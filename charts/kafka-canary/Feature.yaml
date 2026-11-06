@@ -1,7 +1,6 @@
 dependencies:
   - allOf:
       - nais-api
-      - nais-verification
 environmentKinds:
   - management
 values:
