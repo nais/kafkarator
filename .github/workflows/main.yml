@@ -52,7 +52,7 @@ jobs:
             **/go.sum
 
       - name: Setup mise
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # ratchet:jdx/mise-action@v5
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # ratchet:jdx/mise-action@v5
 
       - name: Trust mise config
         run: mise trust
@@ -117,7 +117,7 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://${{ env.GOOGLE_REGISTRY }}
-      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # ratchet:azure/setup-helm@v5
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # ratchet:azure/setup-helm@v5
         name: 'Setup Helm'
       - name: Set versions
         run: |-
