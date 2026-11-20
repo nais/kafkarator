@@ -18,8 +18,8 @@ github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAw
 github.com/Masterminds/semver/v3 v3.5.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/aiven/aiven-go-client/v2 v2.44.0 h1:UiWQLsVEsAPpHomNqq8PYVb3EEBVvggNZ9Ymx3GTOBI=
 github.com/aiven/aiven-go-client/v2 v2.44.0/go.mod h1:BBpB3Lb2FFAElQZugsEKDYe8of5v3G3TlEkERDoQ01g=
-github.com/aiven/go-client-codegen v0.237.0 h1:el/CoZGvO4w6SG9EW/uefcs5K6AzeDYLmQiEUpNwh/o=
-github.com/aiven/go-client-codegen v0.237.0/go.mod h1:OuyZpHom3+gFMj9LB/l1aWbrOA8EMBaDWGzif/GjhU4=
+github.com/aiven/go-client-codegen v0.238.0 h1:M9f7Lolu8zzsGAicXQY+NxY+JNdUCVU3yxP6XSX0j+U=
+github.com/aiven/go-client-codegen v0.238.0/go.mod h1:OuyZpHom3+gFMj9LB/l1aWbrOA8EMBaDWGzif/GjhU4=
 github.com/anthropics/anthropic-sdk-go v1.82.0 h1:A82J+yHEMbQ3+7ObCagOX4tVm1uyBhELCHd2dDYZYuo=
 github.com/anthropics/anthropic-sdk-go v1.82.0/go.mod h1:GThfYqPJoaQ/6pmibCI98Cr4y5su2FXMUHn3NrSSnIc=
 github.com/aws/aws-sdk-go-v2 v1.47.1 h1:uOIZnp4PK3ZhKI0dNrJrhTEsLxbpXHTAJlwoS1pvAtw=
